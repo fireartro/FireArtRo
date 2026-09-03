@@ -1,0 +1,1500 @@
+{
+  "$defs": {
+    "BusinessHours": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "note": {
+          "default": "",
+          "maxLength": 1000,
+          "title": "Note",
+          "type": "string"
+        },
+        "schema": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 7,
+          "minItems": 1,
+          "title": "Schema",
+          "type": "array"
+        }
+      },
+      "required": [
+        "label",
+        "schema"
+      ],
+      "title": "BusinessHours",
+      "type": "object"
+    },
+    "ContactOption": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "ContactOption",
+      "type": "object"
+    },
+    "ContactPageContent": {
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Eyebrow",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 1200,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "formTitle": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Formtitle",
+          "type": "string"
+        },
+        "eventTypes": {
+          "items": {
+            "$ref": "#/$defs/ContactOption"
+          },
+          "maxItems": 24,
+          "minItems": 1,
+          "title": "Eventtypes",
+          "type": "array"
+        },
+        "showOptions": {
+          "items": {
+            "$ref": "#/$defs/ContactOption"
+          },
+          "maxItems": 24,
+          "minItems": 1,
+          "title": "Showoptions",
+          "type": "array"
+        },
+        "consentLabel": {
+          "maxLength": 400,
+          "minLength": 1,
+          "title": "Consentlabel",
+          "type": "string"
+        },
+        "submitLabel": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Submitlabel",
+          "type": "string"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "title",
+        "description",
+        "formTitle",
+        "eventTypes",
+        "showOptions",
+        "consentLabel",
+        "submitLabel"
+      ],
+      "title": "ContactPageContent",
+      "type": "object"
+    },
+    "ContactSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "phoneDisplay": {
+          "maxLength": 40,
+          "minLength": 3,
+          "title": "Phonedisplay",
+          "type": "string"
+        },
+        "phoneTel": {
+          "maxLength": 20,
+          "minLength": 8,
+          "title": "Phonetel",
+          "type": "string"
+        },
+        "whatsappNumber": {
+          "maxLength": 20,
+          "minLength": 8,
+          "title": "Whatsappnumber",
+          "type": "string"
+        }
+      },
+      "required": [
+        "phoneDisplay",
+        "phoneTel",
+        "whatsappNumber"
+      ],
+      "title": "ContactSettings",
+      "type": "object"
+    },
+    "CookieSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 1200,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "necessaryLabel": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Necessarylabel",
+          "type": "string"
+        },
+        "necessaryDescription": {
+          "maxLength": 1200,
+          "minLength": 1,
+          "title": "Necessarydescription",
+          "type": "string"
+        },
+        "analyticsLabel": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Analyticslabel",
+          "type": "string"
+        },
+        "analyticsDescription": {
+          "maxLength": 1200,
+          "minLength": 1,
+          "title": "Analyticsdescription",
+          "type": "string"
+        },
+        "marketingLabel": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Marketinglabel",
+          "type": "string"
+        },
+        "marketingDescription": {
+          "maxLength": 1200,
+          "minLength": 1,
+          "title": "Marketingdescription",
+          "type": "string"
+        },
+        "retentionDays": {
+          "maximum": 730,
+          "minimum": 1,
+          "title": "Retentiondays",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "title",
+        "summary",
+        "necessaryLabel",
+        "necessaryDescription",
+        "analyticsLabel",
+        "analyticsDescription",
+        "marketingLabel",
+        "marketingDescription",
+        "retentionDays"
+      ],
+      "title": "CookieSettings",
+      "type": "object"
+    },
+    "FaqItem": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "q": {
+          "maxLength": 240,
+          "minLength": 3,
+          "title": "Q",
+          "type": "string"
+        },
+        "a": {
+          "maxLength": 4000,
+          "minLength": 3,
+          "title": "A",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "q",
+        "a"
+      ],
+      "title": "FaqItem",
+      "type": "object"
+    },
+    "FooterContent": {
+      "additionalProperties": false,
+      "properties": {
+        "tagline": {
+          "maxLength": 280,
+          "minLength": 1,
+          "title": "Tagline",
+          "type": "string"
+        },
+        "exploreHeading": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Exploreheading",
+          "type": "string"
+        },
+        "contactHeading": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Contactheading",
+          "type": "string"
+        },
+        "socialHeading": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Socialheading",
+          "type": "string"
+        },
+        "copyright": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Copyright",
+          "type": "string"
+        },
+        "exploreLinks": {
+          "items": {
+            "$ref": "#/$defs/LinkItem"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "title": "Explorelinks",
+          "type": "array"
+        },
+        "legalLinks": {
+          "items": {
+            "$ref": "#/$defs/LinkItem"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "title": "Legallinks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tagline",
+        "exploreHeading",
+        "contactHeading",
+        "socialHeading",
+        "copyright",
+        "exploreLinks",
+        "legalLinks"
+      ],
+      "title": "FooterContent",
+      "type": "object"
+    },
+    "HeroContent": {
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Eyebrow",
+          "type": "string"
+        },
+        "titleLead": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Titlelead",
+          "type": "string"
+        },
+        "titleTail": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Titletail",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 600,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "primaryCtaLabel": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Primaryctalabel",
+          "type": "string"
+        },
+        "primaryCtaHref": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Primaryctahref",
+          "type": "string"
+        },
+        "secondaryCtaLabel": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Secondaryctalabel",
+          "type": "string"
+        },
+        "secondaryCtaHref": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Secondaryctahref",
+          "type": "string"
+        },
+        "backgroundMediaId": {
+          "default": "",
+          "maxLength": 80,
+          "pattern": "^$|^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Backgroundmediaid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "titleLead",
+        "titleTail",
+        "description",
+        "primaryCtaLabel",
+        "primaryCtaHref",
+        "secondaryCtaLabel",
+        "secondaryCtaHref"
+      ],
+      "title": "HeroContent",
+      "type": "object"
+    },
+    "HomePageContent": {
+      "additionalProperties": false,
+      "properties": {
+        "hero": {
+          "$ref": "#/$defs/HeroContent"
+        },
+        "gallery": {
+          "$ref": "#/$defs/SectionCopy"
+        },
+        "packages": {
+          "$ref": "#/$defs/SectionCopy"
+        },
+        "about": {
+          "$ref": "#/$defs/RichSection"
+        },
+        "partners": {
+          "$ref": "#/$defs/SectionCopy"
+        },
+        "brief": {
+          "$ref": "#/$defs/SectionCopy"
+        },
+        "promoSlides": {
+          "items": {
+            "$ref": "#/$defs/PromoSlide"
+          },
+          "maxItems": 12,
+          "title": "Promoslides",
+          "type": "array"
+        }
+      },
+      "required": [
+        "hero",
+        "gallery",
+        "packages",
+        "about",
+        "partners",
+        "brief"
+      ],
+      "title": "HomePageContent",
+      "type": "object"
+    },
+    "InteriorPageContent": {
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Eyebrow",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 1200,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "seoTitle": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Seotitle",
+          "type": "string"
+        },
+        "seoDescription": {
+          "maxLength": 320,
+          "minLength": 1,
+          "title": "Seodescription",
+          "type": "string"
+        },
+        "heroMediaId": {
+          "default": "",
+          "maxLength": 80,
+          "pattern": "^$|^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Heromediaid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "title",
+        "description",
+        "seoTitle",
+        "seoDescription"
+      ],
+      "title": "InteriorPageContent",
+      "type": "object"
+    },
+    "LegalDocument": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "updatedLabel": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Updatedlabel",
+          "type": "string"
+        },
+        "sections": {
+          "items": {
+            "$ref": "#/$defs/LegalSection"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "Sections",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title",
+        "updatedLabel",
+        "sections"
+      ],
+      "title": "LegalDocument",
+      "type": "object"
+    },
+    "LegalPages": {
+      "additionalProperties": false,
+      "properties": {
+        "privacy": {
+          "$ref": "#/$defs/LegalDocument"
+        },
+        "terms": {
+          "$ref": "#/$defs/LegalDocument"
+        },
+        "cookies": {
+          "$ref": "#/$defs/LegalDocument"
+        }
+      },
+      "required": [
+        "privacy",
+        "terms",
+        "cookies"
+      ],
+      "title": "LegalPages",
+      "type": "object"
+    },
+    "LegalSection": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "heading": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Heading",
+          "type": "string"
+        },
+        "paragraphs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "Paragraphs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "heading",
+        "paragraphs"
+      ],
+      "title": "LegalSection",
+      "type": "object"
+    },
+    "LinkItem": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "href": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Href",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "href"
+      ],
+      "title": "LinkItem",
+      "type": "object"
+    },
+    "MediaItem": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "image",
+            "video",
+            "youtube",
+            "promo"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "shortDescription": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Shortdescription",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "Artificii de zi",
+            "Artificii de noapte",
+            "Drone show",
+            "Drone + artificii",
+            "Efecte speciale",
+            "Corporate / Festival",
+            "Festival",
+            "Nunt\u0103",
+            "Corporate",
+            "Promo\u021bii"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 24,
+          "title": "Tags",
+          "type": "array"
+        },
+        "thumbnail": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Thumbnail",
+          "type": "string"
+        },
+        "poster": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Poster",
+          "type": "string"
+        },
+        "src": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Src",
+          "type": "string"
+        },
+        "youtubeUrl": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Youtubeurl",
+          "type": "string"
+        },
+        "alt": {
+          "maxLength": 400,
+          "minLength": 3,
+          "title": "Alt",
+          "type": "string"
+        },
+        "featured": {
+          "default": false,
+          "title": "Featured",
+          "type": "boolean"
+        },
+        "date": {
+          "maxLength": 10,
+          "minLength": 10,
+          "title": "Date",
+          "type": "string"
+        },
+        "order": {
+          "maximum": 100000,
+          "minimum": 0,
+          "title": "Order",
+          "type": "integer"
+        },
+        "eventType": {
+          "default": "",
+          "maxLength": 120,
+          "title": "Eventtype",
+          "type": "string"
+        },
+        "ctaLabel": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Ctalabel",
+          "type": "string"
+        },
+        "ctaHref": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Ctahref",
+          "type": "string"
+        },
+        "width": {
+          "anyOf": [
+            {
+              "maximum": 32000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "maximum": 32000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height"
+        },
+        "aspectRatio": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Aspectratio"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "title",
+        "shortDescription",
+        "category",
+        "alt",
+        "date",
+        "order"
+      ],
+      "title": "MediaItem",
+      "type": "object"
+    },
+    "NavigationContent": {
+      "additionalProperties": false,
+      "properties": {
+        "links": {
+          "items": {
+            "$ref": "#/$defs/LinkItem"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "title": "Links",
+          "type": "array"
+        }
+      },
+      "required": [
+        "links"
+      ],
+      "title": "NavigationContent",
+      "type": "object"
+    },
+    "PackageItem": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "Artificii de zi",
+            "Artificii de noapte",
+            "Show drone",
+            "Drone + artificii",
+            "Efecte speciale",
+            "Corporate / Festival"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "bestFor": {
+          "default": "",
+          "maxLength": 400,
+          "title": "Bestfor",
+          "type": "string"
+        },
+        "shortDescription": {
+          "maxLength": 1200,
+          "minLength": 1,
+          "title": "Shortdescription",
+          "type": "string"
+        },
+        "visualImpact": {
+          "default": "",
+          "maxLength": 240,
+          "title": "Visualimpact",
+          "type": "string"
+        },
+        "duration": {
+          "default": "",
+          "maxLength": 120,
+          "title": "Duration",
+          "type": "string"
+        },
+        "droneCount": {
+          "anyOf": [
+            {
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dronecount"
+        },
+        "effectsCount": {
+          "anyOf": [
+            {
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effectscount"
+        },
+        "badge": {
+          "default": "",
+          "maxLength": 120,
+          "title": "Badge",
+          "type": "string"
+        },
+        "cta": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Cta",
+          "type": "string"
+        },
+        "ctaHref": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Ctahref",
+          "type": "string"
+        },
+        "imageMediaId": {
+          "default": "",
+          "maxLength": 80,
+          "pattern": "^$|^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Imagemediaid",
+          "type": "string"
+        },
+        "highlights": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 24,
+          "title": "Highlights",
+          "type": "array"
+        },
+        "bonus": {
+          "default": "",
+          "maxLength": 1200,
+          "title": "Bonus",
+          "type": "string"
+        },
+        "videoUrl": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Videourl",
+          "type": "string"
+        },
+        "videoNote": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Videonote",
+          "type": "string"
+        },
+        "moreVideoUrls": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 24,
+          "title": "Morevideourls",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "category",
+        "shortDescription",
+        "cta",
+        "ctaHref"
+      ],
+      "title": "PackageItem",
+      "type": "object"
+    },
+    "PartnerItem": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "logoPlaceholder": {
+          "default": "",
+          "maxLength": 120,
+          "title": "Logoplaceholder",
+          "type": "string"
+        },
+        "logoMediaId": {
+          "default": "",
+          "maxLength": 80,
+          "pattern": "^$|^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Logomediaid",
+          "type": "string"
+        },
+        "replaceable": {
+          "default": false,
+          "title": "Replaceable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "PartnerItem",
+      "type": "object"
+    },
+    "PromoSlide": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "image",
+            "video",
+            "youtube",
+            "promotion"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "shortText": {
+          "maxLength": 600,
+          "minLength": 1,
+          "title": "Shorttext",
+          "type": "string"
+        },
+        "badge": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Badge",
+          "type": "string"
+        },
+        "mediaId": {
+          "default": "",
+          "maxLength": 80,
+          "pattern": "^$|^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Mediaid",
+          "type": "string"
+        },
+        "youtubeUrl": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Youtubeurl",
+          "type": "string"
+        },
+        "ctaLabel": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Ctalabel",
+          "type": "string"
+        },
+        "ctaHref": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Ctahref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "title",
+        "shortText",
+        "ctaLabel",
+        "ctaHref"
+      ],
+      "title": "PromoSlide",
+      "type": "object"
+    },
+    "ReviewSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "heading": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Heading",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 600,
+          "title": "Description",
+          "type": "string"
+        },
+        "googleEnabled": {
+          "default": false,
+          "title": "Googleenabled",
+          "type": "boolean"
+        },
+        "facebookEnabled": {
+          "default": false,
+          "title": "Facebookenabled",
+          "type": "boolean"
+        },
+        "maxItems": {
+          "default": 8,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Maxitems",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "heading"
+      ],
+      "title": "ReviewSettings",
+      "type": "object"
+    },
+    "RichSection": {
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Eyebrow",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "body": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "title": "Body",
+          "type": "array"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "title",
+        "body"
+      ],
+      "title": "RichSection",
+      "type": "object"
+    },
+    "SectionCopy": {
+      "additionalProperties": false,
+      "properties": {
+        "eyebrow": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Eyebrow",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 1200,
+          "title": "Description",
+          "type": "string"
+        },
+        "ctaLabel": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Ctalabel",
+          "type": "string"
+        },
+        "ctaHref": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Ctahref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "eyebrow",
+        "title"
+      ],
+      "title": "SectionCopy",
+      "type": "object"
+    },
+    "SiteDetails": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "siteUrl": {
+          "maxLength": 500,
+          "minLength": 8,
+          "title": "Siteurl",
+          "type": "string"
+        },
+        "email": {
+          "format": "email",
+          "title": "Email",
+          "type": "string"
+        },
+        "googleReviewsUrl": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Googlereviewsurl",
+          "type": "string"
+        },
+        "areaServed": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Areaserved",
+          "type": "string"
+        },
+        "legalName": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Legalname",
+          "type": "string"
+        },
+        "registrationNumber": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Registrationnumber",
+          "type": "string"
+        },
+        "taxId": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Taxid",
+          "type": "string"
+        },
+        "registeredOffice": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Registeredoffice",
+          "type": "string"
+        },
+        "mainOffice": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Mainoffice",
+          "type": "string"
+        },
+        "secondaryOffice": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Secondaryoffice",
+          "type": "string"
+        },
+        "seoTitle": {
+          "default": "",
+          "maxLength": 160,
+          "title": "Seotitle",
+          "type": "string"
+        },
+        "seoDescription": {
+          "default": "",
+          "maxLength": 320,
+          "title": "Seodescription",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "siteUrl",
+        "email",
+        "areaServed",
+        "legalName",
+        "registrationNumber",
+        "taxId",
+        "registeredOffice"
+      ],
+      "title": "SiteDetails",
+      "type": "object"
+    },
+    "SocialLink": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "href": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Href",
+          "type": "string"
+        },
+        "placeholder": {
+          "default": false,
+          "title": "Placeholder",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "href"
+      ],
+      "title": "SocialLink",
+      "type": "object"
+    },
+    "TestimonialItem": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "eventType": {
+          "default": "",
+          "maxLength": 120,
+          "title": "Eventtype",
+          "type": "string"
+        },
+        "quote": {
+          "maxLength": 2000,
+          "minLength": 3,
+          "title": "Quote",
+          "type": "string"
+        },
+        "source": {
+          "default": "client",
+          "enum": [
+            "client",
+            "google",
+            "facebook",
+            "other"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "replaceable": {
+          "default": false,
+          "title": "Replaceable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "quote"
+      ],
+      "title": "TestimonialItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "siteDetails": {
+      "$ref": "#/$defs/SiteDetails"
+    },
+    "contactSettings": {
+      "$ref": "#/$defs/ContactSettings"
+    },
+    "businessHours": {
+      "$ref": "#/$defs/BusinessHours"
+    },
+    "socialLinks": {
+      "items": {
+        "$ref": "#/$defs/SocialLink"
+      },
+      "maxItems": 12,
+      "minItems": 1,
+      "title": "Sociallinks",
+      "type": "array"
+    },
+    "navigation": {
+      "$ref": "#/$defs/NavigationContent"
+    },
+    "footer": {
+      "$ref": "#/$defs/FooterContent"
+    },
+    "homePage": {
+      "$ref": "#/$defs/HomePageContent"
+    },
+    "galleryPage": {
+      "$ref": "#/$defs/InteriorPageContent"
+    },
+    "packagesPage": {
+      "$ref": "#/$defs/InteriorPageContent"
+    },
+    "faqPage": {
+      "$ref": "#/$defs/InteriorPageContent"
+    },
+    "contactPage": {
+      "$ref": "#/$defs/ContactPageContent"
+    },
+    "blogPage": {
+      "$ref": "#/$defs/InteriorPageContent"
+    },
+    "mediaItems": {
+      "items": {
+        "$ref": "#/$defs/MediaItem"
+      },
+      "maxItems": 2000,
+      "title": "Mediaitems",
+      "type": "array"
+    },
+    "packages": {
+      "items": {
+        "$ref": "#/$defs/PackageItem"
+      },
+      "maxItems": 200,
+      "title": "Packages",
+      "type": "array"
+    },
+    "faqs": {
+      "items": {
+        "$ref": "#/$defs/FaqItem"
+      },
+      "maxItems": 100,
+      "title": "Faqs",
+      "type": "array"
+    },
+    "testimonials": {
+      "items": {
+        "$ref": "#/$defs/TestimonialItem"
+      },
+      "maxItems": 100,
+      "title": "Testimonials",
+      "type": "array"
+    },
+    "partners": {
+      "items": {
+        "$ref": "#/$defs/PartnerItem"
+      },
+      "maxItems": 100,
+      "title": "Partners",
+      "type": "array"
+    },
+    "reviewSettings": {
+      "$ref": "#/$defs/ReviewSettings"
+    },
+    "cookieSettings": {
+      "$ref": "#/$defs/CookieSettings"
+    },
+    "legalPages": {
+      "$ref": "#/$defs/LegalPages"
+    }
+  },
+  "required": [
+    "siteDetails",
+    "contactSettings",
+    "businessHours",
+    "socialLinks",
+    "navigation",
+    "footer",
+    "homePage",
+    "galleryPage",
+    "packagesPage",
+    "faqPage",
+    "contactPage",
+    "blogPage",
+    "mediaItems",
+    "packages",
+    "faqs",
+    "testimonials",
+    "partners",
+    "reviewSettings",
+    "cookieSettings",
+    "legalPages"
+  ],
+  "title": "SiteContent",
+  "type": "object"
+}

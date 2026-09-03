@@ -1,0 +1,11 @@
+{
+  "name": "fireartro-vercel-functions",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20.19.0" },
+  "scripts": { "test:api": "node --test api/admin/blob-upload.test.js" },
+  "dependencies": {
+    "@vercel/blob": "2.8.0",
+    "mongodb": "7.6.0"
+  }
+}

@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ro">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#050308" />
+        <meta name="color-scheme" content="dark" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <script>
+            (() => {
+                const ua = navigator.userAgent || "";
+                const isiOS =
+                    /iPad|iPhone|iPod/.test(ua) ||
+                    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+                const isSafari =
+                    /Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR|SamsungBrowser/.test(ua);
+                const isMac = /Macintosh|MacIntel|MacPPC|Mac68K/.test(
+                    navigator.platform || ua
+                );
+                if (isiOS || isMac) {
+                    document.documentElement.dataset.applePlatform = "true";
+                }
+                if (isiOS || isSafari) {
+                    document.documentElement.dataset.appleWebkit = "true";
+                }
+            })();
+        </script>
+        <meta
+            name="description"
+            content="FireArtRo creează spectacole premium cu drone, artificii și efecte speciale pentru nunți, evenimente corporate, festivaluri și lansări."
+        />
+        <meta
+            name="keywords"
+            content="spectacole cu drone, drone show România, artificii evenimente, artificii nuntă, artificii corporate, show drone și artificii, cold sparks, efecte speciale evenimente"
+        />
+        <meta name="robots" content="index, follow, max-image-preview:large" />
+        <meta name="author" content="FireArtRo" />
+
+        <link rel="canonical" href="https://www.fireartro.ro/" />
+        <link rel="preload" href="/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin />
+        <link rel="preload" href="/fonts/sora-latin-ext.woff2" as="font" type="font/woff2" crossorigin />
+        <style>
+            @font-face {
+                font-family: "Inter";
+                src: url("/fonts/inter-latin.woff2") format("woff2");
+                font-style: normal;
+                font-weight: 300 700;
+                font-display: swap;
+                unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+            }
+            @font-face {
+                font-family: "Inter";
+                src: url("/fonts/inter-latin-ext.woff2") format("woff2");
+                font-style: normal;
+                font-weight: 300 700;
+                font-display: swap;
+                unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+            }
+            @font-face {
+                font-family: "Sora";
+                src: url("/fonts/sora-latin.woff2") format("woff2");
+                font-style: normal;
+                font-weight: 400 800;
+                font-display: swap;
+                unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+            }
+            @font-face {
+                font-family: "Sora";
+                src: url("/fonts/sora-latin-ext.woff2") format("woff2");
+                font-style: normal;
+                font-weight: 400 800;
+                font-display: swap;
+                unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+            }
+            @font-face {
+                font-family: "Cormorant Garamond";
+                src: url("/fonts/cormorant-garamond-italic-500-latin.woff2") format("woff2");
+                font-style: italic;
+                font-weight: 500;
+                font-display: swap;
+                unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+            }
+            @font-face {
+                font-family: "Cormorant Garamond";
+                src: url("/fonts/cormorant-garamond-italic-500-latin-ext.woff2") format("woff2");
+                font-style: italic;
+                font-weight: 500;
+                font-display: swap;
+                unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+            }
+            @font-face {
+                font-family: "Cormorant Garamond";
+                src: url("/fonts/cormorant-garamond-600-latin.woff2") format("woff2");
+                font-style: normal;
+                font-weight: 600;
+                font-display: swap;
+                unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+            }
+            @font-face {
+                font-family: "Cormorant Garamond";
+                src: url("/fonts/cormorant-garamond-600-latin-ext.woff2") format("woff2");
+                font-style: normal;
+                font-weight: 600;
+                font-display: swap;
+                unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+            }
+        </style>
+
+        <meta property="og:locale" content="ro_RO" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="FireArtRo" />
+        <meta
+            property="og:title"
+            content="FireArtRo — Spectacole de drone și artificii premium"
+        />
+        <meta
+            property="og:description"
+            content="Drone show-uri, artificii și efecte speciale sincronizate pentru momente imposibil de uitat."
+        />
+        <meta
+            property="og:image"
+            content="https://www.fireartro.ro/media/fireart-hero-poster.webp"
+        />
+        <meta property="og:url" content="https://www.fireartro.ro/" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+            name="twitter:title"
+            content="FireArtRo — Spectacole de drone și artificii premium"
+        />
+        <meta
+            name="twitter:description"
+            content="Drone show-uri, artificii și efecte speciale sincronizate pentru momente imposibil de uitat."
+        />
+        <meta
+            name="twitter:image"
+            content="https://www.fireartro.ro/media/fireart-hero-poster.webp"
+        />
+
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@graph": [
+                    {
+                        "@type": ["Organization", "LocalBusiness", "ProfessionalService"],
+                        "name": "FireArtRo",
+                        "legalName": "1A BEST EVENTS SRL",
+                        "url": "https://www.fireartro.ro/",
+                        "taxID": "RO37037033",
+                        "description": "Spectacole premium cu drone, artificii și efecte speciale pentru evenimente.",
+                        "address": {
+                            "@type": "PostalAddress",
+                            "streetAddress": "Piața Unirii nr. 2",
+                            "addressLocality": "Seini",
+                            "addressCountry": "RO"
+                        },
+                        "sameAs": [
+                            "https://www.instagram.com/fireartro/",
+                            "https://www.facebook.com/FireArtRo",
+                            "https://www.youtube.com/@fireart6369"
+                        ],
+                        "areaServed": {
+                            "@type": "Country",
+                            "name": "România"
+                        },
+                        "openingHours": ["Mo-Fr 10:00-18:00"],
+                        "email": "contact@fireart.ro",
+                        "priceRange": "$$$",
+                        "image": "https://www.fireartro.ro/media/fireart-hero-poster.webp",
+                        "hasOfferCatalog": {
+                            "@type": "OfferCatalog",
+                            "name": "Servicii FireArtRo",
+                            "itemListElement": [
+                                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Spectacole cu drone" } },
+                                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Artificii profesionale pentru evenimente" } },
+                                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Show drone și artificii sincronizate" } },
+                                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Cold sparks și efecte speciale" } }
+                            ]
+                        }
+                    },
+                    {
+                        "@type": "WebSite",
+                        "name": "FireArtRo",
+                        "url": "https://www.fireartro.ro/"
+                    },
+                    {
+                        "@type": "Service",
+                        "name": "Spectacole cu drone și artificii",
+                        "serviceType": "Drone show, artificii profesionale și efecte speciale",
+                        "provider": {
+                            "@type": "Organization",
+                            "name": "FireArtRo"
+                        },
+                        "areaServed": {
+                            "@type": "Country",
+                            "name": "România"
+                        }
+                    }
+                ]
+            }
+        </script>
+
+        <title>FireArtRo — Spectacole de drone și artificii premium</title>
+    </head>
+    <body>
+        <noscript>Ai nevoie de JavaScript activat pentru a folosi site-ul FireArtRo.</noscript>
+        <div id="root"></div>
+    </body>
+</html>

@@ -1,0 +1,322 @@
+{
+  "schema_version": 1,
+  "siteDetails": {
+    "name": "FireArtRo",
+    "siteUrl": "https://www.fireartro.ro",
+    "email": "contact@fireart.ro",
+    "googleReviewsUrl": "https://maps.google.com/?cid=1",
+    "areaServed": "Rom\u00e2nia",
+    "legalName": "FireArtRo Events SRL",
+    "registrationNumber": "J12/123/2026",
+    "taxId": "RO12345678",
+    "registeredOffice": "Cluj-Napoca",
+    "mainOffice": "Cluj-Napoca",
+    "secondaryOffice": "",
+    "seoTitle": "FireArtRo | Spectacole",
+    "seoDescription": "Spectacole cu drone, artificii \u0219i efecte scenice."
+  },
+  "contactSettings": {
+    "phoneDisplay": "+40 787 602 144",
+    "phoneTel": "+40787602144",
+    "whatsappNumber": "40787602144"
+  },
+  "businessHours": {
+    "label": "Luni\u2013Vineri, 10:00\u201318:00",
+    "note": "Disponibilitatea se confirm\u0103 dup\u0103 brief.",
+    "schema": [
+      "Mo-Fr 10:00-18:00"
+    ]
+  },
+  "socialLinks": [
+    {
+      "id": "youtube",
+      "label": "YouTube",
+      "href": "https://youtube.com/@fireart",
+      "placeholder": false
+    }
+  ],
+  "navigation": {
+    "links": [
+      {
+        "id": "about",
+        "label": "Despre noi",
+        "href": "#intro"
+      },
+      {
+        "id": "contact",
+        "label": "Contact",
+        "href": "/contact"
+      }
+    ]
+  },
+  "footer": {
+    "tagline": "Spectacole construite pentru momentul potrivit.",
+    "exploreHeading": "Exploreaz\u0103",
+    "contactHeading": "Contact direct",
+    "socialHeading": "Urm\u0103re\u0219te",
+    "copyright": "\u00a9 2026 FireArtRo",
+    "exploreLinks": [
+      {
+        "id": "packages",
+        "label": "Pachete",
+        "href": "/pachete"
+      }
+    ],
+    "legalLinks": [
+      {
+        "id": "privacy",
+        "label": "Confiden\u021bialitate",
+        "href": "/confidentialitate"
+      }
+    ]
+  },
+  "homePage": {
+    "hero": {
+      "eyebrow": "DRONE \u00b7 ARTIFICII \u00b7 EFECTE SCENICE",
+      "titleLead": "Spectacole",
+      "titleTail": "\u00een lumin\u0103.",
+      "description": "Momente care r\u0103m\u00e2n.",
+      "primaryCtaLabel": "Cere ofert\u0103",
+      "primaryCtaHref": "/contact",
+      "secondaryCtaLabel": "Vezi galeria",
+      "secondaryCtaHref": "/galerie",
+      "backgroundMediaId": "media-hero"
+    },
+    "gallery": {
+      "eyebrow": "Selec\u021bie FireArtRo",
+      "title": "Momente \u00een mi\u0219care.",
+      "description": "Cadre reale.",
+      "ctaLabel": "Vezi galeria",
+      "ctaHref": "/galerie"
+    },
+    "packages": {
+      "eyebrow": "Pachete FireArtRo",
+      "title": "Fiecare noapte cere alt spectacol.",
+      "description": "Alege direc\u021bia potrivit\u0103.",
+      "ctaLabel": "Vezi pachetele",
+      "ctaHref": "/pachete"
+    },
+    "about": {
+      "eyebrow": "Despre FireArtRo",
+      "title": "Construim spectacolul \u00eempreun\u0103.",
+      "body": [
+        "Planific\u0103m fiecare detaliu."
+      ]
+    },
+    "partners": {
+      "eyebrow": "\u00cempreun\u0103 \u00een produc\u021bie",
+      "title": "Parteneriate care duc ideea p\u00e2n\u0103 la cap\u0103t.",
+      "description": "Echipele intr\u0103 \u00een aceea\u0219i orbit\u0103.",
+      "ctaLabel": "",
+      "ctaHref": ""
+    },
+    "brief": {
+      "eyebrow": "\u00cencepem cu reperele",
+      "title": "Spune-ne ce preg\u0103te\u0219ti.",
+      "description": "Construim direc\u021bia potrivit\u0103.",
+      "ctaLabel": "Cere ofert\u0103",
+      "ctaHref": "/contact"
+    },
+    "promoSlides": [
+      {
+        "id": "slide-hero",
+        "type": "image",
+        "title": "Un moment \u00een lumin\u0103",
+        "shortText": "Un cadru FireArtRo.",
+        "badge": "Selec\u021bie",
+        "mediaId": "media-hero",
+        "youtubeUrl": "",
+        "ctaLabel": "Vezi galeria",
+        "ctaHref": "/galerie"
+      }
+    ]
+  },
+  "galleryPage": {
+    "eyebrow": "Galerie FireArtRo",
+    "title": "Galerie",
+    "description": "Cadre reale din spectacole.",
+    "seoTitle": "Galerie FireArtRo",
+    "seoDescription": "Galerie spectacole.",
+    "heroMediaId": "media-hero"
+  },
+  "packagesPage": {
+    "eyebrow": "Formate FireArtRo",
+    "title": "Pachete",
+    "description": "Alege direc\u021bia potrivit\u0103.",
+    "seoTitle": "Pachete FireArtRo",
+    "seoDescription": "Pachete de spectacol.",
+    "heroMediaId": "media-hero"
+  },
+  "faqPage": {
+    "eyebrow": "\u00centreb\u0103ri",
+    "title": "\u00centreb\u0103ri.",
+    "description": "Ce conteaz\u0103 \u00eenainte de rezervare.",
+    "seoTitle": "\u00centreb\u0103ri FireArtRo",
+    "seoDescription": "\u00centreb\u0103ri frecvente.",
+    "heroMediaId": "media-hero"
+  },
+  "contactPage": {
+    "eyebrow": "Brief FireArtRo",
+    "title": "Ai data. Construim restul.",
+    "description": "Spune-ne reperele evenimentului.",
+    "formTitle": "Planificare eveniment",
+    "eventTypes": [
+      {
+        "id": "wedding",
+        "label": "Nunt\u0103"
+      }
+    ],
+    "showOptions": [
+      {
+        "id": "drone-show",
+        "label": "Spectacol cu drone"
+      }
+    ],
+    "consentLabel": "Sunt de acord cu politica de confiden\u021bialitate.",
+    "submitLabel": "Trimite cererea"
+  },
+  "blogPage": {
+    "eyebrow": "Jurnal FireArtRo",
+    "title": "Blog",
+    "description": "Articole publicate de echipa FireArtRo.",
+    "seoTitle": "Blog FireArtRo",
+    "seoDescription": "Jurnalul FireArtRo.",
+    "heroMediaId": "media-hero"
+  },
+  "mediaItems": [
+    {
+      "id": "media-hero",
+      "type": "image",
+      "title": "Cer \u00een mi\u0219care",
+      "shortDescription": "O coregrafie luminoas\u0103.",
+      "category": "Drone show",
+      "tags": [
+        "Drone show"
+      ],
+      "thumbnail": "/media/hero.webp",
+      "poster": "/media/hero.webp",
+      "src": "/media/hero.webp",
+      "youtubeUrl": "",
+      "alt": "Dron\u0103 luminoas\u0103 pe cer.",
+      "featured": true,
+      "date": "2026-09-03",
+      "order": 1,
+      "eventType": "Corporate",
+      "ctaLabel": "Vezi detalii",
+      "ctaHref": "/contact",
+      "width": 1920,
+      "height": 1080,
+      "aspectRatio": 1.7778
+    }
+  ],
+  "packages": [
+    {
+      "id": "night-gold",
+      "title": "Gold",
+      "category": "Artificii de noapte",
+      "bestFor": "Evenimente private",
+      "shortDescription": "Final pirotehnic regizat.",
+      "visualImpact": "Amplu",
+      "duration": "2\u20134 minute",
+      "droneCount": null,
+      "effectsCount": null,
+      "badge": "Premium",
+      "cta": "Cere ofert\u0103",
+      "ctaHref": "/contact",
+      "imageMediaId": "media-hero",
+      "highlights": [
+        "Calibru mare"
+      ],
+      "bonus": "Configura\u021bie adaptat\u0103.",
+      "videoUrl": "https://www.youtube.com/watch?v=example",
+      "videoNote": "Film de referin\u021b\u0103.",
+      "moreVideoUrls": []
+    }
+  ],
+  "faqs": [
+    {
+      "id": "booking",
+      "q": "Cu c\u00e2t timp \u00eenainte trebuie rezervat?",
+      "a": "Recomand\u0103m s\u0103 ne contactezi din timp pentru planificare."
+    }
+  ],
+  "testimonials": [
+    {
+      "id": "client-one",
+      "name": "Client aprobat",
+      "eventType": "Corporate",
+      "quote": "Un moment excelent pentru invita\u021bi.",
+      "source": "client",
+      "replaceable": false
+    }
+  ],
+  "partners": [
+    {
+      "id": "partner-one",
+      "name": "Partener aprobat",
+      "logoPlaceholder": "PARTENER",
+      "logoMediaId": "media-hero",
+      "replaceable": false
+    }
+  ],
+  "reviewSettings": {
+    "enabled": true,
+    "heading": "Recenzii",
+    "description": "Experien\u021be verificate.",
+    "googleEnabled": true,
+    "facebookEnabled": true,
+    "maxItems": 8
+  },
+  "cookieSettings": {
+    "title": "Preferin\u021be cookies",
+    "summary": "Folosim cookies necesare \u0219i op\u021bionale.",
+    "necessaryLabel": "Strict necesare",
+    "necessaryDescription": "Sunt necesare func\u021bion\u0103rii site-ului.",
+    "analyticsLabel": "Analiz\u0103",
+    "analyticsDescription": "Ne ajut\u0103 s\u0103 \u00een\u021belegem folosirea site-ului.",
+    "marketingLabel": "Marketing",
+    "marketingDescription": "Ajut\u0103 la relevan\u021ba comunic\u0103rii.",
+    "retentionDays": 180
+  },
+  "legalPages": {
+    "privacy": {
+      "title": "Politica de confiden\u021bialitate",
+      "updatedLabel": "Actualizat\u0103 la 3 septembrie 2026",
+      "sections": [
+        {
+          "id": "privacy-data",
+          "heading": "Date personale",
+          "paragraphs": [
+            "Prelucr\u0103m datele doar pentru solicitarea ta."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Termeni \u0219i condi\u021bii",
+      "updatedLabel": "Actualizat\u0103 la 3 septembrie 2026",
+      "sections": [
+        {
+          "id": "terms-use",
+          "heading": "Utilizare",
+          "paragraphs": [
+            "Con\u021binutul site-ului este protejat."
+          ]
+        }
+      ]
+    },
+    "cookies": {
+      "title": "Politica de cookies",
+      "updatedLabel": "Actualizat\u0103 la 3 septembrie 2026",
+      "sections": [
+        {
+          "id": "cookies-use",
+          "heading": "Cookies",
+          "paragraphs": [
+            "Po\u021bi alege preferin\u021bele tale."
+          ]
+        }
+      ]
+    }
+  }
+}
