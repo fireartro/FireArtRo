@@ -35,13 +35,13 @@
 - [ ] Add an HTTPX `MockTransport` test for `POST https://api.resend.com/emails` that asserts the `Authorization` header is present, `Idempotency-Key` is exact, `from`/`to`/`reply_to` are correct, and the API key never appears in returned exceptions.
 - [ ] Add tests for `GET https://api.resend.com/emails/receiving/{email_id}` that normalize sender, recipients, subject, text, HTML, message ID, references, and attachment metadata with explicit length caps.
 - [ ] Add repository tests with async in-memory collections for unique `idempotency_key`, unique `resend_email_id`, unique `webhook_id`, state transitions, pagination, category filtering, and safe projections.
-- [ ] Run the new tests and confirm they fail because `resend_email` and `email_inbox` do not yet exist:
+- [ ] Import the wished-for modules inside the test functions, then run the new tests and confirm pytest reports ordinary failed tests (not collection errors) because `resend_email` and `email_inbox` do not yet exist:
 
 ```powershell
 $env:PYTHONPATH='backend'; python -m pytest backend/tests/test_resend_email.py backend/tests/test_email_inbox.py -q
 ```
 
-- [ ] Add the Svix Python package to both production and development requirements using the same bounded major version. Keep HTTPX at the existing version.
+- [ ] Add the Svix Python package to `backend/requirements.txt` with a bounded major version. `backend/requirements-dev.txt` already includes production requirements via `-r requirements.txt`, so do not duplicate the dependency there. Keep HTTPX at the existing version.
 - [ ] Commit the contract tests and dependency declaration:
 
 ```powershell
