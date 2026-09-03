@@ -279,6 +279,7 @@ def inbound_document(identifier, received_at, category="contact", **changes):
         "latest_reply_at": None,
         "raw_provider_payload": "must-not-leak",
         "private_secret": "must-not-leak",
+        "future_sensitive_field": "must-not-leak",
     }
     document.update(changes)
     return document
@@ -370,12 +371,16 @@ async def test_delivery_repository_moves_pending_records_to_sent_or_failed():
 
     sent_document = as_document(sent)
     failed_document = as_document(failed)
+    persisted_sent = await collection.find_one({"id": sent_document["id"]})
+    persisted_failed = await collection.find_one({"id": failed_document["id"]})
+    assert persisted_sent == sent_document
+    assert persisted_failed == failed_document
     assert {
-        "state": sent_document["state"],
-        "resend_email_id": sent_document["resend_email_id"],
-        "error_code": sent_document["error_code"],
-        "sent_at": sent_document["sent_at"],
-        "updated_at": sent_document["updated_at"],
+        "state": persisted_sent["state"],
+        "resend_email_id": persisted_sent["resend_email_id"],
+        "error_code": persisted_sent["error_code"],
+        "sent_at": persisted_sent["sent_at"],
+        "updated_at": persisted_sent["updated_at"],
     } == {
         "state": "sent",
         "resend_email_id": "provider-sent-001",
@@ -384,11 +389,11 @@ async def test_delivery_repository_moves_pending_records_to_sent_or_failed():
         "updated_at": datetime(2026, 9, 4, 9, 1, tzinfo=timezone.utc),
     }
     assert {
-        "state": failed_document["state"],
-        "resend_email_id": failed_document["resend_email_id"],
-        "error_code": failed_document["error_code"],
-        "sent_at": failed_document["sent_at"],
-        "updated_at": failed_document["updated_at"],
+        "state": persisted_failed["state"],
+        "resend_email_id": persisted_failed["resend_email_id"],
+        "error_code": persisted_failed["error_code"],
+        "sent_at": persisted_failed["sent_at"],
+        "updated_at": persisted_failed["updated_at"],
     } == {
         "state": "failed",
         "resend_email_id": None,
@@ -396,6 +401,32 @@ async def test_delivery_repository_moves_pending_records_to_sent_or_failed():
         "sent_at": None,
         "updated_at": datetime(2026, 9, 4, 9, 3, tzinfo=timezone.utc),
     }
+
+    clock.value = datetime(2026, 9, 4, 9, 4, tzinfo=timezone.utc)
+    assert (
+        await repository.mark_sent(
+            sent_document["id"], resend_email_id="provider-must-not-replace"
+        )
+        is None
+    )
+    assert (
+        await repository.mark_failed(sent_document["id"], error_code="delivery_failed")
+        is None
+    )
+    assert (
+        await repository.mark_sent(
+            failed_document["id"], resend_email_id="provider-must-not-save"
+        )
+        is None
+    )
+    assert (
+        await repository.mark_failed(
+            failed_document["id"], error_code="provider_rejected"
+        )
+        is None
+    )
+    assert await collection.find_one({"id": sent_document["id"]}) == persisted_sent
+    assert await collection.find_one({"id": failed_document["id"]}) == persisted_failed
 
 
 @pytest.mark.asyncio
@@ -493,6 +524,37 @@ async def test_inbound_list_filters_paginates_and_projects_only_safe_admin_field
     )
     detail = as_document(await repository.get("inbound-004"))
 
+    summary_projection = {
+        "_id": 0,
+        "id": 1,
+        "from": 1,
+        "subject": 1,
+        "category": 1,
+        "received_at": 1,
+        "relay_state": 1,
+        "latest_reply_at": 1,
+    }
+    detail_projection = {
+        "_id": 0,
+        "id": 1,
+        "from": 1,
+        "to": 1,
+        "subject": 1,
+        "text": 1,
+        "attachments": 1,
+        "category": 1,
+        "received_at": 1,
+        "relay_state": 1,
+        "latest_reply_at": 1,
+    }
+    assert collection.projections == [
+        summary_projection,
+        summary_projection,
+        summary_projection,
+        detail_projection,
+    ]
+
+    assert set(first_page) == {"items", "total", "page", "page_size"}
     assert first_page["total"] == 3
     assert first_page["page"] == 1
     assert first_page["page_size"] == 2
@@ -503,21 +565,31 @@ async def test_inbound_list_filters_paginates_and_projects_only_safe_admin_field
     assert [item["id"] for item in second_page["items"]] == ["inbound-001"]
     assert [item["id"] for item in other_recipient["items"]] == ["inbound-003"]
 
-    for item in first_page["items"]:
-        for private in (
-            "text",
-            "html",
-            "attachments",
-            "message_id",
-            "references",
-            "resend_email_id",
-            "webhook_id",
-            "raw_provider_payload",
-            "private_secret",
-            "_id",
-        ):
-            assert private not in item
+    summary_keys = {
+        "id",
+        "from",
+        "subject",
+        "category",
+        "received_at",
+        "relay_state",
+        "latest_reply_at",
+    }
+    for page in (first_page, second_page, other_recipient):
+        for item in page["items"]:
+            assert set(item) == summary_keys
 
+    assert set(detail) == {
+        "id",
+        "from",
+        "to",
+        "subject",
+        "text",
+        "attachments",
+        "category",
+        "received_at",
+        "relay_state",
+        "latest_reply_at",
+    }
     assert detail["id"] == "inbound-004"
     assert detail["from"] == "sender-inbound-004@example.com"
     assert detail["to"] == ["contact@inbound.example.com"]
@@ -531,14 +603,3 @@ async def test_inbound_list_filters_paginates_and_projects_only_safe_admin_field
             "size": 12,
         }
     ]
-    for private in (
-        "html",
-        "message_id",
-        "references",
-        "resend_email_id",
-        "webhook_id",
-        "raw_provider_payload",
-        "private_secret",
-        "_id",
-    ):
-        assert private not in detail

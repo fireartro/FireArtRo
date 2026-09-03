@@ -177,12 +177,19 @@ async def test_send_converts_provider_rejection_to_an_exception_without_secrets(
 async def test_get_received_email_normalizes_and_caps_provider_content():
     from resend_email import ResendClient, ResendConfig
 
-    references = [f"<reference-{number:02d}@example.com>" for number in range(22)]
+    recipients = [
+        f" RECIPIENT-{number:03d}-" + "R" * 330 + "@example.com "
+        for number in range(52)
+    ]
+    references = [
+        f"<REFERENCE-{number:02d}-" + "R" * 1_100 + "@example.com>"
+        for number in range(22)
+    ]
     attachments = [
         {
-            "id": f"attachment-{number:02d}",
+            "id": f"attachment-{number:02d}-" + "I" * 210,
             "filename": "x" * 245 + f"-{number:02d}.txt",
-            "content_type": "text/plain",
+            "content_type": "application/x-contract-" + "C" * 300,
             "size": number + 1,
             "download_url": f"https://files.example.com/private-{number:02d}",
         }
@@ -202,12 +209,12 @@ async def test_get_received_email_normalizes_and_caps_provider_content():
             200,
             json={
                 "id": "received-email-001",
-                "from": "  Example Sender <SENDER@example.com>  ",
-                "to": [" CONTACT@inbound.example.com ", "Second@example.com"],
+                "from": "  " + "S" * 325 + "  ",
+                "to": recipients,
                 "subject": "S" * 305,
                 "text": "T" * 100_005,
                 "html": "H" * 200_005,
-                "message_id": "  <thread-root@example.com>  ",
+                "message_id": "  <" + "M" * 1_100 + ">  ",
                 "headers": {"references": " ".join(references)},
                 "attachments": attachments,
             },
@@ -218,21 +225,32 @@ async def test_get_received_email_normalizes_and_caps_provider_content():
         client = ResendClient(provider_config(ResendConfig), http_client=http_client)
         received = await client.get_received_email("received-email-001")
 
-    assert received.sender == "sender@example.com"
-    assert received.recipients == ["contact@inbound.example.com", "second@example.com"]
+    assert received.sender == "s" * 320
+    assert len(received.sender) == 320
+    assert len(received.recipients) == 50
+    assert all(len(recipient) == 320 for recipient in received.recipients)
+    assert received.recipients[0] == "recipient-000-" + "r" * 306
+    assert received.recipients[-1] == "recipient-049-" + "r" * 306
     assert received.subject == "S" * 300
     assert received.text == "T" * 100_000
     assert received.html == "H" * 200_000
-    assert received.message_id == "<thread-root@example.com>"
+    assert received.message_id == "<" + "M" * 997
+    assert len(received.message_id) == 998
     assert len(received.references) == 20
-    assert received.references[0] == "<reference-00@example.com>"
-    assert received.references[-1] == "<reference-19@example.com>"
+    assert all(len(reference) == 998 for reference in received.references)
+    assert received.references[0] == "<REFERENCE-00-" + "R" * 984
+    assert received.references[-1] == "<REFERENCE-19-" + "R" * 984
     assert len(received.attachments) == 50
+    assert all(len(attachment.id) == 200 for attachment in received.attachments)
+    assert all(len(attachment.filename) == 240 for attachment in received.attachments)
+    assert all(
+        len(attachment.content_type) == 255 for attachment in received.attachments
+    )
     assert received.attachments[0].model_dump() == {
-        "id": "attachment-00",
+        "id": "attachment-00-" + "I" * 186,
         "filename": "x" * 240,
-        "content_type": "text/plain",
+        "content_type": "application/x-contract-" + "C" * 232,
         "size": 1,
     }
-    assert received.attachments[-1].id == "attachment-49"
+    assert received.attachments[-1].id == "attachment-49-" + "I" * 186
     assert "download_url" not in received.attachments[0].model_dump()
