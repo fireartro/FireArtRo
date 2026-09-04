@@ -1,4 +1,6 @@
 const { TextEncoder, TextDecoder } = require("util");
+const fs = require("fs");
+const path = require("path");
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
 
@@ -49,7 +51,7 @@ async function render({ handle } = {}) {
     }
     const custom = handle?.(path, options);
     if (custom !== undefined) return custom;
-    if (path.startsWith("/api/admin/inbox?")) {
+    if (path === "/api/admin/inbox/search") {
       return response({ items: [summary(), summary("inbound-002")], total: 2, page: 1, page_size: 20 });
     }
     if (path === "/api/admin/inbox/inbound-001") return response(detail());
@@ -102,10 +104,19 @@ test("search and category filters request only bounded query values", async () =
   await change('input[name="inbox-search"]', "  Ana & nuntă  ");
   await change('select[name="inbox-category"]', "contact");
   await submit('form[aria-label="Filtrează mesajele"]');
-  const request = global.fetch.mock.calls.find(([path]) => path.includes("q=Ana"));
-  expect(request[0]).toContain("q=Ana+%26+nunt%C4%83");
-  expect(request[0]).toContain("category=contact");
-  expect(request[0]).toContain("page=1");
+  const searchRequest = global.fetch.mock.calls.filter(([requestPath]) => requestPath === "/api/admin/inbox/search").at(-1);
+  expect(searchRequest[0]).not.toContain("Ana");
+  expect(JSON.parse(searchRequest[1].body)).toEqual({ q: "Ana & nuntă", category: "contact", page: 1, page_size: 20 });
+  expect(searchRequest[1].headers["X-CSRF-Token"]).toBe("csrf-test");
+});
+
+test("applying filters clears the previously loaded private detail", async () => {
+  await render();
+  await click("Deschide mesajul Cerere nuntă");
+  expect(container.textContent).toContain("Detalii private");
+  await submit('form[aria-label="Filtrează mesajele"]');
+  expect(container.textContent).not.toContain("Detalii private");
+  expect(container.textContent).not.toContain("Primul răspuns");
 });
 
 test("a late detail response cannot replace the current selection", async () => {
@@ -167,4 +178,41 @@ test("failed relay can be retried explicitly", async () => {
   expect(write[1].method).toBe("POST");
   expect(write[1].headers["X-CSRF-Token"]).toBe("csrf-test");
   expect(container.textContent).toContain("Notificare trimisă");
+});
+
+test("a conflict blocks another send until the message is explicitly reloaded", async () => {
+  let attempts = 0;
+  await render({ handle: (requestPath) => {
+    if (requestPath.endsWith("/reply")) {
+      attempts += 1;
+      return attempts === 1 ? response({ detail: "Conflict" }, 409) : response(detail());
+    }
+    return undefined;
+  } });
+  await click("Deschide mesajul Cerere nuntă");
+  await change('textarea[name="inbox-reply"]', "Răspuns în conflict");
+  await click("Trimite răspunsul");
+  await click("Trimite răspunsul");
+  expect(attempts).toBe(1);
+  await click("Reîncarcă mesajul");
+  await click("Trimite răspunsul");
+  expect(attempts).toBe(2);
+});
+
+test("a persisted failed reply is retried with its existing id", async () => {
+  const failedReply = { id: "77777777-7777-4777-8777-777777777777", text: "Răspuns deja salvat", state: "failed", created_at: "2026-09-04T10:10:00Z", sent_at: null };
+  await render({ handle: (requestPath, options) => {
+    if (requestPath === "/api/admin/inbox/inbound-001") return response(detail("inbound-001", { replies: [failedReply] }));
+    if (requestPath.endsWith("/reply")) return response(detail());
+    return undefined;
+  } });
+  await click("Deschide mesajul Cerere nuntă");
+  await click("Reîncearcă răspunsul");
+  const write = global.fetch.mock.calls.find(([requestPath]) => requestPath.endsWith("/reply"));
+  expect(JSON.parse(write[1].body)).toEqual({ text: "Răspuns deja salvat", reply_id: "77777777-7777-4777-8777-777777777777" });
+});
+
+test("mobile stylesheet keeps the inbox in one column", () => {
+  const css = fs.readFileSync(path.join(__dirname, "..", "admin.css"), "utf8");
+  expect(css).toMatch(/@media \(max-width: 900px\)[\s\S]*?\.admin-inbox-workspace\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/);
 });

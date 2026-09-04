@@ -142,6 +142,7 @@ def test_every_inbox_route_requires_session_and_mutations_require_csrf(
     client, _, _, _, _ = inbox_domain
     for method, path in [
         ("get", "/api/admin/inbox"),
+        ("post", "/api/admin/inbox/search"),
         ("get", "/api/admin/inbox/inbound-001"),
         ("post", "/api/admin/inbox/inbound-001/relay/retry"),
         ("post", "/api/admin/inbox/inbound-001/reply"),
@@ -152,6 +153,7 @@ def test_every_inbox_route_requires_session_and_mutations_require_csrf(
 
     client.cookies.set(ADMIN_COOKIE_NAME, SESSION_TOKEN)
     for path in (
+        "/api/admin/inbox/search",
         "/api/admin/inbox/inbound-001/relay/retry",
         "/api/admin/inbox/inbound-001/reply",
     ):
@@ -175,6 +177,20 @@ def test_list_is_safe_summary_and_detail_is_no_store(inbox_domain):
     assert "HTML inbound-001" not in listing.text
     assert detail.json()["text"] == "Text inbound-001"
     assert "html" not in detail.json()
+
+
+def test_private_search_uses_protected_request_body(inbox_domain):
+    client, _, _, _, _ = inbox_domain
+    response = client.post(
+        "/api/admin/inbox/search",
+        headers=authorize(client),
+        json={"q": "  Cerere  ", "category": "contact", "page": 1, "page_size": 20},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.json()["total"] == 1
+    assert "Cerere" not in str(response.request.url)
 
 
 def test_reply_uses_stored_sender_thread_headers_and_stable_delivery(inbox_domain):

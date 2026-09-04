@@ -29,7 +29,7 @@ function formatSize(value) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function InboxDetail({ message, busy, replyText, replyError, replyStatus, onReplyText, onReply, onRetryRelay, onReload }) {
+function InboxDetail({ message, busy, reloadRequired, replyText, replyError, replyStatus, onReplyText, onReply, onRetryReply, onRetryRelay, onReload }) {
   return <article className="admin-inbox-detail" aria-label={`Mesaj de la ${message.from}`}>
     <header className="admin-inbox-detail__header">
       <div>
@@ -59,6 +59,9 @@ function InboxDetail({ message, busy, replyText, replyError, replyStatus, onRepl
       <ol>{message.replies.map((item) => <li key={item.id}>
         <div><span>{formatDate(item.created_at)}</span><span className={`admin-inbox-state is-${item.state}`}>{item.state === "sent" ? "Trimis" : item.state === "failed" ? "Eșuat" : "În curs"}</span></div>
         <p>{item.text}</p>
+        {item.state !== "sent" ? <button className="admin-button" type="button" disabled={busy} onClick={() => onRetryReply(item)}>
+          <RefreshCw aria-hidden="true" /> Reîncearcă răspunsul
+        </button> : null}
       </li>)}</ol>
     </section> : null}
 
@@ -79,7 +82,7 @@ function InboxDetail({ message, busy, replyText, replyError, replyStatus, onRepl
           disabled={busy} onChange={(event) => onReplyText(event.target.value)} />
       </div>
       <div className="admin-inbox-reply__actions">
-        <button className="admin-button is-primary" type="submit" disabled={busy}>
+        <button className="admin-button is-primary" type="submit" disabled={busy || reloadRequired}>
           <Send aria-hidden="true" /> {busy ? "Se trimite…" : "Trimite răspunsul"}
         </button>
         {replyError ? <button className="admin-button" type="button" onClick={onReload}>Reîncarcă mesajul</button> : null}
@@ -101,8 +104,9 @@ export default function AdminInbox() {
   const [replyText, setReplyText] = useState("");
   const [replyId, setReplyId] = useState(createReplyId);
   const [replyState, setReplyState] = useState({ busy: false, error: "", status: "" });
+  const [replyReloadRequired, setReplyReloadRequired] = useState(false);
   const operationRef = useRef(0);
-  const blocked = replyState.busy || Boolean(replyText.trim());
+  const blocked = replyState.busy || replyReloadRequired || Boolean(replyText.trim());
 
   useEffect(() => {
     if (sessionStatus === "authenticated") return;
@@ -112,6 +116,7 @@ export default function AdminInbox() {
     setDetailState({ data: null, loading: false, error: "" });
     setReplyText("");
     setReplyState({ busy: false, error: "", status: "" });
+    setReplyReloadRequired(false);
   }, [sessionStatus]);
 
   useEffect(() => {
@@ -143,9 +148,11 @@ export default function AdminInbox() {
   }, [request, revision, selectedId, sessionStatus]);
 
   const reload = useCallback(() => {
+    if (replyReloadRequired) setReplyId(createReplyId());
+    setReplyReloadRequired(false);
     setReplyState((current) => ({ ...current, error: "", status: "" }));
     setRevision((value) => value + 1);
-  }, []);
+  }, [replyReloadRequired]);
 
   const selectMessage = useCallback((id) => {
     if (blocked) return;
@@ -153,12 +160,17 @@ export default function AdminInbox() {
     setReplyText("");
     setReplyId(createReplyId());
     setReplyState({ busy: false, error: "", status: "" });
+    setReplyReloadRequired(false);
   }, [blocked]);
 
   const submitFilters = useCallback((event) => {
     event.preventDefault();
     if (blocked) return;
+    operationRef.current += 1;
     setSelectedId(null);
+    setDetailState({ data: null, loading: false, error: "" });
+    setReplyState({ busy: false, error: "", status: "" });
+    setReplyReloadRequired(false);
     setFilters({ q: input.q.trim().slice(0, 200), category: input.category, page: 1 });
   }, [blocked, input]);
 
@@ -169,7 +181,7 @@ export default function AdminInbox() {
       setReplyState({ busy: false, error: "Scrie un răspuns înainte de trimitere.", status: "" });
       return;
     }
-    if (text.length > 12000 || replyState.busy || !detailState.data) return;
+    if (text.length > 12000 || replyState.busy || replyReloadRequired || !detailState.data) return;
     const operation = ++operationRef.current;
     setReplyState({ busy: true, error: "", status: "" });
     try {
@@ -179,10 +191,11 @@ export default function AdminInbox() {
       setReplyText("");
       setReplyId(createReplyId());
       setReplyState({ busy: false, error: "", status: "Răspuns trimis." });
+      setReplyReloadRequired(false);
     } catch (error) {
       if (operation !== operationRef.current) return;
       if (error?.status === 401) return;
-      if (error?.status === 409) setReplyId(createReplyId());
+      if (error?.status === 409) setReplyReloadRequired(true);
       setReplyState({
         busy: false,
         error: error?.status === 409
@@ -190,6 +203,26 @@ export default function AdminInbox() {
           : "Trimiterea nu a fost confirmată. Răspunsul local este păstrat.",
         status: "",
       });
+    }
+  }
+
+  async function retrySavedReply(reply) {
+    if (replyState.busy || !detailState.data || reply?.state === "sent") return;
+    const operation = ++operationRef.current;
+    setReplyState({ busy: true, error: "", status: "" });
+    try {
+      const updated = await replyToInboxMessage(
+        request,
+        detailState.data.id,
+        reply.text,
+        reply.id,
+      );
+      if (operation !== operationRef.current || updated?.id !== detailState.data.id) return;
+      setDetailState({ data: updated, loading: false, error: "" });
+      setReplyState({ busy: false, error: "", status: "Răspuns retrimis." });
+    } catch (error) {
+      if (operation !== operationRef.current || error?.status === 401) return;
+      setReplyState({ busy: false, error: "Răspunsul salvat nu a putut fi retrimis.", status: "" });
     }
   }
 
@@ -212,6 +245,16 @@ export default function AdminInbox() {
     () => Math.min(1000, Math.max(1, Math.ceil(listState.data.total / 20))),
     [listState.data.total],
   );
+
+  const changePage = useCallback((page) => {
+    if (blocked) return;
+    operationRef.current += 1;
+    setSelectedId(null);
+    setDetailState({ data: null, loading: false, error: "" });
+    setReplyState({ busy: false, error: "", status: "" });
+    setReplyReloadRequired(false);
+    setFilters((current) => ({ ...current, page }));
+  }, [blocked]);
 
   if (sessionStatus !== "authenticated") {
     return <p role="status">Este necesară o sesiune Admin activă.</p>;
@@ -253,10 +296,10 @@ export default function AdminInbox() {
         </li>)}</ul>
         <nav aria-label="Paginarea mesajelor">
           <button className="admin-button" type="button" disabled={blocked || listState.loading || filters.page <= 1}
-            onClick={() => setFilters((current) => ({ ...current, page: current.page - 1 }))}>Înapoi</button>
+            onClick={() => changePage(filters.page - 1)}>Înapoi</button>
           <span>{filters.page} / {pages}</span>
           <button className="admin-button" type="button" disabled={blocked || listState.loading || filters.page >= pages}
-            onClick={() => setFilters((current) => ({ ...current, page: current.page + 1 }))}>Înainte</button>
+            onClick={() => changePage(filters.page + 1)}>Înainte</button>
         </nav>
       </aside>
 
@@ -264,10 +307,10 @@ export default function AdminInbox() {
         {detailState.loading ? <p role="status">Se încarcă mesajul…</p> : null}
         {detailState.error ? <div className="cms-notice is-error" role="alert"><span>{detailState.error}</span><button className="admin-button" onClick={reload}>Reîncarcă mesajul</button></div> : null}
         {!detailState.loading && !detailState.error && !detailState.data ? <div className="admin-inbox-empty"><Mail aria-hidden="true" /><h2>Selectează un mesaj</h2><p>Conținutul și răspunsurile apar aici.</p></div> : null}
-        {detailState.data ? <InboxDetail message={detailState.data} busy={replyState.busy} replyText={replyText}
+        {detailState.data ? <InboxDetail message={detailState.data} busy={replyState.busy} reloadRequired={replyReloadRequired} replyText={replyText}
           replyError={replyState.error} replyStatus={replyState.status} onReplyText={(value) => {
             setReplyText(value); setReplyState((current) => ({ ...current, error: "", status: "" }));
-          }} onReply={sendReply} onRetryRelay={retryRelay} onReload={reload} /> : null}
+          }} onReply={sendReply} onRetryReply={retrySavedReply} onRetryRelay={retryRelay} onReload={reload} /> : null}
       </div>
     </div>
   </section>;

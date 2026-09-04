@@ -4,16 +4,20 @@ export const INBOX_CATEGORIES = {
 };
 
 export function listInboxMessages(request, filters, options = {}) {
-  const query = new URLSearchParams({
-    page: String(filters.page),
-    page_size: "20",
-  });
   const search = String(filters.q || "").trim().slice(0, 200);
-  if (search) query.set("q", search);
-  if (Object.hasOwn(INBOX_CATEGORIES, filters.category)) {
-    query.set("category", filters.category);
-  }
-  return request(`/api/admin/inbox?${query}`, options);
+  const category = Object.hasOwn(INBOX_CATEGORIES, filters.category)
+    ? filters.category
+    : null;
+  return request("/api/admin/inbox/search", {
+    ...options,
+    method: "POST",
+    body: JSON.stringify({
+      q: search,
+      category,
+      page: filters.page,
+      page_size: 20,
+    }),
+  });
 }
 
 export function getInboxMessage(request, id, options = {}) {

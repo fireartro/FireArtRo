@@ -255,6 +255,20 @@ class InboundPage(StrictModel):
     page_size: int = Field(ge=1, le=MAX_PAGE_SIZE)
 
 
+class InboundSearchQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    q: str = Field(default="", max_length=MAX_SEARCH_LENGTH)
+    category: InboundCategory | None = None
+    page: int = Field(default=1, ge=1, le=MAX_PAGE)
+    page_size: int = Field(default=20, ge=1, le=MAX_PAGE_SIZE)
+
+    @field_validator("q", mode="before")
+    @classmethod
+    def trim_query(cls, value: Any) -> Any:
+        return value.strip() if isinstance(value, str) else value
+
+
 class InboundReplyCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -1570,6 +1584,19 @@ def create_inbound_admin_router(
                 category=category,
                 page=page,
                 page_size=page_size,
+            )
+            return response(listing.model_dump(mode="json"))
+        except (PyMongoError, ValidationError, RuntimeError):
+            raise _inbox_error(503, "Mesajele nu sunt disponibile momentan.") from None
+
+    @router.post("/search")
+    async def search_messages(command: InboundSearchQuery):
+        try:
+            listing = await inbound_repository.list(
+                q=command.q,
+                category=command.category,
+                page=command.page,
+                page_size=command.page_size,
             )
             return response(listing.model_dump(mode="json"))
         except (PyMongoError, ValidationError, RuntimeError):
