@@ -307,8 +307,8 @@ async def test_get_received_email_normalizes_and_caps_provider_content():
     assert len(received.message_id) == 998
     assert len(received.references) == 20
     assert all(len(reference) == 998 for reference in received.references)
-    assert received.references[0] == "<REFERENCE-00-" + "R" * 984
-    assert received.references[-1] == "<REFERENCE-19-" + "R" * 984
+    assert received.references[0] == "<REFERENCE-02-" + "R" * 984
+    assert received.references[-1] == "<REFERENCE-21-" + "R" * 984
     assert len(received.attachments) == 50
     assert all(len(attachment.id) == 200 for attachment in received.attachments)
     assert all(len(attachment.filename) == 240 for attachment in received.attachments)

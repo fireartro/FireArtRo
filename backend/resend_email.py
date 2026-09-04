@@ -158,7 +158,7 @@ def _normalized_references(value: Any) -> list[str]:
         item.strip()[:MAX_MESSAGE_ID_LENGTH]
         for item in values
         if isinstance(item, str) and item.strip()
-    ][:MAX_REFERENCES]
+    ][-MAX_REFERENCES:]
 
 
 def _attachment_size(value: Any) -> int:

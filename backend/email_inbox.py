@@ -107,7 +107,7 @@ def _normalized_references(value: Any) -> list[str]:
         item.strip()[:MAX_MESSAGE_ID_LENGTH]
         for item in values
         if isinstance(item, str) and item.strip()
-    ][:MAX_REFERENCES]
+    ][-MAX_REFERENCES:]
 
 
 def _attachment_size(value: Any) -> int:
@@ -207,6 +207,7 @@ class InboundMessage(StrictModel):
     relay_sent_at: datetime | None = None
     latest_reply_at: datetime | None = None
     reply_count: int = Field(default=0, ge=0)
+    accounted_reply_ids: list[str] = Field(default_factory=list, max_length=10_000)
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -257,7 +258,7 @@ class InboundPage(StrictModel):
 class InboundReplyCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    reply_id: str = Field(default_factory=lambda: str(uuid.uuid4()), max_length=36)
+    reply_id: str = Field(max_length=36)
     text: str = Field(min_length=1, max_length=MAX_REPLY_TEXT_LENGTH)
 
     @field_validator("reply_id")
@@ -358,6 +359,7 @@ INBOUND_INTERNAL_FIELDS = {
     "relay_sent_at": 1,
     "latest_reply_at": 1,
     "reply_count": 1,
+    "accounted_reply_ids": 1,
     "created_at": 1,
     "updated_at": 1,
 }
@@ -654,6 +656,15 @@ class MongoInboundReplyRepository:
         )
         return _reply(document)
 
+    async def get(self, reply_id: str) -> InboundReply | None:
+        self._ready()
+        document = await self.collection.find_one(
+            {"id": _bounded_string(reply_id, MAX_IDENTIFIER_LENGTH, strip=True)},
+            INBOUND_REPLY_FIELDS,
+            max_time_ms=QUERY_TIMEOUT_MS,
+        )
+        return _reply(document)
+
     @staticmethod
     def _same_content(existing: InboundReply, candidate: InboundReply) -> bool:
         immutable = (
@@ -838,6 +849,30 @@ class InboundReplyService:
         self.delivery_repository = delivery_repository
         self.inbound_repository = inbound_repository
 
+    async def _converge_sent_reply(
+        self,
+        message: InboundMessage,
+        saved_reply: InboundReply,
+        *,
+        provider_id: str,
+    ) -> InboundReply:
+        current = saved_reply
+        if current.state == "failed":
+            current = await self.reply_repository.reset_failed(current.id)
+            if current is None:
+                current = await self.reply_repository.get(saved_reply.id)
+        if current is not None and current.state == "pending":
+            transitioned = await self.reply_repository.mark_sent(
+                current.id, resend_email_id=provider_id
+            )
+            current = transitioned or await self.reply_repository.get(current.id)
+        if current is None or current.state != "sent":
+            raise InboundReplyError("delivery_failed")
+        accounted = await self.inbound_repository.mark_reply_sent(message.id, current.id)
+        if accounted is None:
+            raise InboundReplyError("delivery_failed")
+        return current
+
     async def reply(
         self, message: InboundMessage, *, reply_id: str, text: str
     ) -> InboundReply:
@@ -878,18 +913,11 @@ class InboundReplyService:
         )
 
         if delivery.state == "sent":
-            if saved_reply.state == "failed":
-                saved_reply = await self.reply_repository.reset_failed(saved_reply.id)
-                if saved_reply is None:
-                    raise InboundReplyError("delivery_failed")
-            transitioned = await self.reply_repository.mark_sent(
-                saved_reply.id,
-                resend_email_id=delivery.resend_email_id or "",
+            return await self._converge_sent_reply(
+                message,
+                saved_reply,
+                provider_id=delivery.resend_email_id or "",
             )
-            if transitioned is not None:
-                await self.inbound_repository.mark_reply_sent(message.id)
-                return transitioned
-            return saved_reply
 
         if delivery.state == "failed":
             delivery = await self.delivery_repository.reset_failed(delivery.id)
@@ -927,13 +955,11 @@ class InboundReplyService:
         await self.delivery_repository.mark_sent(
             delivery.id, resend_email_id=provider_id
         )
-        sent_reply = await self.reply_repository.mark_sent(
-            saved_reply.id, resend_email_id=provider_id
+        return await self._converge_sent_reply(
+            message,
+            saved_reply,
+            provider_id=provider_id,
         )
-        if sent_reply is None:
-            raise InboundReplyError("delivery_failed")
-        await self.inbound_repository.mark_reply_sent(message.id)
-        return sent_reply
 
 
 class InboundRelayService:
@@ -1160,6 +1186,7 @@ class MongoInboundMessageRepository:
             relay_sent_at=None,
             latest_reply_at=None,
             reply_count=0,
+            accounted_reply_ids=[],
             created_at=created_at,
             updated_at=now,
         )
@@ -1457,22 +1484,45 @@ class MongoInboundMessageRepository:
             error_code=None,
         )
 
-    async def mark_reply_sent(self, message_id: str) -> InboundMessage | None:
+    async def mark_reply_sent(
+        self, message_id: str, reply_id: str
+    ) -> InboundMessage | None:
         now = _aware_utc(self.clock())
+        normalized_message_id = _bounded_string(
+            message_id, MAX_IDENTIFIER_LENGTH, strip=True
+        )
+        normalized_reply_id = _bounded_string(
+            reply_id, MAX_IDENTIFIER_LENGTH, strip=True
+        )
         document = await self.collection.find_one_and_update(
             {
-                "id": _bounded_string(message_id, MAX_IDENTIFIER_LENGTH, strip=True),
+                "id": normalized_message_id,
                 "ingest_state": {"$ne": "reserved"},
+                "accounted_reply_ids": {"$ne": normalized_reply_id},
             },
             {
                 "$set": {"latest_reply_at": now, "updated_at": now},
                 "$inc": {"reply_count": 1},
+                "$addToSet": {"accounted_reply_ids": normalized_reply_id},
             },
             return_document=ReturnDocument.AFTER,
             projection=INBOUND_INTERNAL_FIELDS,
             maxTimeMS=QUERY_TIMEOUT_MS,
         )
-        return _inbound(document)
+        if document is not None:
+            return _inbound(document)
+        existing = await self.collection.find_one(
+            {
+                "id": normalized_message_id,
+                "ingest_state": {"$ne": "reserved"},
+            },
+            INBOUND_INTERNAL_FIELDS,
+            max_time_ms=QUERY_TIMEOUT_MS,
+        )
+        parsed = _inbound(existing)
+        if parsed is not None and normalized_reply_id in parsed.accounted_reply_ids:
+            return parsed
+        return None
 
 
 def _inbox_error(status_code: int, detail: str) -> HTTPException:

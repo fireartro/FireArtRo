@@ -36,7 +36,9 @@ def matches(document, query):
                 return False
             if operator == "$in" and actual not in value:
                 return False
-            if operator == "$ne" and actual == value:
+            if operator == "$ne" and (
+                actual == value or (isinstance(actual, list) and value in actual)
+            ):
                 return False
             if operator == "$lt" and not actual < value:
                 return False
@@ -203,7 +205,7 @@ class AsyncCollection:
         await asyncio.sleep(0)
         assert not set(kwargs) - {"maxTimeMS"}
         self.record_query_timeout(max_time_ms or kwargs.get("maxTimeMS"))
-        assert not set(update) - {"$set", "$setOnInsert", "$inc"}
+        assert not set(update) - {"$set", "$setOnInsert", "$inc", "$addToSet"}
         existing = next((item for item in self.documents if matches(item, query)), None)
         before = deepcopy(existing)
         if existing is None and upsert:
@@ -219,6 +221,10 @@ class AsyncCollection:
             }
             for key, amount in update.get("$inc", {}).items():
                 existing[key] = existing.get(key, 0) + amount
+            for key, value in update.get("$addToSet", {}).items():
+                existing.setdefault(key, [])
+                if value not in existing[key]:
+                    existing[key].append(deepcopy(value))
             self.enforce_unique(existing)
             self.documents.append(existing)
             before = None
@@ -227,6 +233,10 @@ class AsyncCollection:
             candidate.update(deepcopy(update.get("$set", {})))
             for key, amount in update.get("$inc", {}).items():
                 candidate[key] = candidate.get(key, 0) + amount
+            for key, value in update.get("$addToSet", {}).items():
+                candidate.setdefault(key, [])
+                if value not in candidate[key]:
+                    candidate[key].append(deepcopy(value))
             self.enforce_unique(candidate, ignored=existing)
             existing.clear()
             existing.update(candidate)
@@ -962,13 +972,18 @@ async def test_inbound_repository_searches_literal_text_and_updates_relay_reply_
     failed = await repository.mark_relay_failed("inbound-failed")
     clock.value = datetime(2026, 9, 4, 15, 1, tzinfo=timezone.utc)
     retried = await repository.mark_relay_pending("inbound-failed")
-    replied = await repository.mark_reply_sent("inbound-literal")
+    replied = await repository.mark_reply_sent("inbound-literal", "reply-literal")
+    duplicate_reply = await repository.mark_reply_sent(
+        "inbound-literal", "reply-literal"
+    )
 
     assert [item["id"] for item in searched["items"]] == ["inbound-literal"]
     assert as_document(relayed)["relay_state"] == "sent"
     assert as_document(failed)["relay_state"] == "failed"
     assert as_document(retried)["relay_state"] == "pending"
     assert as_document(replied)["latest_reply_at"] == clock.value
+    assert as_document(duplicate_reply)["reply_count"] == 1
+    assert collection.documents[0]["accounted_reply_ids"] == ["reply-literal"]
     assert collection.query_timeouts
 
 

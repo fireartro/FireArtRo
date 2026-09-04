@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from pymongo.errors import PyMongoError
 
 from auth import ADMIN_COOKIE_NAME, AuthError, AdminIdentity
 from resend_email import ResendError
@@ -50,6 +51,31 @@ class ResendSender:
         if self.failure is not None:
             raise self.failure
         return "re_reply_001"
+
+
+class ConcurrentResendSender(ResendSender):
+    def __init__(self):
+        super().__init__()
+        self.both_started = asyncio.Event()
+
+    async def send(self, **kwargs):
+        self.calls.append(kwargs)
+        if len(self.calls) == 2:
+            self.both_started.set()
+        await asyncio.wait_for(self.both_started.wait(), timeout=1)
+        return "re_reply_001"
+
+
+class FailFirstAccountingRepository:
+    def __init__(self, repository):
+        self.repository = repository
+        self.failed = False
+
+    async def mark_reply_sent(self, message_id, reply_id):
+        if not self.failed:
+            self.failed = True
+            raise PyMongoError("simulated post-send accounting outage")
+        return await self.repository.mark_reply_sent(message_id, reply_id)
 
 
 @pytest.fixture
@@ -211,6 +237,90 @@ def test_reply_uses_stored_sender_thread_headers_and_stable_delivery(inbox_domai
     assert len(delivery_collection.documents) == 1
 
 
+def test_reply_id_is_required_for_safe_client_retry(inbox_domain):
+    client, _, _, _, sender = inbox_domain
+
+    response = client.post(
+        "/api/admin/inbox/inbound-001/reply",
+        headers=authorize(client),
+        json={"text": "Salut"},
+    )
+
+    assert response.status_code == 422
+    assert sender.calls == []
+
+
+@pytest.mark.asyncio
+async def test_concurrent_same_reply_id_converges_without_false_failure():
+    from email_inbox import (
+        InboundReplyService,
+        MongoEmailDeliveryRepository,
+        MongoInboundMessageRepository,
+        MongoInboundReplyRepository,
+    )
+
+    inbound_collection = AsyncCollection([
+        inbound_document("inbound-concurrent", datetime(2026, 9, 4, 10, tzinfo=timezone.utc))
+    ])
+    delivery_collection = AsyncCollection()
+    reply_collection = AsyncCollection()
+    inbound_repository = MongoInboundMessageRepository(inbound_collection)
+    reply_repository = MongoInboundReplyRepository(reply_collection)
+    delivery_repository = MongoEmailDeliveryRepository(delivery_collection)
+    sender = ConcurrentResendSender()
+    service = InboundReplyService(
+        sender, reply_repository, delivery_repository, inbound_repository
+    )
+    message = await inbound_repository.get_internal("inbound-concurrent")
+    reply_id = "33333333-3333-4333-8333-333333333333"
+
+    results = await asyncio.gather(
+        service.reply(message, reply_id=reply_id, text="Același răspuns"),
+        service.reply(message, reply_id=reply_id, text="Același răspuns"),
+    )
+
+    assert [result.state for result in results] == ["sent", "sent"]
+    assert len(sender.calls) == 2
+    assert len({call["idempotency_key"] for call in sender.calls}) == 1
+    assert inbound_collection.documents[0]["reply_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_retry_repairs_post_send_message_accounting_without_resending():
+    from email_inbox import (
+        InboundReplyService,
+        MongoEmailDeliveryRepository,
+        MongoInboundMessageRepository,
+        MongoInboundReplyRepository,
+    )
+
+    inbound_collection = AsyncCollection([
+        inbound_document("inbound-accounting", datetime(2026, 9, 4, 10, tzinfo=timezone.utc))
+    ])
+    delivery_collection = AsyncCollection()
+    reply_collection = AsyncCollection()
+    durable_inbound_repository = MongoInboundMessageRepository(inbound_collection)
+    flaky_inbound_repository = FailFirstAccountingRepository(durable_inbound_repository)
+    sender = ResendSender()
+    service = InboundReplyService(
+        sender,
+        MongoInboundReplyRepository(reply_collection),
+        MongoEmailDeliveryRepository(delivery_collection),
+        flaky_inbound_repository,
+    )
+    message = await durable_inbound_repository.get_internal("inbound-accounting")
+    reply_id = "44444444-4444-4444-8444-444444444444"
+
+    with pytest.raises(PyMongoError):
+        await service.reply(message, reply_id=reply_id, text="Răspuns salvat")
+    repaired = await service.reply(message, reply_id=reply_id, text="Răspuns salvat")
+
+    assert repaired.state == "sent"
+    assert len(sender.calls) == 1
+    assert inbound_collection.documents[0]["reply_count"] == 1
+    assert inbound_collection.documents[0]["latest_reply_at"] is not None
+
+
 def test_failed_reply_is_persisted_and_same_reply_id_can_retry(inbox_domain):
     client, _, delivery_collection, reply_collection, sender = inbox_domain
     headers = authorize(client)
@@ -244,7 +354,10 @@ def test_reply_text_is_trimmed_and_bounded(inbox_domain, text):
     response = client.post(
         "/api/admin/inbox/inbound-001/reply",
         headers=authorize(client),
-        json={"text": text},
+        json={
+            "reply_id": "55555555-5555-4555-8555-555555555555",
+            "text": text,
+        },
     )
 
     assert response.status_code == 422
@@ -256,7 +369,10 @@ def test_reply_accepts_twelve_thousand_unicode_characters(inbox_domain):
     response = client.post(
         "/api/admin/inbox/inbound-001/reply",
         headers=authorize(client),
-        json={"text": "ă" * 12_000},
+        json={
+            "reply_id": "66666666-6666-4666-8666-666666666666",
+            "text": "ă" * 12_000,
+        },
     )
 
     assert response.status_code == 200
