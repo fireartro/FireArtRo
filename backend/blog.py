@@ -56,6 +56,12 @@ def utc_now():
 def request_size_limit(path, method):
     if path == "/api/webhooks/resend" and method.upper() == "POST":
         return 64 * 1024
+    if (
+        path.startswith("/api/admin/inbox/")
+        and path.endswith("/reply")
+        and method.upper() == "POST"
+    ):
+        return 128 * 1024
     if path == "/api/admin/blog/media":
         return 6 * 1024 * 1024
     if path.startswith("/api/admin/blog/posts") and method.upper() in {"POST", "PUT"}:

@@ -10,9 +10,13 @@ from datetime import datetime, timezone
 from email.utils import parseaddr
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 from pymongo import ReturnDocument
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import DuplicateKeyError, PyMongoError
+
+from auth import require_admin_session
 
 from resend_email import (
     MAX_ADDRESS_LENGTH,
@@ -39,6 +43,8 @@ MAX_SEARCH_LENGTH = 200
 MAX_PAGE = 1_000
 MAX_PAGE_SIZE = 100
 MAX_RELATED_DELIVERIES = 100
+MAX_REPLY_TEXT_LENGTH = 12_000
+INBOX_REPLY_MAX_BYTES = 128 * 1024
 
 DeliveryKind = Literal["quote_notification", "inbound_relay", "admin_reply"]
 DeliveryState = Literal["pending", "sent", "failed"]
@@ -248,12 +254,82 @@ class InboundPage(StrictModel):
     page_size: int = Field(ge=1, le=MAX_PAGE_SIZE)
 
 
+class InboundReplyCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    reply_id: str = Field(default_factory=lambda: str(uuid.uuid4()), max_length=36)
+    text: str = Field(min_length=1, max_length=MAX_REPLY_TEXT_LENGTH)
+
+    @field_validator("reply_id")
+    @classmethod
+    def validate_reply_id(cls, value: str) -> str:
+        try:
+            parsed = uuid.UUID(value)
+        except (ValueError, TypeError, AttributeError):
+            raise ValueError("reply_id must be a UUID") from None
+        if str(parsed) != value.lower():
+            raise ValueError("reply_id must be a canonical UUID")
+        return str(parsed)
+
+    @field_validator("text", mode="before")
+    @classmethod
+    def trim_text(cls, value: Any) -> Any:
+        return value.strip() if isinstance(value, str) else value
+
+
+class InboundReply(StrictModel):
+    id: str = Field(min_length=1, max_length=MAX_IDENTIFIER_LENGTH)
+    inbound_message_id: str = Field(min_length=1, max_length=MAX_IDENTIFIER_LENGTH)
+    idempotency_key: str = Field(min_length=1, max_length=MAX_IDEMPOTENCY_KEY_LENGTH)
+    recipient: str = Field(min_length=1, max_length=MAX_ADDRESS_LENGTH)
+    subject: str = Field(max_length=MAX_SUBJECT_LENGTH)
+    text: str = Field(min_length=1, max_length=MAX_REPLY_TEXT_LENGTH)
+    in_reply_to: str = Field(default="", max_length=MAX_MESSAGE_ID_LENGTH)
+    references: list[str] = Field(default_factory=list, max_length=MAX_REFERENCES)
+    state: DeliveryState = "pending"
+    resend_email_id: str | None = Field(default=None, max_length=MAX_IDENTIFIER_LENGTH)
+    error_code: DeliveryErrorCode | None = None
+    created_at: datetime
+    sent_at: datetime | None = None
+    updated_at: datetime
+
+    @field_validator("created_at", "sent_at", "updated_at")
+    @classmethod
+    def validate_timestamp(cls, value: datetime | None) -> datetime | None:
+        return _aware_utc(value) if value is not None else None
+
+
+class InboundReplySummary(StrictModel):
+    id: str
+    text: str
+    state: DeliveryState
+    created_at: datetime
+    sent_at: datetime | None = None
+
+    @field_validator("created_at", "sent_at")
+    @classmethod
+    def validate_timestamp(cls, value: datetime | None) -> datetime | None:
+        return _aware_utc(value) if value is not None else None
+
+
 class InboundIdentityConflict(RuntimeError):
     """A webhook/provider ID was already reserved for a different pair."""
 
 
 class InboundRelayError(RuntimeError):
     """A relay failed with an allowlisted provider error code."""
+
+    def __init__(self, error_code: DeliveryErrorCode):
+        self.error_code = error_code
+        super().__init__(error_code)
+
+
+class InboundReplyConflict(RuntimeError):
+    """A reply UUID was already used with different immutable content."""
+
+
+class InboundReplyError(RuntimeError):
+    """A reply failed with an allowlisted provider error code."""
 
     def __init__(self, error_code: DeliveryErrorCode):
         self.error_code = error_code
@@ -308,6 +384,15 @@ INBOUND_DETAIL_FIELDS = {
     "relay_state": 1,
     "latest_reply_at": 1,
 }
+INBOUND_REPLY_FIELDS = {"_id": 0, **dict.fromkeys(InboundReply.model_fields, 1)}
+INBOUND_REPLY_SUMMARY_FIELDS = {
+    "_id": 0,
+    "id": 1,
+    "text": 1,
+    "state": 1,
+    "created_at": 1,
+    "sent_at": 1,
+}
 
 
 def _projection_for(
@@ -333,6 +418,12 @@ def _inbound(document: Mapping[str, Any] | None) -> InboundMessage | None:
     if document is None:
         return None
     return InboundMessage.model_validate(_projection_for(InboundMessage, document))
+
+
+def _reply(document: Mapping[str, Any] | None) -> InboundReply | None:
+    if document is None:
+        return None
+    return InboundReply.model_validate(_projection_for(InboundReply, document))
 
 
 class MongoEmailDeliveryRepository:
@@ -531,6 +622,320 @@ class MongoEmailDeliveryRepository:
         return [delivery for item in documents if (delivery := _delivery(item))]
 
 
+class MongoInboundReplyRepository:
+    """Persist reply content and its provider-safe delivery state before sending."""
+
+    def __init__(self, collection, *, clock: Callable[[], datetime] = _utc_now):
+        self.collection = collection
+        self.clock = clock
+
+    def _ready(self) -> None:
+        if self.collection is None:
+            raise RuntimeError("reply repository unavailable")
+
+    async def create_indexes(self) -> None:
+        self._ready()
+        await self.collection.create_index("id", unique=True)
+        await self.collection.create_index("idempotency_key", unique=True)
+        await self.collection.create_index(
+            [("inbound_message_id", 1), ("created_at", 1), ("id", 1)]
+        )
+
+    async def _get_by_key(self, idempotency_key: str) -> InboundReply | None:
+        self._ready()
+        document = await self.collection.find_one(
+            {
+                "idempotency_key": _bounded_string(
+                    idempotency_key, MAX_IDEMPOTENCY_KEY_LENGTH, strip=True
+                )
+            },
+            INBOUND_REPLY_FIELDS,
+            max_time_ms=QUERY_TIMEOUT_MS,
+        )
+        return _reply(document)
+
+    @staticmethod
+    def _same_content(existing: InboundReply, candidate: InboundReply) -> bool:
+        immutable = (
+            "id",
+            "inbound_message_id",
+            "idempotency_key",
+            "recipient",
+            "subject",
+            "text",
+            "in_reply_to",
+            "references",
+        )
+        return all(
+            getattr(existing, name) == getattr(candidate, name) for name in immutable
+        )
+
+    async def create_or_get(
+        self,
+        *,
+        reply_id: str,
+        inbound_message_id: str,
+        idempotency_key: str,
+        recipient: str,
+        subject: str,
+        text: str,
+        in_reply_to: str,
+        references: Sequence[str],
+    ) -> InboundReply:
+        now = _aware_utc(self.clock())
+        candidate = InboundReply(
+            id=_bounded_string(reply_id, MAX_IDENTIFIER_LENGTH, strip=True),
+            inbound_message_id=_bounded_string(
+                inbound_message_id, MAX_IDENTIFIER_LENGTH, strip=True
+            ),
+            idempotency_key=_bounded_string(
+                idempotency_key, MAX_IDEMPOTENCY_KEY_LENGTH, strip=True
+            ),
+            recipient=_normalized_address(recipient),
+            subject=_bounded_string(subject, MAX_SUBJECT_LENGTH),
+            text=_bounded_string(text, MAX_REPLY_TEXT_LENGTH, strip=True),
+            in_reply_to=_bounded_string(in_reply_to, MAX_MESSAGE_ID_LENGTH, strip=True),
+            references=_normalized_references(references)[-MAX_REFERENCES:],
+            state="pending",
+            resend_email_id=None,
+            error_code=None,
+            created_at=now,
+            sent_at=None,
+            updated_at=now,
+        )
+        existing = await self._get_by_key(candidate.idempotency_key)
+        if existing is not None:
+            if not self._same_content(existing, candidate):
+                raise InboundReplyConflict()
+            return existing
+        try:
+            await self.collection.insert_one(candidate.model_dump(by_alias=True))
+            return candidate
+        except DuplicateKeyError:
+            winner = await self._get_by_key(candidate.idempotency_key)
+            if winner is None or not self._same_content(winner, candidate):
+                raise InboundReplyConflict() from None
+            return winner
+
+    async def _transition(
+        self,
+        reply_id: str,
+        *,
+        from_state: DeliveryState,
+        to_state: DeliveryState,
+        resend_email_id: str | None,
+        error_code: DeliveryErrorCode | None,
+    ) -> InboundReply | None:
+        self._ready()
+        now = _aware_utc(self.clock())
+        values: dict[str, Any] = {
+            "state": to_state,
+            "resend_email_id": (
+                _bounded_string(resend_email_id, MAX_IDENTIFIER_LENGTH, strip=True)
+                or None
+            ),
+            "error_code": error_code,
+            "sent_at": now if to_state == "sent" else None,
+            "updated_at": now,
+        }
+        document = await self.collection.find_one_and_update(
+            {
+                "id": _bounded_string(reply_id, MAX_IDENTIFIER_LENGTH, strip=True),
+                "state": from_state,
+            },
+            {"$set": values},
+            return_document=ReturnDocument.AFTER,
+            projection=INBOUND_REPLY_FIELDS,
+            maxTimeMS=QUERY_TIMEOUT_MS,
+        )
+        return _reply(document)
+
+    async def mark_sent(
+        self, reply_id: str, *, resend_email_id: str
+    ) -> InboundReply | None:
+        return await self._transition(
+            reply_id,
+            from_state="pending",
+            to_state="sent",
+            resend_email_id=resend_email_id,
+            error_code=None,
+        )
+
+    async def mark_failed(
+        self, reply_id: str, *, error_code: DeliveryErrorCode
+    ) -> InboundReply | None:
+        safe_error = DeliveryFailure(error_code=error_code).error_code
+        return await self._transition(
+            reply_id,
+            from_state="pending",
+            to_state="failed",
+            resend_email_id=None,
+            error_code=safe_error,
+        )
+
+    async def reset_failed(self, reply_id: str) -> InboundReply | None:
+        return await self._transition(
+            reply_id,
+            from_state="failed",
+            to_state="pending",
+            resend_email_id=None,
+            error_code=None,
+        )
+
+    async def list_for_message(
+        self, inbound_message_id: str
+    ) -> list[InboundReplySummary]:
+        self._ready()
+        cursor = (
+            self.collection.find(
+                {
+                    "inbound_message_id": _bounded_string(
+                        inbound_message_id, MAX_IDENTIFIER_LENGTH, strip=True
+                    )
+                },
+                INBOUND_REPLY_SUMMARY_FIELDS,
+            )
+            .sort([("created_at", 1), ("id", 1)])
+            .limit(MAX_RELATED_DELIVERIES)
+            .max_time_ms(QUERY_TIMEOUT_MS)
+        )
+        documents = await cursor.to_list(length=MAX_RELATED_DELIVERIES)
+        return [InboundReplySummary.model_validate(item) for item in documents]
+
+
+def _reply_subject(original: str) -> str:
+    normalized = original.strip()
+    while True:
+        without_prefix = re.sub(r"^re\s*:\s*", "", normalized, count=1, flags=re.I)
+        if without_prefix == normalized:
+            break
+        normalized = without_prefix
+    normalized = normalized or "(fără subiect)"
+    return _bounded_string(f"Re: {normalized}", MAX_SUBJECT_LENGTH)
+
+
+def _valid_message_reference(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    if not re.fullmatch(r"<[^<>\s]{1,996}>", normalized):
+        return None
+    return normalized[:MAX_MESSAGE_ID_LENGTH]
+
+
+class InboundReplyService:
+    """Persist and send a plain-text Admin reply to the verified stored sender."""
+
+    def __init__(
+        self,
+        resend_client,
+        reply_repository,
+        delivery_repository,
+        inbound_repository,
+    ):
+        self.resend_client = resend_client
+        self.reply_repository = reply_repository
+        self.delivery_repository = delivery_repository
+        self.inbound_repository = inbound_repository
+
+    async def reply(
+        self, message: InboundMessage, *, reply_id: str, text: str
+    ) -> InboundReply:
+        if (
+            self.resend_client is None
+            or self.reply_repository is None
+            or self.delivery_repository is None
+            or self.inbound_repository is None
+        ):
+            raise InboundReplyError("not_configured")
+
+        recipient = _normalized_address(message.sender)
+        if not recipient or "@" not in recipient:
+            raise InboundReplyError("delivery_failed")
+        subject = _reply_subject(message.subject)
+        in_reply_to = _valid_message_reference(message.message_id) or ""
+        references = [
+            normalized
+            for item in [*message.references, in_reply_to]
+            if (normalized := _valid_message_reference(item))
+        ][-MAX_REFERENCES:]
+        key = f"admin-reply/{message.id}/{reply_id}"
+        saved_reply = await self.reply_repository.create_or_get(
+            reply_id=reply_id,
+            inbound_message_id=message.id,
+            idempotency_key=key,
+            recipient=recipient,
+            subject=subject,
+            text=text,
+            in_reply_to=in_reply_to,
+            references=references,
+        )
+        delivery = await self.delivery_repository.create_or_get(
+            kind="admin_reply",
+            idempotency_key=key,
+            recipient=recipient,
+            related_inbound_message_id=message.id,
+        )
+
+        if delivery.state == "sent":
+            if saved_reply.state == "failed":
+                saved_reply = await self.reply_repository.reset_failed(saved_reply.id)
+                if saved_reply is None:
+                    raise InboundReplyError("delivery_failed")
+            transitioned = await self.reply_repository.mark_sent(
+                saved_reply.id,
+                resend_email_id=delivery.resend_email_id or "",
+            )
+            if transitioned is not None:
+                await self.inbound_repository.mark_reply_sent(message.id)
+                return transitioned
+            return saved_reply
+
+        if delivery.state == "failed":
+            delivery = await self.delivery_repository.reset_failed(delivery.id)
+            if saved_reply.state == "failed":
+                saved_reply = await self.reply_repository.reset_failed(saved_reply.id)
+            if delivery is None or saved_reply is None:
+                raise InboundReplyError("delivery_failed")
+        elif saved_reply.state == "failed":
+            saved_reply = await self.reply_repository.reset_failed(saved_reply.id)
+            if saved_reply is None:
+                raise InboundReplyError("delivery_failed")
+
+        if delivery.state != "pending" or saved_reply.state != "pending":
+            raise InboundReplyError("delivery_failed")
+
+        try:
+            provider_id = await self.resend_client.send(
+                to=recipient,
+                subject=subject,
+                text=text,
+                html=f"<pre>{html.escape(text)}</pre>",
+                idempotency_key=key,
+                in_reply_to=in_reply_to or None,
+                references=references,
+            )
+        except ResendError as error:
+            await self.delivery_repository.mark_failed(
+                delivery.id, error_code=error.code
+            )
+            await self.reply_repository.mark_failed(
+                saved_reply.id, error_code=error.code
+            )
+            raise InboundReplyError(error.code) from None
+
+        await self.delivery_repository.mark_sent(
+            delivery.id, resend_email_id=provider_id
+        )
+        sent_reply = await self.reply_repository.mark_sent(
+            saved_reply.id, resend_email_id=provider_id
+        )
+        if sent_reply is None:
+            raise InboundReplyError("delivery_failed")
+        await self.inbound_repository.mark_reply_sent(message.id)
+        return sent_reply
+
+
 class InboundRelayService:
     """Relay a verified inbound message to the owner through one stable key."""
 
@@ -572,6 +977,10 @@ class InboundRelayService:
             related_inbound_message_id=message.id,
         )
         if delivery.state == "sent":
+            if message.relay_state == "failed":
+                await self.inbound_repository.mark_relay_pending(message.id)
+            if message.relay_state != "sent":
+                await self.inbound_repository.mark_relay_sent(message.id)
             return delivery
         if delivery.state == "failed":
             if not retry:
@@ -586,6 +995,7 @@ class InboundRelayService:
                 )
             if delivery.state != "pending":
                 return delivery
+        if retry and message.relay_state == "failed":
             await self.inbound_repository.mark_relay_pending(message.id)
 
         subject, text, html_body = self._message(message)
@@ -1063,3 +1473,120 @@ class MongoInboundMessageRepository:
             maxTimeMS=QUERY_TIMEOUT_MS,
         )
         return _inbound(document)
+
+
+def _inbox_error(status_code: int, detail: str) -> HTTPException:
+    return HTTPException(
+        status_code=status_code,
+        detail=detail,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+def create_inbound_admin_router(
+    inbound_repository,
+    reply_repository,
+    relay_service,
+    reply_service,
+):
+    router = APIRouter(
+        prefix="/api/admin/inbox",
+        tags=["admin-inbox"],
+        dependencies=[Depends(require_admin_session)],
+    )
+
+    def response(payload: Any) -> JSONResponse:
+        return JSONResponse(payload, headers={"Cache-Control": "no-store"})
+
+    async def detail_payload(message_id: str) -> dict[str, Any]:
+        detail = await inbound_repository.get(message_id)
+        if detail is None:
+            raise _inbox_error(404, "Mesajul nu a fost găsit.")
+        replies = await reply_repository.list_for_message(message_id)
+        payload = detail.model_dump(mode="json")
+        payload["replies"] = [item.model_dump(mode="json") for item in replies]
+        return payload
+
+    @router.get("")
+    async def list_messages(
+        q: str = Query(default="", max_length=MAX_SEARCH_LENGTH),
+        category: InboundCategory | None = None,
+        page: int = Query(default=1, ge=1, le=MAX_PAGE),
+        page_size: int = Query(default=20, ge=1, le=MAX_PAGE_SIZE),
+    ):
+        try:
+            listing = await inbound_repository.list(
+                q=q,
+                category=category,
+                page=page,
+                page_size=page_size,
+            )
+            return response(listing.model_dump(mode="json"))
+        except (PyMongoError, ValidationError, RuntimeError):
+            raise _inbox_error(503, "Mesajele nu sunt disponibile momentan.") from None
+
+    @router.get("/{message_id}")
+    async def get_message(
+        message_id: str = Path(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$"),
+    ):
+        try:
+            return response(await detail_payload(message_id))
+        except HTTPException:
+            raise
+        except (PyMongoError, ValidationError, RuntimeError):
+            raise _inbox_error(503, "Mesajul nu este disponibil momentan.") from None
+
+    @router.post("/{message_id}/relay/retry")
+    async def retry_relay(
+        message_id: str = Path(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$"),
+    ):
+        try:
+            message = await inbound_repository.get_internal(message_id)
+            if message is None:
+                raise _inbox_error(404, "Mesajul nu a fost găsit.")
+            if message.relay_state != "failed":
+                raise _inbox_error(409, "Retrimiterea nu este disponibilă.")
+            await relay_service.retry(message)
+            return response(await detail_payload(message_id))
+        except HTTPException:
+            raise
+        except (ResendError, InboundRelayError):
+            raise _inbox_error(503, "Mesajul nu a putut fi retransmis.") from None
+        except (PyMongoError, ValidationError, RuntimeError):
+            raise _inbox_error(503, "Mesajul nu este disponibil momentan.") from None
+
+    @router.post("/{message_id}/reply")
+    async def send_reply(
+        request: Request,
+        message_id: str = Path(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$"),
+    ):
+        body = await request.body()
+        if len(body) > INBOX_REPLY_MAX_BYTES:
+            raise _inbox_error(413, "Răspunsul este prea mare.")
+        try:
+            command = InboundReplyCreate.model_validate_json(body)
+        except ValidationError:
+            raise _inbox_error(
+                422,
+                "Răspunsul trebuie să conțină între 1 și 12000 de caractere.",
+            ) from None
+        try:
+            message = await inbound_repository.get_internal(message_id)
+            if message is None:
+                raise _inbox_error(404, "Mesajul nu a fost găsit.")
+            await reply_service.reply(
+                message,
+                reply_id=command.reply_id,
+                text=command.text,
+            )
+            return response(await detail_payload(message_id))
+        except HTTPException:
+            raise
+        except InboundReplyConflict:
+            raise _inbox_error(409, "Răspunsul are deja alt conținut.") from None
+        except (ResendError, InboundReplyError):
+            raise _inbox_error(503, "Răspunsul nu a putut fi trimis.") from None
+        except (PyMongoError, ValidationError, RuntimeError):
+            raise _inbox_error(503, "Mesajul nu este disponibil momentan.") from None
+
+    return router

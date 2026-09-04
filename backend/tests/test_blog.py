@@ -363,4 +363,7 @@ def test_request_limits_are_scoped_to_blog_writes_and_media_only():
     )
     assert request_size_limit("/api/admin/blog/media", "POST") == 6 * 1024 * 1024
     assert request_size_limit("/api/webhooks/resend", "POST") == 64 * 1024
+    assert (
+        request_size_limit("/api/admin/inbox/inbound-001/reply", "POST") == 128 * 1024
+    )
     assert request_size_limit("/api/blog/posts", "GET") == 32_768

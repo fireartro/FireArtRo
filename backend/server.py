@@ -51,10 +51,13 @@ from quote_admin import (
 )
 from email_inbox import (
     InboundIdentityConflict,
+    InboundReplyService,
     InboundRelayError,
     InboundRelayService,
     MongoEmailDeliveryRepository,
     MongoInboundMessageRepository,
+    MongoInboundReplyRepository,
+    create_inbound_admin_router,
 )
 from resend_email import ResendClient, ResendConfig, ResendError
 from svix.webhooks import Webhook, WebhookVerificationError
@@ -145,8 +148,17 @@ quote_notification_service = QuoteNotificationService(
 inbound_repository = MongoInboundMessageRepository(
     db.inbound_messages if db is not None else None
 )
+inbound_reply_repository = MongoInboundReplyRepository(
+    db.inbound_replies if db is not None else None
+)
 inbound_relay_service = InboundRelayService(
     resend_client,
+    quote_delivery_repository if db is not None else None,
+    inbound_repository if db is not None else None,
+)
+inbound_reply_service = InboundReplyService(
+    resend_client,
+    inbound_reply_repository if db is not None else None,
     quote_delivery_repository if db is not None else None,
     inbound_repository if db is not None else None,
 )
@@ -180,6 +192,7 @@ async def ensure_indexes():
     await quote_repository.create_indexes()
     await quote_delivery_repository.create_indexes()
     await inbound_repository.create_indexes()
+    await inbound_reply_repository.create_indexes()
     await quote_rate_limiter.create_indexes()
     await media_repository.create_indexes()
 
@@ -472,6 +485,14 @@ app.include_router(api_router)
 app.include_router(webhook_router)
 app.include_router(
     create_quote_admin_router(quote_repository, quote_notification_service)
+)
+app.include_router(
+    create_inbound_admin_router(
+        inbound_repository,
+        inbound_reply_repository,
+        inbound_relay_service,
+        inbound_reply_service,
+    )
 )
 app.include_router(create_media_router(media_service))
 
