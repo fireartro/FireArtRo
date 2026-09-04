@@ -4,6 +4,7 @@ import asyncio
 import re
 from copy import deepcopy
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI
@@ -17,13 +18,25 @@ from test_cms_routes import RouteAuthService, SESSION_TOKEN, CSRF_TOKEN
 
 def quote(identifier="q1", **changes):
     return {
-        "id": identifier, "first_name": "Ana", "last_name": "Popescu",
-        "phone": "+40712345678", "email": "ana@example.com", "locality": "Cluj",
-        "event_location": "Sala", "event_type": "Nuntă", "event_date": "2027-06-12",
-        "services": ["Drone"], "package_title": "Signature", "package_id": "signature",
-        "message": "Mesaj client", "created_at": "2026-09-03T12:00:00+00:00",
-        "status": "new", "internal_note": "Notă privată", "consent": True,
-        "unrelated_secret": "must-not-leak", **changes,
+        "id": identifier,
+        "first_name": "Ana",
+        "last_name": "Popescu",
+        "phone": "+40712345678",
+        "email": "ana@example.com",
+        "locality": "Cluj",
+        "event_location": "Sala",
+        "event_type": "Nuntă",
+        "event_date": "2027-06-12",
+        "services": ["Drone"],
+        "package_title": "Signature",
+        "package_id": "signature",
+        "message": "Mesaj client",
+        "created_at": "2026-09-03T12:00:00+00:00",
+        "status": "new",
+        "internal_note": "Notă privată",
+        "consent": True,
+        "unrelated_secret": "must-not-leak",
+        **changes,
     }
 
 
@@ -51,7 +64,9 @@ def matches(document, query):
 def project(document, projection):
     if document is None:
         return None
-    return deepcopy({key: value for key, value in document.items() if projection.get(key) == 1})
+    return deepcopy(
+        {key: value for key, value in document.items() if projection.get(key) == 1}
+    )
 
 
 class Cursor:
@@ -86,7 +101,9 @@ class Collection:
         self.indexes = []
 
     def find(self, query, projection):
-        return Cursor([project(d, projection) for d in self.documents if matches(d, query)])
+        return Cursor(
+            [project(d, projection) for d in self.documents if matches(d, query)]
+        )
 
     async def count_documents(self, query, **kwargs):
         assert kwargs.get("maxTimeMS", 0) > 0
@@ -94,9 +111,13 @@ class Collection:
 
     async def find_one(self, query, projection):
         await asyncio.sleep(0)
-        return project(next((d for d in self.documents if matches(d, query)), None), projection)
+        return project(
+            next((d for d in self.documents if matches(d, query)), None), projection
+        )
 
-    async def find_one_and_update(self, query, update, *, return_document, projection=None, upsert=False):
+    async def find_one_and_update(
+        self, query, update, *, return_document, projection=None, upsert=False
+    ):
         await asyncio.sleep(0)  # concurrency before the atomic storage operation
         assert return_document == ReturnDocument.AFTER
         assert not set(update) - {"$set", "$inc", "$setOnInsert"}
@@ -115,12 +136,72 @@ class Collection:
         self.indexes.append((keys, kwargs))
 
 
+class NotificationDeliveryRepository:
+    def __init__(self, state="failed"):
+        self.delivery = None
+        self.initial_state = state
+
+    async def create_or_get(self, **kwargs):
+        if self.delivery is None:
+            self.delivery = SimpleNamespace(
+                id="delivery-admin-001",
+                kind=kwargs["kind"],
+                state=self.initial_state,
+                idempotency_key=kwargs["idempotency_key"],
+                related_quote_id=kwargs["related_quote_id"],
+                recipient=kwargs["recipient"],
+                error_code=(
+                    "provider_unavailable" if self.initial_state == "failed" else None
+                ),
+                sent_at=None,
+                updated_at=datetime.now(timezone.utc),
+            )
+        return self.delivery
+
+    async def get_current_quote_notification(self, quote_id):
+        return self.delivery
+
+    async def reset_failed(self, delivery_id):
+        if self.delivery and self.delivery.state == "failed":
+            self.delivery.state = "pending"
+            self.delivery.error_code = None
+        return self.delivery
+
+    async def mark_failed(self, delivery_id, *, error_code):
+        self.delivery.state = "failed"
+        self.delivery.error_code = error_code
+        self.delivery.updated_at = datetime.now(timezone.utc)
+        return self.delivery
+
+    async def mark_sent(self, delivery_id, *, resend_email_id):
+        self.delivery.state = "sent"
+        self.delivery.error_code = None
+        self.delivery.sent_at = datetime.now(timezone.utc)
+        return self.delivery
+
+
+class RetryResendClient:
+    def __init__(self, *, failure=None):
+        self.failure = failure
+        self.calls = []
+
+    async def send(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.failure is not None:
+            raise self.failure
+        return "re_admin_notification_001"
+
+
 @pytest.fixture
 def domain():
     # Import inside the fixture so the initial red run is an explicit missing-feature assertion.
     import importlib.util
-    assert importlib.util.find_spec("quote_admin"), "Protected quote administration is missing"
+
+    assert importlib.util.find_spec(
+        "quote_admin"
+    ), "Protected quote administration is missing"
     from quote_admin import MongoQuoteRepository, create_quote_admin_router
+
     collection = Collection([quote(), quote("q2", first_name="Ion", locality="Brașov")])
     repository = MongoQuoteRepository(collection)
     app = FastAPI()
@@ -128,6 +209,30 @@ def domain():
     app.include_router(create_quote_admin_router(repository))
     with TestClient(app) as client:
         yield client, collection, repository
+
+
+@pytest.fixture
+def notification_domain():
+    from quote_admin import (
+        MongoQuoteRepository,
+        QuoteNotificationService,
+        create_quote_admin_router,
+    )
+    from resend_email import ResendError
+
+    collection = Collection([quote()])
+    delivery = NotificationDeliveryRepository()
+    sender = RetryResendClient(failure=ResendError("provider_unavailable"))
+    repository = MongoQuoteRepository(collection, delivery_repository=delivery)
+    app = FastAPI()
+    app.state.auth_service = RouteAuthService()
+    app.include_router(
+        create_quote_admin_router(
+            repository, QuoteNotificationService(sender, delivery)
+        )
+    )
+    with TestClient(app) as client:
+        yield client, collection, delivery, sender
 
 
 def authorize(client):
@@ -138,14 +243,88 @@ def authorize(client):
 def test_all_quote_routes_require_session_and_mutations_require_csrf(domain):
     client, collection, _ = domain
     before = deepcopy(collection.documents)
-    assert client.get("/api/admin/quotes", headers={"X-Admin-Key": "old-key"}).status_code == 401
+    assert (
+        client.get("/api/admin/quotes", headers={"X-Admin-Key": "old-key"}).status_code
+        == 401
+    )
     assert client.get("/api/admin/quotes/q1").status_code == 401
-    assert client.patch("/api/admin/quotes/q1", json={"version": 0, "status": "spam"}).status_code == 401
+    assert (
+        client.patch(
+            "/api/admin/quotes/q1", json={"version": 0, "status": "spam"}
+        ).status_code
+        == 401
+    )
     authorize(client)
-    assert client.patch("/api/admin/quotes/q1", json={"version": 0, "status": "spam"}).status_code == 403
-    assert client.patch("/api/admin/quotes/q1", json={"version": 0, "status": "spam"},
-                        headers={"X-CSRF-Token": CSRF_TOKEN, "Origin": "https://evil.example"}).status_code == 403
+    assert (
+        client.patch(
+            "/api/admin/quotes/q1", json={"version": 0, "status": "spam"}
+        ).status_code
+        == 403
+    )
+    assert (
+        client.patch(
+            "/api/admin/quotes/q1",
+            json={"version": 0, "status": "spam"},
+            headers={"X-CSRF-Token": CSRF_TOKEN, "Origin": "https://evil.example"},
+        ).status_code
+        == 403
+    )
     assert collection.documents == before
+
+
+def test_notification_retry_requires_session_and_csrf(notification_domain):
+    client, _, _, _ = notification_domain
+    assert client.post("/api/admin/quotes/q1/notification/retry").status_code == 401
+    client.cookies.set(ADMIN_COOKIE_NAME, SESSION_TOKEN)
+    assert client.post("/api/admin/quotes/q1/notification/retry").status_code == 403
+
+
+def test_notification_retry_reuses_quote_idempotency_identity_and_sanitizes_detail(
+    notification_domain,
+):
+    client, _, delivery, sender = notification_domain
+    headers = authorize(client)
+
+    first = client.post("/api/admin/quotes/q1/notification/retry", headers=headers)
+    second = client.post("/api/admin/quotes/q1/notification/retry", headers=headers)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert len(sender.calls) == 2
+    assert {call["idempotency_key"] for call in sender.calls} == {
+        "quote-notification/q1"
+    }
+    assert delivery.delivery.state == "failed"
+    assert first.json()["notification"] == {
+        "state": "failed",
+        "error_code": "provider_unavailable",
+        "sent_at": None,
+        "failed_at": first.json()["notification"]["failed_at"],
+    }
+    for unsafe in ("resend_email_id", "idempotency_key"):
+        assert unsafe not in first.text
+
+
+def test_notification_retry_does_not_replay_pending_delivery(notification_domain):
+    client, _, delivery, sender = notification_domain
+    delivery.delivery = SimpleNamespace(
+        id="delivery-admin-pending",
+        kind="quote_notification",
+        state="pending",
+        idempotency_key="quote-notification/q1",
+        related_quote_id="q1",
+        recipient="fireartro@gmail.com",
+        error_code=None,
+        sent_at=None,
+        updated_at=datetime.now(timezone.utc),
+    )
+
+    response = client.post(
+        "/api/admin/quotes/q1/notification/retry", headers=authorize(client)
+    )
+
+    assert response.status_code == 409
+    assert sender.calls == []
 
 
 def test_filters_pagination_and_summary_do_not_expose_notes_or_contact_details(domain):
@@ -156,7 +335,14 @@ def test_filters_pagination_and_summary_do_not_expose_notes_or_contact_details(d
     assert response.headers["cache-control"] == "no-store"
     assert response.json()["total"] == 1
     assert response.json()["items"][0]["id"] == "q1"
-    for private in ("internal_note", "Notă privată", "phone", "email", "message", "unrelated_secret"):
+    for private in (
+        "internal_note",
+        "Notă privată",
+        "phone",
+        "email",
+        "message",
+        "unrelated_secret",
+    ):
         assert private not in response.text
     first = client.get("/api/admin/quotes?page_size=1").json()
     second = client.get("/api/admin/quotes?page_size=1&page=2").json()
@@ -165,14 +351,24 @@ def test_filters_pagination_and_summary_do_not_expose_notes_or_contact_details(d
     assert client.get("/api/admin/quotes?page=3&page_size=1").json()["items"] == []
 
 
-@pytest.mark.parametrize("query", [".*", "(a+)+$", "{\"$ne\":null}", "Notă privată"])
+@pytest.mark.parametrize("query", [".*", "(a+)+$", '{"$ne":null}', "Notă privată"])
 def test_search_is_literal_and_never_searches_private_notes(domain, query):
     client, _, _ = domain
     authorize(client)
     assert client.get("/api/admin/quotes", params={"q": query}).json()["items"] == []
 
 
-@pytest.mark.parametrize("query", ["status=deleted", "page=0", "page=1001", "page_size=0", "page_size=101", "q=" + "x" * 121])
+@pytest.mark.parametrize(
+    "query",
+    [
+        "status=deleted",
+        "page=0",
+        "page=1001",
+        "page_size=0",
+        "page_size=101",
+        "q=" + "x" * 121,
+    ],
+)
 def test_filter_bounds_are_authoritative(domain, query):
     client, _, _ = domain
     authorize(client)
@@ -186,32 +382,58 @@ def test_detail_update_and_stale_version_never_overwrite_newer_note(domain):
     assert detail.json()["internal_note"] == "Notă privată"
     assert detail.json()["version"] == 0
     assert "must-not-leak" not in detail.text
-    saved = client.patch("/api/admin/quotes/q1", json={"version": 0, "status": "contacted", "internal_note": "Sunat\nRevenim mâine"}, headers=headers)
+    saved = client.patch(
+        "/api/admin/quotes/q1",
+        json={
+            "version": 0,
+            "status": "contacted",
+            "internal_note": "Sunat\nRevenim mâine",
+        },
+        headers=headers,
+    )
     assert saved.status_code == 200
     assert saved.json()["version"] == 1
     assert saved.json()["status"] == "contacted"
     assert saved.headers["cache-control"] == "no-store"
-    stale = client.patch("/api/admin/quotes/q1", json={"version": 0, "internal_note": "Overwrite"}, headers=headers)
+    stale = client.patch(
+        "/api/admin/quotes/q1",
+        json={"version": 0, "internal_note": "Overwrite"},
+        headers=headers,
+    )
     assert stale.status_code == 409
     assert collection.documents[0]["internal_note"] == "Sunat\nRevenim mâine"
-    saved = client.patch("/api/admin/quotes/q1", json={"version": 1, "status": "qualified"}, headers=headers)
+    saved = client.patch(
+        "/api/admin/quotes/q1",
+        json={"version": 1, "status": "qualified"},
+        headers=headers,
+    )
     assert saved.json()["internal_note"] == "Sunat\nRevenim mâine"
     assert saved.json()["version"] == 2
     assert client.get("/api/quotes/q1").status_code == 404
     assert client.get("/api/quotes").status_code == 404
 
 
-@pytest.mark.parametrize("payload", [
-    {"version": 0, "status": "deleted"}, {"version": 0, "internal_note": "x" * 4001},
-    {"version": -1, "status": "new"}, {"version": True, "status": "new"},
-    {"version": "0", "status": "new"}, {"status": "new"}, {"version": 0},
-    {"version": 0, "internal_note": None}, {"version": 0, "status": None},
-    {"version": 0, "status": "new", "email": "changed@example.com"},
-])
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"version": 0, "status": "deleted"},
+        {"version": 0, "internal_note": "x" * 4001},
+        {"version": -1, "status": "new"},
+        {"version": True, "status": "new"},
+        {"version": "0", "status": "new"},
+        {"status": "new"},
+        {"version": 0},
+        {"version": 0, "internal_note": None},
+        {"version": 0, "status": None},
+        {"version": 0, "status": "new", "email": "changed@example.com"},
+    ],
+)
 def test_invalid_mutations_do_not_change_customer_data(domain, payload):
     client, collection, _ = domain
     before = deepcopy(collection.documents)
-    response = client.patch("/api/admin/quotes/q1", json=payload, headers=authorize(client))
+    response = client.patch(
+        "/api/admin/quotes/q1", json=payload, headers=authorize(client)
+    )
     assert response.status_code == 422
     assert collection.documents == before
     assert "x" * 100 not in response.text  # validation errors do not echo private input
@@ -221,7 +443,14 @@ def test_missing_quote_and_database_failure_are_sanitized(domain, monkeypatch):
     client, _, repository = domain
     headers = authorize(client)
     assert client.get("/api/admin/quotes/absent").status_code == 404
-    assert client.patch("/api/admin/quotes/absent", json={"version": 0, "status": "closed"}, headers=headers).status_code == 404
+    assert (
+        client.patch(
+            "/api/admin/quotes/absent",
+            json={"version": 0, "status": "closed"},
+            headers=headers,
+        ).status_code
+        == 404
+    )
 
     async def broken(*args, **kwargs):
         raise AutoReconnect("mongodb://private:password@example.com")
@@ -236,6 +465,7 @@ def test_missing_quote_and_database_failure_are_sanitized(domain, monkeypatch):
 async def test_concurrent_editors_get_one_success_and_one_conflict():
     from quote_admin import MongoQuoteRepository, QuoteAdminUpdate
     from fastapi import HTTPException
+
     collection = Collection([quote()])
     a, b = MongoQuoteRepository(collection), MongoQuoteRepository(collection)
     outcomes = await asyncio.gather(
@@ -243,7 +473,13 @@ async def test_concurrent_editors_get_one_success_and_one_conflict():
         b.update("q1", QuoteAdminUpdate(version=0, internal_note="Editor B")),
         return_exceptions=True,
     )
-    assert sum(isinstance(result, HTTPException) and result.status_code == 409 for result in outcomes) == 1
+    assert (
+        sum(
+            isinstance(result, HTTPException) and result.status_code == 409
+            for result in outcomes
+        )
+        == 1
+    )
     assert collection.documents[0]["version"] == 1
     assert collection.documents[0]["internal_note"] in {"Editor A", "Editor B"}
 
@@ -252,12 +488,24 @@ async def test_concurrent_editors_get_one_success_and_one_conflict():
 async def test_rate_limit_is_atomic_across_instances_and_rolls_over_without_ttl_cleanup():
     from quote_admin import MongoQuoteRateLimiter
     from fastapi import HTTPException
+
     collection = Collection()
     instant = datetime(2026, 9, 3, 12, tzinfo=timezone.utc)
-    limiters = [MongoQuoteRateLimiter(collection, "isolated-test-secret", clock=lambda: instant) for _ in range(2)]
-    outcomes = await asyncio.gather(*(limiters[i % 2].enforce("127.0.0.1") for i in range(12)), return_exceptions=True)
+    limiters = [
+        MongoQuoteRateLimiter(collection, "isolated-test-secret", clock=lambda: instant)
+        for _ in range(2)
+    ]
+    outcomes = await asyncio.gather(
+        *(limiters[i % 2].enforce("127.0.0.1") for i in range(12)),
+        return_exceptions=True,
+    )
     assert sum(result is None for result in outcomes) == 5
-    assert all(result is None or isinstance(result, HTTPException) and result.status_code == 429 for result in outcomes)
+    assert all(
+        result is None
+        or isinstance(result, HTTPException)
+        and result.status_code == 429
+        for result in outcomes
+    )
     assert "127.0.0.1" not in repr(collection.documents)
     assert collection.documents[0]["expires_at"].tzinfo is not None
     instant = datetime(2026, 9, 3, 12, 10, tzinfo=timezone.utc)
@@ -270,6 +518,7 @@ async def test_rate_limit_is_atomic_across_instances_and_rolls_over_without_ttl_
 @pytest.mark.asyncio
 async def test_rate_limit_first_upsert_collision_retries_increment(monkeypatch):
     from quote_admin import MongoQuoteRateLimiter
+
     collection = Collection()
     original = collection.find_one_and_update
     raced = False

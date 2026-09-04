@@ -9,6 +9,7 @@ import asyncio
 from contextlib import asynccontextmanager
 import os
 import logging
+import httpx
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import List, Optional
@@ -23,7 +24,11 @@ from blog import (
     request_size_limit,
 )
 from cms_repository import MongoCmsRepository
-from cms_routes import CMS_CONTENT_WRITE_MAX_BYTES, create_cms_router, is_cms_content_write
+from cms_routes import (
+    CMS_CONTENT_WRITE_MAX_BYTES,
+    create_cms_router,
+    is_cms_content_write,
+)
 from cms_service import CmsService
 from reviews import ReviewsService, create_reviews_router
 from auth import (
@@ -35,8 +40,23 @@ from auth import (
     create_auth_router,
     request_ip,
 )
-from quote_admin import MongoQuoteRateLimiter, MongoQuoteRepository, create_quote_admin_router
-from media import MediaService, MediaWriteGuardMiddleware, MongoMediaRepository, VercelBlobClient, create_media_router
+from quote_admin import (
+    NOTIFICATION_FROM,
+    NOTIFICATION_TO,
+    MongoQuoteRateLimiter,
+    MongoQuoteRepository,
+    QuoteNotificationService,
+    create_quote_admin_router,
+)
+from email_inbox import MongoEmailDeliveryRepository
+from resend_email import ResendClient, ResendConfig, ResendError
+from media import (
+    MediaService,
+    MediaWriteGuardMiddleware,
+    MongoMediaRepository,
+    VercelBlobClient,
+    create_media_router,
+)
 from integrations import IntegrationsService, create_integrations_router
 
 
@@ -72,6 +92,36 @@ if not database_configuration_errors:
             client.close()
             client = None
 
+
+def _email_config():
+    try:
+        configured = ResendConfig.from_env()
+    except ResendError:
+        return ResendConfig(
+            enabled=False,
+            api_key="",
+            webhook_secret="",
+            from_email="",
+            notification_to="",
+            inbound_domain="",
+            inbound_address="",
+        )
+    if not configured.enabled:
+        return configured
+    return configured.model_copy(
+        update={"from_email": NOTIFICATION_FROM, "notification_to": NOTIFICATION_TO}
+    )
+
+
+resend_http_client = httpx.AsyncClient()
+resend_client = ResendClient(_email_config(), http_client=resend_http_client)
+quote_delivery_repository = MongoEmailDeliveryRepository(
+    db.email_deliveries if db is not None else None
+)
+quote_notification_service = QuoteNotificationService(
+    resend_client, quote_delivery_repository if db is not None else None
+)
+
 cms_repository = MongoCmsRepository(
     drafts=db.site_content_drafts if db is not None else None,
     publications=db.site_content_publications if db is not None else None,
@@ -79,7 +129,10 @@ cms_repository = MongoCmsRepository(
     client=client,
 )
 cms_service = CmsService(cms_repository)
-quote_repository = MongoQuoteRepository(db.quotes if db is not None else None)
+quote_repository = MongoQuoteRepository(
+    db.quotes if db is not None else None,
+    delivery_repository=quote_delivery_repository if db is not None else None,
+)
 quote_rate_limiter = MongoQuoteRateLimiter(
     db.quote_rate_limits if db is not None else None,
     os.environ.get("ADMIN_SESSION_SECRET", ""),
@@ -96,6 +149,7 @@ async def ensure_indexes():
     await db.admin_login_attempts.create_index("expires_at", expireAfterSeconds=0)
     await cms_repository.create_indexes()
     await quote_repository.create_indexes()
+    await quote_delivery_repository.create_indexes()
     await quote_rate_limiter.create_indexes()
     await media_repository.create_indexes()
 
@@ -116,6 +170,7 @@ async def lifespan(application):
         application.state.indexes_ready = False
         if client is not None:
             client.close()
+        await resend_http_client.aclose()
 
 
 # Create the main app without a prefix
@@ -184,7 +239,11 @@ class QuoteCreate(BaseModel):
     @field_validator("services")
     @classmethod
     def normalize_services(cls, values):
-        normalized = [" ".join(value.strip().split()) for value in values if value and value.strip()]
+        normalized = [
+            " ".join(value.strip().split())
+            for value in values
+            if value and value.strip()
+        ]
         return list(dict.fromkeys(normalized))
 
     @field_validator("email")
@@ -270,12 +329,15 @@ async def create_quote(input: QuoteCreate, request: Request):
     doc["internal_note"] = ""
     doc["version"] = 0
     await db.quotes.insert_one(doc)
+    await quote_notification_service.notify(quote)
     return QuoteAcknowledgement()
 
 
 # Include the router in the main app
 app.include_router(api_router)
-app.include_router(create_quote_admin_router(quote_repository))
+app.include_router(
+    create_quote_admin_router(quote_repository, quote_notification_service)
+)
 app.include_router(create_media_router(media_service))
 
 blog_repository = MongoBlogRepository(db.blog_posts if db is not None else None)
@@ -283,15 +345,14 @@ blog_media_store = GridFsBlogMediaStore(
     AsyncIOMotorGridFSBucket(db, bucket_name="blog_media") if db is not None else None
 )
 blog_service = BlogService(blog_repository, blog_media_store)
-app.include_router(
-    create_blog_router(blog_service)
-)
+app.include_router(create_blog_router(blog_service))
 
 reviews_service = ReviewsService(os.environ)
 app.include_router(create_reviews_router(reviews_service))
 integration_service = IntegrationsService(db, reviews_service, os.environ)
 app.state.integration_service = integration_service
 app.include_router(create_integrations_router(integration_service))
+
 
 class RequestSecurityMiddleware:
     """Bound the streamed body before any parser or login can consume it."""
@@ -307,9 +368,11 @@ class RequestSecurityMiddleware:
         maximum = (
             4096
             if path.startswith("/api/admin/auth/")
-            else CMS_CONTENT_WRITE_MAX_BYTES
-            if is_cms_content_write(path, scope["method"])
-            else request_size_limit(path, scope["method"])
+            else (
+                CMS_CONTENT_WRITE_MAX_BYTES
+                if is_cms_content_write(path, scope["method"])
+                else request_size_limit(path, scope["method"])
+            )
         )
 
         async def secure_send(message):
@@ -398,7 +461,6 @@ app.add_middleware(RequestSecurityMiddleware)
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
