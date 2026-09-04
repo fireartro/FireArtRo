@@ -182,7 +182,9 @@ test("failed relay can be retried explicitly", async () => {
 
 test("a conflict blocks another send until the message is explicitly reloaded", async () => {
   let attempts = 0;
+  const failedReply = { id: "77777777-7777-4777-8777-777777777777", text: "Răspuns deja salvat", state: "failed", created_at: "2026-09-04T10:10:00Z", sent_at: null };
   await render({ handle: (requestPath) => {
+    if (requestPath === "/api/admin/inbox/inbound-001") return response(detail("inbound-001", { relay_state: "failed", replies: [failedReply] }));
     if (requestPath.endsWith("/reply")) {
       attempts += 1;
       return attempts === 1 ? response({ detail: "Conflict" }, 409) : response(detail());
@@ -192,9 +194,14 @@ test("a conflict blocks another send until the message is explicitly reloaded", 
   await click("Deschide mesajul Cerere nuntă");
   await change('textarea[name="inbox-reply"]', "Răspuns în conflict");
   await click("Trimite răspunsul");
-  await click("Trimite răspunsul");
+  expect(container.querySelector('textarea[name="inbox-reply"]').disabled).toBe(true);
+  expect(button("Trimite răspunsul").disabled).toBe(true);
+  expect(button("Reîncearcă răspunsul").disabled).toBe(true);
+  expect(button("Retrimite notificarea").disabled).toBe(true);
+  expect(button("Reîncarcă mesajul")).toBeTruthy();
   expect(attempts).toBe(1);
   await click("Reîncarcă mesajul");
+  expect(container.querySelector('textarea[name="inbox-reply"]').disabled).toBe(false);
   await click("Trimite răspunsul");
   expect(attempts).toBe(2);
 });

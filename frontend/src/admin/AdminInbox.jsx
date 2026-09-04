@@ -59,7 +59,7 @@ function InboxDetail({ message, busy, reloadRequired, replyText, replyError, rep
       <ol>{message.replies.map((item) => <li key={item.id}>
         <div><span>{formatDate(item.created_at)}</span><span className={`admin-inbox-state is-${item.state}`}>{item.state === "sent" ? "Trimis" : item.state === "failed" ? "Eșuat" : "În curs"}</span></div>
         <p>{item.text}</p>
-        {item.state !== "sent" ? <button className="admin-button" type="button" disabled={busy} onClick={() => onRetryReply(item)}>
+        {item.state !== "sent" ? <button className="admin-button" type="button" disabled={busy || reloadRequired} onClick={() => onRetryReply(item)}>
           <RefreshCw aria-hidden="true" /> Reîncearcă răspunsul
         </button> : null}
       </li>)}</ol>
@@ -67,7 +67,7 @@ function InboxDetail({ message, busy, reloadRequired, replyText, replyError, rep
 
     {message.relay_state === "failed" ? <div className="admin-inbox-relay-action">
       <p>Notificarea către adresa de administrare nu a ajuns.</p>
-      <button className="admin-button" type="button" disabled={busy} onClick={onRetryRelay}>
+      <button className="admin-button" type="button" disabled={busy || reloadRequired} onClick={onRetryRelay}>
         <RefreshCw aria-hidden="true" /> Retrimite notificarea
       </button>
     </div> : null}
@@ -79,13 +79,13 @@ function InboxDetail({ message, busy, reloadRequired, replyText, replyError, rep
           <small>{replyText.length}/12000</small>
         </div>
         <textarea id="inbox-reply" name="inbox-reply" rows={7} maxLength={12000} value={replyText}
-          disabled={busy} onChange={(event) => onReplyText(event.target.value)} />
+          disabled={busy || reloadRequired} onChange={(event) => onReplyText(event.target.value)} />
       </div>
       <div className="admin-inbox-reply__actions">
         <button className="admin-button is-primary" type="submit" disabled={busy || reloadRequired}>
           <Send aria-hidden="true" /> {busy ? "Se trimite…" : "Trimite răspunsul"}
         </button>
-        {replyError ? <button className="admin-button" type="button" onClick={onReload}>Reîncarcă mesajul</button> : null}
+        {replyError || reloadRequired ? <button className="admin-button" type="button" onClick={onReload}>Reîncarcă mesajul</button> : null}
         <span role="status">{replyStatus}</span>
       </div>
       {replyError ? <p className="cms-error" role="alert">{replyError}</p> : null}
@@ -207,7 +207,7 @@ export default function AdminInbox() {
   }
 
   async function retrySavedReply(reply) {
-    if (replyState.busy || !detailState.data || reply?.state === "sent") return;
+    if (replyState.busy || replyReloadRequired || !detailState.data || reply?.state === "sent") return;
     const operation = ++operationRef.current;
     setReplyState({ busy: true, error: "", status: "" });
     try {
@@ -227,7 +227,7 @@ export default function AdminInbox() {
   }
 
   async function retryRelay() {
-    if (replyState.busy || !detailState.data) return;
+    if (replyState.busy || replyReloadRequired || !detailState.data) return;
     const operation = ++operationRef.current;
     setReplyState({ busy: true, error: "", status: "" });
     try {
