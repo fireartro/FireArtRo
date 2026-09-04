@@ -11,15 +11,16 @@ import AdminPreview from './AdminPreview';
 import AdminRevisions from './AdminRevisions';
 import AdminBlogPanel from './AdminBlogPanel';
 import AdminQuotes from './AdminQuotes';
+import AdminInbox from './AdminInbox';
 import AdminMediaLibrary from './AdminMediaLibrary';
 import { CMS_DEFAULTS } from '@/data/cmsDefaults';
 
-const special = new Set(['dashboard', 'revisions', 'blog', 'quotes', 'media']);
+const special = new Set(['dashboard', 'revisions', 'blog', 'quotes', 'inbox', 'media']);
 const groups = [
   ['Site', ['siteDetails', 'contactSettings', 'businessHours', 'socialLinks', 'navigation', 'footer']],
   ['Pagini', ['homePage', 'galleryPage', 'packagesPage', 'faqPage', 'contactPage', 'blogPage']],
   ['Conținut', ['media', 'mediaItems', 'packages', 'faqs', 'testimonials', 'partners', 'reviewSettings']],
-  ['Operațiuni', ['blog', 'quotes', 'revisions']],
+  ['Operațiuni', ['blog', 'quotes', 'inbox', 'revisions']],
   ['Sistem', ['cookieSettings', 'legalPages']],
 ];
 const STATUS = { loading: 'Se încarcă', dirty: 'Nesalvat', saving: 'Se salvează', saved: 'Salvat', invalid: 'Câmpuri invalide', conflict: 'Conflict', error: 'Eroare', publishing: 'Se publică', restoring: 'Se restaurează' };
@@ -41,9 +42,9 @@ export default function AdminLayout() {
       <div className="admin-appbar-actions"><span className={`cms-save-state is-${draft.status}`} aria-live="polite">{STATUS[draft.status] || draft.status}</span><button className="admin-button" onClick={() => setPreview(true)}>Previzualizează</button><button className="admin-button is-primary" disabled={draft.status !== 'saved' || !draft.changedModules.length} onClick={() => setPublish(true)}>Publică modificările</button>
       <span className="admin-session-user">{admin.username}</span><button className="admin-session-logout" onClick={logout}><LogOut /> Ieși</button></div></header>
     <div className="admin-workspace"><aside className={`admin-sidebar ${menu ? 'is-open' : ''}`}><button className={section === 'dashboard' ? 'is-active' : ''} onClick={() => choose('dashboard')}>Panou principal</button>
-      {groups.map(([title, keys]) => <section key={title}><h2>{title}</h2>{keys.filter(key => special.has(key) || moduleKeys.has(key)).map(key => <button key={key} className={section === key ? 'is-active' : ''} onClick={() => choose(key)}>{special.has(key) ? { blog: 'Articole Blog', quotes: 'Cereri de ofertă', revisions: 'Istoric publicări', media: 'Încarcă media' }[key] : ADMIN_MODULES[key]?.label}</button>)}</section>)}</aside>
+      {groups.map(([title, keys]) => <section key={title}><h2>{title}</h2>{keys.filter(key => special.has(key) || moduleKeys.has(key)).map(key => <button key={key} className={section === key ? 'is-active' : ''} onClick={() => choose(key)}>{special.has(key) ? { blog: 'Articole Blog', quotes: 'Cereri de ofertă', inbox: 'Mesaje', revisions: 'Istoric publicări', media: 'Încarcă media' }[key] : ADMIN_MODULES[key]?.label}</button>)}</section>)}</aside>
       <div className="cms-main">{section === 'dashboard' ? <AdminDashboard onEdit={() => choose('homePage')} onPreview={() => setPreview(true)} onPublish={() => setPublish(true)} />
-        : section === 'revisions' ? <AdminRevisions /> : section === 'blog' ? <AdminBlogPanel /> : section === 'quotes' ? <AdminQuotes /> : section === 'media' ? <AdminMediaLibrary />
+        : section === 'revisions' ? <AdminRevisions /> : section === 'blog' ? <AdminBlogPanel /> : section === 'quotes' ? <AdminQuotes /> : section === 'inbox' ? <AdminInbox /> : section === 'media' ? <AdminMediaLibrary />
         : ADMIN_MODULES[section] ? <AdminContentEditor moduleKey={section} /> : <AdminDashboard onEdit={() => choose('homePage')} onPreview={() => setPreview(true)} onPublish={() => setPublish(true)} />}</div></div>
     <AdminPublishDialog open={publish} onOpenChange={setPublish} /><AdminPreview open={preview} onClose={() => setPreview(false)} />
   </main>;
