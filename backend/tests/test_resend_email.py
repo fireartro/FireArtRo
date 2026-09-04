@@ -174,6 +174,75 @@ async def test_send_converts_provider_rejection_to_an_exception_without_secrets(
 
 
 @pytest.mark.asyncio
+async def test_get_received_email_preserves_normal_values_and_normalizes_addresses():
+    from resend_email import ResendClient, ResendConfig
+
+    def handle(request):
+        assert request.method == "GET"
+        assert (
+            str(request.url)
+            == "https://api.resend.com/emails/receiving/received-email-normal"
+        )
+        assert (
+            request.headers["Authorization"] == "Bearer re_test_contract_key_not_real"
+        )
+        return httpx.Response(
+            200,
+            json={
+                "id": "received-email-normal",
+                "from": "  Example Sender <SENDER@example.com>  ",
+                "to": [
+                    " CONTACT@inbound.example.com ",
+                    "Second@example.com",
+                ],
+                "subject": "Subiect scurt",
+                "text": "Mesaj text scurt.",
+                "html": "<p>Mesaj HTML scurt.</p>",
+                "message_id": "  <thread-root@example.com>  ",
+                "headers": {
+                    "references": "<earlier@example.com> <previous@example.com>"
+                },
+                "attachments": [
+                    {
+                        "id": "attachment-001",
+                        "filename": "brief-final.pdf",
+                        "content_type": "application/pdf",
+                        "size": 4096,
+                        "download_url": "https://files.example.com/private-normal",
+                    }
+                ],
+            },
+        )
+
+    transport = httpx.MockTransport(handle)
+    async with httpx.AsyncClient(transport=transport) as http_client:
+        client = ResendClient(provider_config(ResendConfig), http_client=http_client)
+        received = await client.get_received_email("received-email-normal")
+
+    assert received.sender == "sender@example.com"
+    assert received.recipients == [
+        "contact@inbound.example.com",
+        "second@example.com",
+    ]
+    assert received.subject == "Subiect scurt"
+    assert received.text == "Mesaj text scurt."
+    assert received.html == "<p>Mesaj HTML scurt.</p>"
+    assert received.message_id == "<thread-root@example.com>"
+    assert received.references == [
+        "<earlier@example.com>",
+        "<previous@example.com>",
+    ]
+    assert [attachment.model_dump() for attachment in received.attachments] == [
+        {
+            "id": "attachment-001",
+            "filename": "brief-final.pdf",
+            "content_type": "application/pdf",
+            "size": 4096,
+        }
+    ]
+
+
+@pytest.mark.asyncio
 async def test_get_received_email_normalizes_and_caps_provider_content():
     from resend_email import ResendClient, ResendConfig
 
