@@ -6,7 +6,6 @@ param(
 # This reads only variable names from a project that the operator has already
 # linked. It never pulls, prints, or writes secret values.
 $required = @(
-  'MONGODB_URI',
   'DB_NAME',
   'ADMIN_USERNAME',
   'ADMIN_PASSWORD_HASH',
@@ -22,6 +21,10 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $missing = @($required | Where-Object { $listing -notmatch [regex]::Escape($_) })
+$mongoNames = @('MONGODB_URI', 'MONGO_MONGODB_URI', 'MONGO_URL')
+if (-not ($mongoNames | Where-Object { $listing -match [regex]::Escape($_) })) {
+  $missing = @('MONGODB_URI (sau variabila Atlas furnizată de Vercel)') + $missing
+}
 if ($missing.Count -gt 0) {
   Write-Error ('Lipsesc variabile Vercel: ' + ($missing -join ', '))
   exit 1

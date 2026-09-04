@@ -4,6 +4,7 @@ import { getPayloadFromClientToken } from '@vercel/blob/client';
 import { test } from 'node:test';
 import { createBlobUploadHandler } from './blob-upload.js';
 import { hashToken, requireAdminUploadSession } from '../lib/admin-session.js';
+import { resolveMongoUri } from '../lib/mongodb.js';
 
 const env = {
   ADMIN_USERNAME: 'administrator', ADMIN_SESSION_SECRET: 'local-test-secret'.repeat(3),
@@ -18,6 +19,11 @@ const hash = (value) => createHmac('sha256', env.ADMIN_SESSION_SECRET).update(va
 const id = 'media-11111111-1111-4111-8111-111111111111';
 const pathname = `cms/${id}/asset.webp`;
 const url = `${env.VERCEL_BLOB_MEDIA_ORIGIN}/${pathname}`;
+
+test('MongoDB connection accepts the secret name created by the Vercel Atlas integration', () => {
+  assert.equal(resolveMongoUri({ MONGO_MONGODB_URI: 'mongodb+srv://atlas.example' }), 'mongodb+srv://atlas.example');
+  assert.equal(resolveMongoUri({ MONGODB_URI: 'primary', MONGO_MONGODB_URI: 'integration', MONGO_URL: 'legacy' }), 'primary');
+});
 
 function fixture() {
   const records = new Map();

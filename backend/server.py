@@ -75,8 +75,13 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 # Missing/invalid configuration must leave a diagnosable app, never an implicit
-# localhost connection. MONGO_URL is a temporary compatibility alias.
-mongo_url = os.environ.get("MONGODB_URI") or os.environ.get("MONGO_URL", "")
+# localhost connection. The Vercel Marketplace Atlas integration currently
+# provisions MONGO_MONGODB_URI; MONGO_URL remains a temporary legacy alias.
+mongo_url = (
+    os.environ.get("MONGODB_URI")
+    or os.environ.get("MONGO_MONGODB_URI")
+    or os.environ.get("MONGO_URL", "")
+)
 database_name = os.environ.get("DB_NAME", "")
 database_configuration_errors = []
 client = None

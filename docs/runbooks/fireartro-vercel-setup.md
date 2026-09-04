@@ -42,7 +42,7 @@ Această procedură se face o singură dată, după ce codul este aprobat. O pub
 
 | Variabilă | Tip | Observație |
 | --- | --- | --- |
-| `MONGODB_URI` | secret | furnizat de Atlas / integrarea Vercel |
+| `MONGODB_URI` | secret | furnizat de Atlas; integrarea Vercel poate crea automat `MONGO_MONGODB_URI`, acceptat direct de aplicație |
 | `DB_NAME` | normal | diferit în Preview și Production |
 | `ADMIN_USERNAME` | secret | operatorul Admin |
 | `ADMIN_PASSWORD_HASH` | secret | rezultatul utilitarului bcrypt |

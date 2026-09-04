@@ -870,7 +870,7 @@ def server_loader(monkeypatch, password_hash):
     import dotenv
 
     monkeypatch.setattr(dotenv, "load_dotenv", lambda *args, **kwargs: None)
-    for name in ("MONGODB_URI", "MONGO_URL", "DB_NAME", "VERCEL"):
+    for name in ("MONGODB_URI", "MONGO_MONGODB_URI", "MONGO_URL", "DB_NAME", "VERCEL"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("ADMIN_USERNAME", "admin")
     monkeypatch.setenv("ADMIN_PASSWORD_HASH", password_hash)
@@ -964,20 +964,21 @@ async def test_server_health_invalid_config_is_safe(server_loader, field, value)
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("alias", ["MONGO_MONGODB_URI", "MONGO_URL"])
 @pytest.mark.parametrize("primary", [False, True])
-async def test_server_mongo_alias_preference(server_loader, primary):
+async def test_server_mongo_alias_preference(server_loader, alias, primary):
     environment = {
-        "MONGO_URL": "mongodb://127.0.0.1:27183/?replicaSet=testset",
+        alias: "mongodb://127.0.0.1:27183/?replicaSet=testset",
         "DB_NAME": "fireartro_cms_test_alias_" + uuid.uuid4().hex,
     }
     if primary:
-        environment.update(
-            MONGODB_URI=environment["MONGO_URL"], MONGO_URL="invalid://alias"
-        )
+        environment.update(MONGODB_URI=environment[alias])
+        environment[alias] = "invalid://alias"
     server = server_loader(**environment)
     async with server_client(server) as client:
         response = await client.get("/api/health")
     assert "MONGODB_URI" not in response.json()["configuration_errors"]
+    assert "MONGO_MONGODB_URI" not in response.json()["configuration_errors"]
     assert "MONGO_URL" not in response.json()["configuration_errors"]
 
 
