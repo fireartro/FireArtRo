@@ -291,6 +291,16 @@ class RacingInsertCollection(AsyncCollection):
         return await super().insert_one(document)
 
 
+class RacingReserveCollection(AsyncCollection):
+    """Materialize a mismatched winner, then raise the reservation insert race."""
+
+    async def insert_one(self, document):
+        winner = deepcopy(document)
+        winner["resend_email_id"] = "provider-reservation-race-other"
+        self.documents.append(winner)
+        raise DuplicateKeyError("simulated mismatched reservation race")
+
+
 def as_document(value):
     if hasattr(value, "model_dump"):
         return value.model_dump(by_alias=True)
@@ -950,3 +960,27 @@ async def test_inbound_repository_rejects_mismatched_reserved_identity_without_o
 
     assert collection.documents[0]["webhook_id"] == "webhook-identity-001"
     assert collection.documents[0]["resend_email_id"] == "provider-identity-001"
+
+
+@pytest.mark.asyncio
+async def test_inbound_repository_rejects_mismatched_reservation_insert_race():
+    from email_inbox import InboundIdentityConflict, MongoInboundMessageRepository
+
+    collection = RacingReserveCollection()
+    repository = MongoInboundMessageRepository(
+        collection,
+        id_factory=lambda: "inbound-race-001",
+    )
+    await repository.create_indexes()
+
+    with pytest.raises(InboundIdentityConflict):
+        await repository.reserve_webhook_event(
+            webhook_id="webhook-race-001",
+            resend_email_id="provider-race-001",
+        )
+
+    assert len(collection.documents) == 1
+    assert collection.documents[0]["webhook_id"] == "webhook-race-001"
+    assert (
+        collection.documents[0]["resend_email_id"] == "provider-reservation-race-other"
+    )

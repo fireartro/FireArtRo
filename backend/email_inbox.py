@@ -715,6 +715,11 @@ class MongoInboundMessageRepository:
             if result is not None:
                 return result
             winner = await self._find_identity(webhook_id, resend_email_id)
+            if winner is not None and not (
+                winner.get("webhook_id") == normalized_webhook_id
+                and winner.get("resend_email_id") == normalized_resend_email_id
+            ):
+                raise InboundIdentityConflict()
             result = _inbound(winner)
             if result is not None:
                 return result
