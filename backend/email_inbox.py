@@ -550,26 +550,26 @@ class MongoInboundMessageRepository:
     async def reserve_webhook_event(
         self, *, webhook_id: str, resend_email_id: str
     ) -> bool:
+        normalized_webhook_id = _bounded_string(
+            webhook_id, MAX_IDENTIFIER_LENGTH, strip=True
+        )
+        normalized_resend_email_id = _bounded_string(
+            resend_email_id, MAX_IDENTIFIER_LENGTH, strip=True
+        )
         existing = await self._find_identity(webhook_id, resend_email_id)
         if existing is not None:
             if not (
-                existing.get("webhook_id")
-                == _bounded_string(webhook_id, MAX_IDENTIFIER_LENGTH, strip=True)
-                and existing.get("resend_email_id")
-                == _bounded_string(resend_email_id, MAX_IDENTIFIER_LENGTH, strip=True)
+                existing.get("webhook_id") == normalized_webhook_id
+                and existing.get("resend_email_id") == normalized_resend_email_id
             ):
-                return False
+                raise InboundIdentityConflict()
             return existing.get("ingest_state", "received") != "received"
 
         now = _aware_utc(self.clock())
         reservation = {
             "id": _bounded_string(self.id_factory(), MAX_IDENTIFIER_LENGTH, strip=True),
-            "webhook_id": _bounded_string(
-                webhook_id, MAX_IDENTIFIER_LENGTH, strip=True
-            ),
-            "resend_email_id": _bounded_string(
-                resend_email_id, MAX_IDENTIFIER_LENGTH, strip=True
-            ),
+            "webhook_id": normalized_webhook_id,
+            "resend_email_id": normalized_resend_email_id,
             "ingest_state": "reserved",
             "created_at": now,
             "updated_at": now,
@@ -581,6 +581,11 @@ class MongoInboundMessageRepository:
             winner = await self._find_identity(webhook_id, resend_email_id)
             if winner is None:
                 raise
+            if not (
+                winner.get("webhook_id") == normalized_webhook_id
+                and winner.get("resend_email_id") == normalized_resend_email_id
+            ):
+                raise InboundIdentityConflict()
             return winner.get("ingest_state", "received") != "received"
 
     def _received_document(
@@ -645,7 +650,20 @@ class MongoInboundMessageRepository:
         category: InboundCategory,
         received_at: datetime,
     ) -> InboundMessage:
-        existing = await self._find_identity(webhook_id, resend_email_id)
+        normalized_webhook_id = _bounded_string(
+            webhook_id, MAX_IDENTIFIER_LENGTH, strip=True
+        )
+        normalized_resend_email_id = _bounded_string(
+            resend_email_id, MAX_IDENTIFIER_LENGTH, strip=True
+        )
+        existing = await self._find_identity(
+            normalized_webhook_id, normalized_resend_email_id
+        )
+        if existing is not None and not (
+            existing.get("webhook_id") == normalized_webhook_id
+            and existing.get("resend_email_id") == normalized_resend_email_id
+        ):
+            raise InboundIdentityConflict()
         if (
             existing is not None
             and existing.get("ingest_state", "received") == "received"
@@ -654,18 +672,6 @@ class MongoInboundMessageRepository:
             if result is None:
                 raise RuntimeError("stored inbound message is unavailable")
             return result
-
-        normalized_webhook_id = _bounded_string(
-            webhook_id, MAX_IDENTIFIER_LENGTH, strip=True
-        )
-        normalized_resend_email_id = _bounded_string(
-            resend_email_id, MAX_IDENTIFIER_LENGTH, strip=True
-        )
-        if existing is not None and not (
-            existing.get("webhook_id") == normalized_webhook_id
-            and existing.get("resend_email_id") == normalized_resend_email_id
-        ):
-            raise InboundIdentityConflict()
 
         now = _aware_utc(self.clock())
         identifier = (
@@ -676,8 +682,8 @@ class MongoInboundMessageRepository:
         created_at = existing.get("created_at", now) if existing is not None else now
         document = self._received_document(
             identifier=identifier,
-            webhook_id=webhook_id,
-            resend_email_id=resend_email_id,
+            webhook_id=normalized_webhook_id,
+            resend_email_id=normalized_resend_email_id,
             message_id=message_id,
             references=references,
             sender=sender,
@@ -721,8 +727,15 @@ class MongoInboundMessageRepository:
                 raise RuntimeError("stored inbound message is unavailable")
             return result
         except DuplicateKeyError:
-            winner = await self._find_identity(webhook_id, resend_email_id)
+            winner = await self._find_identity(
+                normalized_webhook_id, normalized_resend_email_id
+            )
             if winner is not None and winner.get("ingest_state") == "received":
+                if not (
+                    winner.get("webhook_id") == normalized_webhook_id
+                    and winner.get("resend_email_id") == normalized_resend_email_id
+                ):
+                    raise InboundIdentityConflict()
                 result = _inbound(winner)
                 if result is not None:
                     return result

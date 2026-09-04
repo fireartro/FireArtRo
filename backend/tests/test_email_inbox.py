@@ -522,18 +522,25 @@ async def test_inbound_repository_converges_on_unique_provider_and_webhook_ids()
 
     await repository.create_indexes()
     first = await repository.upsert_received(**message)
-    same_provider = await repository.upsert_received(
-        **(message | {"webhook_id": "webhook-002", "subject": "Must not replace"})
-    )
-    same_webhook = await repository.upsert_received(
-        **(
-            message
-            | {
-                "resend_email_id": "provider-inbound-002",
-                "subject": "Must not create",
-            }
+    same_provider = await repository.upsert_received(**message)
+    same_webhook = await repository.upsert_received(**message)
+
+    from email_inbox import InboundIdentityConflict
+
+    with pytest.raises(InboundIdentityConflict):
+        await repository.upsert_received(
+            **(message | {"webhook_id": "webhook-002", "subject": "Must not replace"})
         )
-    )
+    with pytest.raises(InboundIdentityConflict):
+        await repository.upsert_received(
+            **(
+                message
+                | {
+                    "resend_email_id": "provider-inbound-002",
+                    "subject": "Must not create",
+                }
+            )
+        )
 
     assert_unique_index(collection, "resend_email_id")
     assert_unique_index(collection, "webhook_id")
@@ -919,13 +926,11 @@ async def test_inbound_repository_rejects_mismatched_reserved_identity_without_o
         )
         is True
     )
-    assert (
+    with pytest.raises(InboundIdentityConflict):
         await repository.reserve_webhook_event(
             webhook_id="webhook-identity-001",
             resend_email_id="provider-identity-002",
         )
-        is False
-    )
 
     with pytest.raises(InboundIdentityConflict):
         await repository.upsert_received(
