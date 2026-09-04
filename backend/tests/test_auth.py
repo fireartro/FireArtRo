@@ -931,6 +931,7 @@ async def test_server_missing_env_imports_and_fails_closed(server_loader, monkey
                 ("/api/admin/auth/logout", "POST"),
                 ("/api/blog/posts", "GET"),
                 ("/api/quotes", "GET"),
+                ("/api/webhooks/resend", "POST"),
             ]:
                 response = await client.request(method, path)
                 assert response.status_code == 503
@@ -1109,6 +1110,7 @@ async def test_server_cors_allows_csrf_and_patch(server_loader):
         ("/api/admin/auth/session", 4096),
         ("/api/admin/auth/logout", 4096),
         ("/api/quotes", 32_768),
+        ("/api/webhooks/resend", 64 * 1024),
         ("/api/admin/blog/posts", 128 * 1024),
         ("/api/admin/blog/media", 6 * 1024 * 1024),
     ],
@@ -1150,6 +1152,7 @@ async def test_server_stream_limit_stops_at_overflow_before_route(
         ("/api/admin/auth/session", 4096),
         ("/api/admin/auth/logout", 4096),
         ("/api/quotes", 32_768),
+        ("/api/webhooks/resend", 64 * 1024),
         ("/api/admin/blog/posts", 128 * 1024),
         ("/api/admin/blog/media", 6 * 1024 * 1024),
     ],
@@ -1215,9 +1218,14 @@ async def test_server_failed_index_startup_keeps_health_and_auth_closed(
     async def ping(*args, **kwargs):
         return {"ok": 1}
 
-    monkeypatch.setattr(server, "db", SimpleNamespace(
-        blog_posts=SimpleNamespace(create_index=fail_index), command=ping,
-    ))
+    monkeypatch.setattr(
+        server,
+        "db",
+        SimpleNamespace(
+            blog_posts=SimpleNamespace(create_index=fail_index),
+            command=ping,
+        ),
+    )
     async with server.app.router.lifespan_context(server.app):
         async with server_client(server) as client:
             health = await client.get("/api/health")

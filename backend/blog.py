@@ -21,11 +21,31 @@ MAX_BLOG_MEDIA_BYTES = 6 * 1024 * 1024
 
 def slugify_ro(value):
     """Create a stable URL segment while preserving Romanian word meaning."""
-    translated = str(value or "").translate(str.maketrans({
-        "ă": "a", "â": "a", "î": "i", "ș": "s", "ş": "s", "ț": "t", "ţ": "t",
-        "Ă": "A", "Â": "A", "Î": "I", "Ș": "S", "Ş": "S", "Ț": "T", "Ţ": "T",
-    }))
-    ascii_value = unicodedata.normalize("NFKD", translated).encode("ascii", "ignore").decode("ascii")
+    translated = str(value or "").translate(
+        str.maketrans(
+            {
+                "ă": "a",
+                "â": "a",
+                "î": "i",
+                "ș": "s",
+                "ş": "s",
+                "ț": "t",
+                "ţ": "t",
+                "Ă": "A",
+                "Â": "A",
+                "Î": "I",
+                "Ș": "S",
+                "Ş": "S",
+                "Ț": "T",
+                "Ţ": "T",
+            }
+        )
+    )
+    ascii_value = (
+        unicodedata.normalize("NFKD", translated)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
     return re.sub(r"[^a-z0-9]+", "-", ascii_value.lower()).strip("-") or "articol"
 
 
@@ -34,6 +54,8 @@ def utc_now():
 
 
 def request_size_limit(path, method):
+    if path == "/api/webhooks/resend" and method.upper() == "POST":
+        return 64 * 1024
     if path == "/api/admin/blog/media":
         return 6 * 1024 * 1024
     if path.startswith("/api/admin/blog/posts") and method.upper() in {"POST", "PUT"}:
@@ -291,7 +313,9 @@ def create_blog_router(service, admin_dependency=require_admin_session):
     router = APIRouter(prefix="/api")
 
     @router.get("/blog/posts", response_model=list[BlogSummaryResponse])
-    async def list_public_posts(limit: Optional[int] = Query(default=None, ge=1, le=100)):
+    async def list_public_posts(
+        limit: Optional[int] = Query(default=None, ge=1, le=100)
+    ):
         return await service.list_public(limit)
 
     @router.get("/blog/posts/{slug}", response_model=BlogArticleResponse)

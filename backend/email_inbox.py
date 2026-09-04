@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import re
 import uuid
 from collections.abc import Callable, Mapping, Sequence
@@ -27,6 +28,7 @@ from resend_email import (
     MAX_SUBJECT_LENGTH,
     MAX_TEXT_LENGTH,
     ReceivedAttachment,
+    ResendError,
 )
 
 
@@ -248,6 +250,14 @@ class InboundPage(StrictModel):
 
 class InboundIdentityConflict(RuntimeError):
     """A webhook/provider ID was already reserved for a different pair."""
+
+
+class InboundRelayError(RuntimeError):
+    """A relay failed with an allowlisted provider error code."""
+
+    def __init__(self, error_code: DeliveryErrorCode):
+        self.error_code = error_code
+        super().__init__(error_code)
 
 
 DELIVERY_FIELDS = {"_id": 0, **dict.fromkeys(EmailDelivery.model_fields, 1)}
@@ -497,6 +507,77 @@ class MongoEmailDeliveryRepository:
         )
         documents = await cursor.to_list(length=MAX_RELATED_DELIVERIES)
         return [delivery for item in documents if (delivery := _delivery(item))]
+
+
+class InboundRelayService:
+    """Relay a verified inbound message to the owner through one stable key."""
+
+    recipient = "fireartro@gmail.com"
+
+    def __init__(self, resend_client, delivery_repository, inbound_repository):
+        self.resend_client = resend_client
+        self.delivery_repository = delivery_repository
+        self.inbound_repository = inbound_repository
+
+    @staticmethod
+    def _message(message: InboundMessage) -> tuple[str, str, str]:
+        subject = message.subject or "(fără subiect)"
+        text = (
+            "Email primit prin FireArtRo\n\n"
+            f"De la: {message.sender}\n"
+            f"Către: {', '.join(message.recipients)}\n"
+            f"Subiect: {subject}\n\n"
+            f"{message.text}"
+        )
+        html_body = (
+            "<h1>Email primit prin FireArtRo</h1>"
+            f"<p><strong>De la:</strong> {html.escape(message.sender)}</p>"
+            f"<p><strong>Către:</strong> {html.escape(', '.join(message.recipients))}</p>"
+            f"<p><strong>Subiect:</strong> {html.escape(subject)}</p>"
+            f"<pre>{html.escape(message.text)}</pre>"
+        )
+        return f"Email primit — {subject}", text, html_body
+
+    async def relay(self, message: InboundMessage):
+        if self.delivery_repository is None or self.resend_client is None:
+            raise InboundRelayError("not_configured")
+
+        key = f"inbound-relay/{message.resend_email_id}"
+        delivery = await self.delivery_repository.create_or_get(
+            kind="inbound_relay",
+            idempotency_key=key,
+            recipient=self.recipient,
+            related_inbound_message_id=message.id,
+        )
+        if delivery.state == "sent":
+            return delivery
+        if delivery.state == "failed":
+            raise InboundRelayError(delivery.error_code or "delivery_failed")
+
+        subject, text, html_body = self._message(message)
+        try:
+            provider_id = await self.resend_client.send(
+                to=self.recipient,
+                subject=subject,
+                text=text,
+                html=html_body,
+                idempotency_key=key,
+                reply_to=message.sender,
+            )
+        except ResendError as error:
+            await self.delivery_repository.mark_failed(
+                delivery.id, error_code=error.code
+            )
+            await self.inbound_repository.mark_relay_failed(
+                message.id, error_code=error.code
+            )
+            raise InboundRelayError(error.code) from None
+
+        await self.delivery_repository.mark_sent(
+            delivery.id, resend_email_id=provider_id
+        )
+        await self.inbound_repository.mark_relay_sent(message.id)
+        return delivery
 
 
 class MongoInboundMessageRepository:

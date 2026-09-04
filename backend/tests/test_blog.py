@@ -48,17 +48,26 @@ class FakeBlogRepository:
         return deepcopy(items[:limit] if limit else items)
 
     async def get_published_by_slug(self, slug):
-        return deepcopy(next((
-            item
-            for item in self.posts
-            if item["slug"] == slug and item["status"] == "published"
-        ), None))
+        return deepcopy(
+            next(
+                (
+                    item
+                    for item in self.posts
+                    if item["slug"] == slug and item["status"] == "published"
+                ),
+                None,
+            )
+        )
 
     async def list_all(self):
-        return deepcopy(sorted(self.posts, key=lambda item: item["updated_at"], reverse=True))
+        return deepcopy(
+            sorted(self.posts, key=lambda item: item["updated_at"], reverse=True)
+        )
 
     async def get_by_id(self, article_id):
-        return deepcopy(next((item for item in self.posts if item["id"] == article_id), None))
+        return deepcopy(
+            next((item for item in self.posts if item["id"] == article_id), None)
+        )
 
     async def slug_exists(self, slug):
         return any(item["slug"] == slug for item in self.posts)
@@ -68,7 +77,14 @@ class FakeBlogRepository:
         return deepcopy(document)
 
     async def replace(self, article_id, document):
-        index = next((index for index, item in enumerate(self.posts) if item["id"] == article_id), -1)
+        index = next(
+            (
+                index
+                for index, item in enumerate(self.posts)
+                if item["id"] == article_id
+            ),
+            -1,
+        )
         if index < 0:
             return None
         self.posts[index] = deepcopy(document)
@@ -170,10 +186,13 @@ def test_admin_routes_reject_missing_or_wrong_key():
     client, _, _ = admin_client()
 
     assert client.get("/api/admin/blog/posts").status_code == 401
-    assert client.get(
-        "/api/admin/blog/posts",
-        headers={"X-Admin-Key": "wrong"},
-    ).status_code == 401
+    assert (
+        client.get(
+            "/api/admin/blog/posts",
+            headers={"X-Admin-Key": "wrong"},
+        ).status_code
+        == 401
+    )
 
 
 def test_create_always_starts_as_draft_and_duplicate_title_gets_unique_slug():
@@ -283,7 +302,10 @@ def test_media_upload_requires_admin_and_public_read_returns_exact_bytes():
     assert public.status_code == 200
     assert public.content == webp_bytes
     assert public.headers["content-type"].startswith("image/webp")
-    assert public.headers["cache-control"] == "public, max-age=86400, stale-while-revalidate=604800"
+    assert (
+        public.headers["cache-control"]
+        == "public, max-age=86400, stale-while-revalidate=604800"
+    )
 
 
 def test_media_upload_rejects_non_image_and_false_image_types():
@@ -332,9 +354,13 @@ def test_replacing_cover_deletes_old_media_only_after_article_save():
 def test_request_limits_are_scoped_to_blog_writes_and_media_only():
     assert request_size_limit("/api/quotes", "POST") == 32_768
     assert request_size_limit("/api/admin/blog/posts", "POST") == 128 * 1024
-    assert request_size_limit(
-        "/api/admin/blog/posts/6f69e970-5d5d-46fc-8593-62c00bf46101",
-        "PUT",
-    ) == 128 * 1024
+    assert (
+        request_size_limit(
+            "/api/admin/blog/posts/6f69e970-5d5d-46fc-8593-62c00bf46101",
+            "PUT",
+        )
+        == 128 * 1024
+    )
     assert request_size_limit("/api/admin/blog/media", "POST") == 6 * 1024 * 1024
+    assert request_size_limit("/api/webhooks/resend", "POST") == 64 * 1024
     assert request_size_limit("/api/blog/posts", "GET") == 32_768

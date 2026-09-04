@@ -1,12 +1,13 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 from starlette.datastructures import MutableHeaders
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 from pymongo.errors import PyMongoError
 import asyncio
 from contextlib import asynccontextmanager
+import json
 import os
 import logging
 import httpx
@@ -48,8 +49,15 @@ from quote_admin import (
     QuoteNotificationService,
     create_quote_admin_router,
 )
-from email_inbox import MongoEmailDeliveryRepository
+from email_inbox import (
+    InboundIdentityConflict,
+    InboundRelayError,
+    InboundRelayService,
+    MongoEmailDeliveryRepository,
+    MongoInboundMessageRepository,
+)
 from resend_email import ResendClient, ResendConfig, ResendError
+from svix.webhooks import Webhook, WebhookVerificationError
 from media import (
     MediaService,
     MediaWriteGuardMiddleware,
@@ -113,13 +121,34 @@ def _email_config():
     )
 
 
+def _build_resend_webhook_verifier(config):
+    if not config.enabled:
+        return None
+    try:
+        return Webhook(config.webhook_secret)
+    except Exception:
+        # Invalid provider configuration fails closed at the route boundary;
+        # importing the app must still leave health/config diagnostics usable.
+        return None
+
+
+resend_config = _email_config()
 resend_http_client = httpx.AsyncClient()
-resend_client = ResendClient(_email_config(), http_client=resend_http_client)
+resend_client = ResendClient(resend_config, http_client=resend_http_client)
+resend_webhook_verifier = _build_resend_webhook_verifier(resend_config)
 quote_delivery_repository = MongoEmailDeliveryRepository(
     db.email_deliveries if db is not None else None
 )
 quote_notification_service = QuoteNotificationService(
     resend_client, quote_delivery_repository if db is not None else None
+)
+inbound_repository = MongoInboundMessageRepository(
+    db.inbound_messages if db is not None else None
+)
+inbound_relay_service = InboundRelayService(
+    resend_client,
+    quote_delivery_repository if db is not None else None,
+    inbound_repository if db is not None else None,
 )
 
 cms_repository = MongoCmsRepository(
@@ -150,6 +179,7 @@ async def ensure_indexes():
     await cms_repository.create_indexes()
     await quote_repository.create_indexes()
     await quote_delivery_repository.create_indexes()
+    await inbound_repository.create_indexes()
     await quote_rate_limiter.create_indexes()
     await media_repository.create_indexes()
 
@@ -316,6 +346,97 @@ async def health():
     )
 
 
+webhook_router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
+
+
+def _webhook_response(status_code: int):
+    return Response(status_code=status_code, headers={"Cache-Control": "no-store"})
+
+
+@webhook_router.post("/resend")
+async def receive_resend_webhook(request: Request):
+    if resend_webhook_verifier is None:
+        return _webhook_response(503)
+
+    svix_headers = {
+        "svix-id": request.headers.get("svix-id", ""),
+        "svix-timestamp": request.headers.get("svix-timestamp", ""),
+        "svix-signature": request.headers.get("svix-signature", ""),
+    }
+    if not all(svix_headers.values()):
+        return _webhook_response(400)
+    if len(svix_headers["svix-id"]) > 200:
+        return _webhook_response(400)
+
+    body = await request.body()
+    try:
+        resend_webhook_verifier.verify(body, svix_headers)
+    except (WebhookVerificationError, UnicodeDecodeError, TypeError, ValueError):
+        return _webhook_response(400)
+
+    try:
+        event = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, TypeError, ValueError):
+        return _webhook_response(400)
+    if not isinstance(event, dict) or not isinstance(event.get("type"), str):
+        return _webhook_response(400)
+    if event["type"] != "email.received":
+        return _webhook_response(204)
+
+    data = event.get("data")
+    email_id = data.get("email_id") if isinstance(data, dict) else None
+    if not isinstance(email_id, str) or not email_id.strip() or len(email_id) > 200:
+        return _webhook_response(400)
+    webhook_id = svix_headers["svix-id"].strip()
+    email_id = email_id.strip()
+
+    try:
+        should_process = await inbound_repository.reserve_webhook_event(
+            webhook_id=webhook_id,
+            resend_email_id=email_id,
+        )
+    except InboundIdentityConflict:
+        return _webhook_response(400)
+    except PyMongoError:
+        return _webhook_response(503)
+    if not should_process:
+        return _webhook_response(204)
+
+    try:
+        received = await resend_client.get_received_email(email_id)
+        recipients = received.recipients
+        normalized_recipients = {
+            item.strip().lower() for item in recipients if isinstance(item, str)
+        }
+        category = (
+            "contact"
+            if "contact@fireart.ro" in normalized_recipients
+            else "other_recipient"
+        )
+        message = await inbound_repository.upsert_received(
+            webhook_id=webhook_id,
+            resend_email_id=email_id,
+            message_id=received.message_id,
+            references=received.references,
+            sender=received.sender,
+            recipients=recipients,
+            subject=received.subject,
+            text=received.text,
+            html=received.html,
+            attachments=[item.model_dump() for item in received.attachments],
+            category=category,
+            received_at=datetime.now(timezone.utc),
+        )
+        await inbound_relay_service.relay(message)
+    except (ResendError, InboundRelayError):
+        return _webhook_response(503)
+    except InboundIdentityConflict:
+        return _webhook_response(400)
+    except PyMongoError:
+        return _webhook_response(503)
+    return _webhook_response(204)
+
+
 @api_router.post("/quotes", response_model=QuoteAcknowledgement)
 async def create_quote(input: QuoteCreate, request: Request):
     if not input.consent:
@@ -335,6 +456,7 @@ async def create_quote(input: QuoteCreate, request: Request):
 
 # Include the router in the main app
 app.include_router(api_router)
+app.include_router(webhook_router)
 app.include_router(
     create_quote_admin_router(quote_repository, quote_notification_service)
 )
@@ -424,6 +546,7 @@ class RequestSecurityMiddleware:
         if db is None and (
             path == "/api/content"
             or path.startswith(("/api/quotes", "/api/blog/", "/api/admin/"))
+            or path == "/api/webhooks/resend"
         ):
             await reject(503, "Serviciul nu este disponibil momentan.")
             return
