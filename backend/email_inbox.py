@@ -586,6 +586,7 @@ class InboundRelayService:
                 )
             if delivery.state != "pending":
                 return delivery
+            await self.inbound_repository.mark_relay_pending(message.id)
 
         subject, text, html_body = self._message(message)
         try:

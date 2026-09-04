@@ -11,6 +11,8 @@ from pydantic import ValidationError
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
+from resend_email import ResendError
+
 
 def matches(document, query):
     for key, expected in query.items():
@@ -493,6 +495,100 @@ async def test_delivery_repository_moves_pending_records_to_sent_or_failed():
     )
     assert await collection.find_one({"id": sent_document["id"]}) == persisted_sent
     assert await collection.find_one({"id": failed_document["id"]}) == persisted_failed
+
+
+@pytest.mark.asyncio
+async def test_inbound_relay_retry_restores_both_states_and_reuses_idempotency_key():
+    from email_inbox import (
+        InboundRelayError,
+        InboundRelayService,
+        MongoEmailDeliveryRepository,
+        MongoInboundMessageRepository,
+    )
+
+    clock = MutableClock(datetime(2026, 9, 4, 9, tzinfo=timezone.utc))
+    inbound_collection = AsyncCollection()
+    delivery_collection = AsyncCollection()
+    inbound_repository = MongoInboundMessageRepository(
+        inbound_collection,
+        clock=clock,
+        id_factory=lambda: "inbound-relay-001",
+    )
+    delivery_repository = MongoEmailDeliveryRepository(
+        delivery_collection,
+        clock=clock,
+        id_factory=lambda: "delivery-relay-001",
+    )
+    await inbound_repository.create_indexes()
+    await delivery_repository.create_indexes()
+    message = await inbound_repository.upsert_received(
+        webhook_id="msg_relay_001",
+        resend_email_id="re_relay_001",
+        message_id="<relay@example.com>",
+        references=[],
+        sender="client@example.com",
+        recipients=["contact@fireart.ro"],
+        subject="Cerere de ofertă",
+        text="Detalii test",
+        html="<p>Detalii test</p>",
+        attachments=[],
+        category="contact",
+        received_at=clock.value,
+    )
+
+    class FakeResendSender:
+        def __init__(self):
+            self.failure = None
+            self.calls = []
+
+        async def send(self, **kwargs):
+            self.calls.append(kwargs)
+            if self.failure is not None:
+                raise self.failure
+            return "re_relay_forwarded_001"
+
+    sender = FakeResendSender()
+    service = InboundRelayService(
+        sender,
+        delivery_repository,
+        inbound_repository,
+    )
+    sender.failure = ResendError("provider_unavailable")
+
+    with pytest.raises(InboundRelayError):
+        await service.relay(message)
+
+    failed_message = await inbound_repository.get_internal(message.id)
+    failed_delivery = await delivery_repository.create_or_get(
+        kind="inbound_relay",
+        idempotency_key="inbound-relay/re_relay_001",
+        recipient="fireartro@gmail.com",
+        related_inbound_message_id=message.id,
+    )
+    assert failed_message.relay_state == "failed"
+    assert failed_delivery.state == "failed"
+
+    sender.failure = None
+    clock.value = datetime(2026, 9, 4, 9, 1, tzinfo=timezone.utc)
+    await service.retry(failed_message)
+
+    sent_message = await inbound_repository.get_internal(message.id)
+    sent_delivery = await delivery_repository.create_or_get(
+        kind="inbound_relay",
+        idempotency_key="inbound-relay/re_relay_001",
+        recipient="fireartro@gmail.com",
+        related_inbound_message_id=message.id,
+    )
+    assert sent_message.relay_state == "sent"
+    assert sent_delivery.state == "sent"
+    assert sent_delivery.resend_email_id == "re_relay_forwarded_001"
+    assert len(sender.calls) == 2
+    assert {call["idempotency_key"] for call in sender.calls} == {
+        "inbound-relay/re_relay_001"
+    }
+
+    await service.relay(sent_message)
+    assert len(sender.calls) == 2
 
 
 @pytest.mark.asyncio
