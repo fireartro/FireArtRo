@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
@@ -76,8 +77,13 @@ def project(document, projection):
 
 
 class Cursor:
-    def __init__(self, documents):
+    def __init__(
+        self, documents, *, require_bounded_queries=False, query_timeouts=None
+    ):
         self.documents = documents
+        self.require_bounded_queries = require_bounded_queries
+        self.query_timeouts = query_timeouts if query_timeouts is not None else []
+        self.timeout = None
 
     def sort(self, fields, direction=None):
         if isinstance(fields, str):
@@ -96,21 +102,34 @@ class Cursor:
 
     def max_time_ms(self, milliseconds):
         assert 0 < milliseconds <= 2_000
+        self.timeout = milliseconds
+        self.query_timeouts.append(milliseconds)
         return self
 
     async def to_list(self, length):
         await asyncio.sleep(0)
+        if self.require_bounded_queries:
+            assert self.timeout is not None
         return deepcopy(self.documents[:length])
 
 
 class AsyncCollection:
     """Small Motor-shaped collection with real uniqueness and projections."""
 
-    def __init__(self, documents=()):
+    def __init__(self, documents=(), *, require_bounded_queries=False):
         self.documents = deepcopy(list(documents))
         self.indexes = []
         self.unique_indexes = []
         self.projections = []
+        self.query_timeouts = []
+        self.require_bounded_queries = require_bounded_queries
+
+    def record_query_timeout(self, milliseconds):
+        if self.require_bounded_queries:
+            assert milliseconds is not None
+        if milliseconds is not None:
+            assert 0 < milliseconds <= 2_000
+            self.query_timeouts.append(milliseconds)
 
     @staticmethod
     def index_fields(keys):
@@ -140,10 +159,15 @@ class AsyncCollection:
         self.documents.append(candidate)
         return SimpleNamespace(inserted_id=candidate.get("_id", candidate.get("id")))
 
-    async def find_one(self, query, projection=None):
+    async def find_one(self, query, projection=None, **kwargs):
         await asyncio.sleep(0)
+        assert not set(kwargs) - {"max_time_ms", "sort"}
+        self.record_query_timeout(kwargs.get("max_time_ms"))
         self.projections.append(deepcopy(projection))
-        found = next((item for item in self.documents if matches(item, query)), None)
+        candidates = [item for item in self.documents if matches(item, query)]
+        for field, order in reversed(kwargs.get("sort") or []):
+            candidates.sort(key=lambda item: item.get(field), reverse=order == -1)
+        found = candidates[0] if candidates else None
         return project(found, projection)
 
     def find(self, query, projection=None):
@@ -153,12 +177,14 @@ class AsyncCollection:
                 project(item, projection)
                 for item in self.documents
                 if matches(item, query)
-            ]
+            ],
+            require_bounded_queries=self.require_bounded_queries,
+            query_timeouts=self.query_timeouts,
         )
 
     async def count_documents(self, query, **kwargs):
-        if "maxTimeMS" in kwargs:
-            assert 0 < kwargs["maxTimeMS"] <= 2_000
+        assert not set(kwargs) - {"maxTimeMS"}
+        self.record_query_timeout(kwargs.get("maxTimeMS"))
         return sum(matches(item, query) for item in self.documents)
 
     async def find_one_and_update(
@@ -169,8 +195,12 @@ class AsyncCollection:
         return_document=ReturnDocument.BEFORE,
         projection=None,
         upsert=False,
+        max_time_ms=None,
+        **kwargs,
     ):
         await asyncio.sleep(0)
+        assert not set(kwargs) - {"maxTimeMS"}
+        self.record_query_timeout(max_time_ms or kwargs.get("maxTimeMS"))
         assert not set(update) - {"$set", "$setOnInsert", "$inc"}
         existing = next((item for item in self.documents if matches(item, query)), None)
         before = deepcopy(existing)
@@ -243,6 +273,24 @@ class MutableClock:
         return self.value
 
 
+class RacingInsertCollection(AsyncCollection):
+    """Materialize a competing winner, then raise the insert race."""
+
+    def __init__(self, winner_id):
+        super().__init__(require_bounded_queries=True)
+        self.winner_id = winner_id
+        self.raced = False
+
+    async def insert_one(self, document):
+        if not self.raced:
+            self.raced = True
+            winner = deepcopy(document)
+            winner["id"] = self.winner_id
+            self.documents.append(winner)
+            raise DuplicateKeyError("simulated concurrent insert")
+        return await super().insert_one(document)
+
+
 def as_document(value):
     if hasattr(value, "model_dump"):
         return value.model_dump(by_alias=True)
@@ -251,6 +299,14 @@ def as_document(value):
 
 def assert_unique_index(collection, field):
     assert (field,) in collection.unique_indexes
+
+
+def assert_index(collection, keys, **options):
+    assert any(
+        saved_keys == keys
+        and all(saved_options.get(key) == value for key, value in options.items())
+        for saved_keys, saved_options in collection.indexes
+    )
 
 
 def inbound_document(identifier, received_at, category="contact", **changes):
@@ -603,3 +659,226 @@ async def test_inbound_list_filters_paginates_and_projects_only_safe_admin_field
             "size": 12,
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_delivery_repository_indexes_races_and_bounded_related_lookups():
+    from email_inbox import MongoEmailDeliveryRepository
+
+    clock = MutableClock(datetime(2026, 9, 4, 12, tzinfo=timezone.utc))
+    collection = RacingInsertCollection("delivery-race-winner")
+    repository = MongoEmailDeliveryRepository(
+        collection,
+        clock=clock,
+        id_factory=lambda: "delivery-race-loser",
+    )
+
+    await repository.create_indexes()
+    quote_delivery = await repository.create_or_get(
+        kind="quote_notification",
+        idempotency_key="quote-notification/quote-001",
+        recipient="owner@example.com",
+        related_quote_id="quote-001",
+    )
+    clock.value = datetime(2026, 9, 4, 12, 1, tzinfo=timezone.utc)
+    inbound_delivery = await repository.create_or_get(
+        kind="inbound_relay",
+        idempotency_key="inbound-relay/provider-001",
+        recipient="owner@example.com",
+        related_inbound_message_id="inbound-001",
+    )
+
+    current = await repository.get_current_quote_notification("quote-001")
+    related = await repository.list_for_inbound_message("inbound-001")
+
+    assert_unique_index(collection, "id")
+    assert_unique_index(collection, "idempotency_key")
+    assert_index(
+        collection,
+        [("related_quote_id", 1), ("created_at", -1)],
+    )
+    assert_index(
+        collection,
+        [("related_inbound_message_id", 1), ("created_at", -1)],
+    )
+    assert_index(collection, [("state", 1), ("updated_at", -1)])
+    assert as_document(quote_delivery)["id"] == "delivery-race-winner"
+    assert as_document(current)["id"] == "delivery-race-winner"
+    assert [as_document(item)["id"] for item in related] == [
+        as_document(inbound_delivery)["id"]
+    ]
+    assert collection.query_timeouts
+
+
+@pytest.mark.asyncio
+async def test_inbound_repository_reserves_then_completes_a_webhook_once():
+    from email_inbox import MongoInboundMessageRepository
+
+    instant = datetime(2026, 9, 4, 13, tzinfo=timezone.utc)
+    collection = AsyncCollection(require_bounded_queries=True)
+    repository = MongoInboundMessageRepository(
+        collection,
+        clock=lambda: instant,
+        id_factory=lambda: "inbound-reserved-001",
+    )
+
+    await repository.create_indexes()
+    first_reservation = await repository.reserve_webhook_event(
+        webhook_id="webhook-reserved-001",
+        resend_email_id="provider-reserved-001",
+    )
+    repeated_reservation = await repository.reserve_webhook_event(
+        webhook_id="webhook-reserved-001",
+        resend_email_id="provider-reserved-001",
+    )
+    received = await repository.upsert_received(
+        webhook_id="webhook-reserved-001",
+        resend_email_id="provider-reserved-001",
+        message_id="<reserved@example.com>",
+        references=[],
+        sender="sender@example.com",
+        recipients=["contact@inbound.example.com"],
+        subject="Reserved message",
+        text="Stored before relay.",
+        html="<p>Archived only.</p>",
+        attachments=[],
+        category="contact",
+        received_at=instant,
+    )
+    completed_reservation = await repository.reserve_webhook_event(
+        webhook_id="webhook-reserved-001",
+        resend_email_id="provider-reserved-001",
+    )
+
+    assert first_reservation is True
+    assert repeated_reservation is True
+    assert completed_reservation is False
+    assert as_document(received)["id"] == "inbound-reserved-001"
+    assert collection.documents[0]["ingest_state"] == "received"
+    assert len(collection.documents) == 1
+    assert collection.query_timeouts
+
+
+@pytest.mark.asyncio
+async def test_inbound_repository_caps_persisted_content_and_wins_insert_race():
+    from email_inbox import MongoInboundMessageRepository
+
+    instant = datetime(2026, 9, 4, 14, tzinfo=timezone.utc)
+    collection = RacingInsertCollection("inbound-race-winner")
+    repository = MongoInboundMessageRepository(
+        collection,
+        clock=lambda: instant,
+        id_factory=lambda: "inbound-race-loser",
+    )
+    attachments = [
+        {
+            "id": f"attachment-{index}",
+            "filename": "f" * 241,
+            "content_type": "text/plain",
+            "size": index,
+            "download_url": "https://provider.invalid/secret",
+        }
+        for index in range(51)
+    ]
+
+    await repository.create_indexes()
+    received = await repository.upsert_received(
+        webhook_id="webhook-race-001",
+        resend_email_id="provider-race-001",
+        message_id="<race@example.com>",
+        references=[f"<reference-{index}@example.com>" for index in range(21)],
+        sender="SENDER@example.com",
+        recipients=["CONTACT@inbound.example.com"],
+        subject="s" * 301,
+        text="t" * 100_001,
+        html="h" * 200_001,
+        attachments=attachments,
+        category="contact",
+        received_at=instant,
+    )
+
+    stored = collection.documents[0]
+    assert as_document(received)["id"] == "inbound-race-winner"
+    assert stored["from"] == "sender@example.com"
+    assert stored["to"] == ["contact@inbound.example.com"]
+    assert len(stored["subject"]) == 300
+    assert len(stored["text"]) == 100_000
+    assert len(stored["html"]) == 200_000
+    assert len(stored["references"]) == 20
+    assert len(stored["attachments"]) == 50
+    assert len(stored["attachments"][0]["filename"]) == 240
+    assert set(stored["attachments"][0]) == {
+        "id",
+        "filename",
+        "content_type",
+        "size",
+    }
+
+
+@pytest.mark.asyncio
+async def test_inbound_repository_searches_literal_text_and_updates_relay_reply_state():
+    from email_inbox import MongoInboundMessageRepository
+
+    clock = MutableClock(datetime(2026, 9, 4, 15, tzinfo=timezone.utc))
+    collection = AsyncCollection(
+        [
+            inbound_document(
+                "inbound-literal",
+                datetime(2026, 9, 4, 14, tzinfo=timezone.utc),
+                subject="Offer [draft]",
+            ),
+            inbound_document(
+                "inbound-regex-lookalike",
+                datetime(2026, 9, 4, 13, tzinfo=timezone.utc),
+                subject="Offer d",
+            ),
+            inbound_document(
+                "inbound-failed",
+                datetime(2026, 9, 4, 12, tzinfo=timezone.utc),
+            ),
+        ],
+        require_bounded_queries=True,
+    )
+    repository = MongoInboundMessageRepository(collection, clock=clock)
+
+    searched = as_document(
+        await repository.list(q="[draft]", category="contact", page=1, page_size=10)
+    )
+    relayed = await repository.mark_relay_sent("inbound-literal")
+    assert await repository.mark_relay_failed("inbound-literal") is None
+    failed = await repository.mark_relay_failed("inbound-failed")
+    clock.value = datetime(2026, 9, 4, 15, 1, tzinfo=timezone.utc)
+    retried = await repository.mark_relay_pending("inbound-failed")
+    replied = await repository.mark_reply_sent("inbound-literal")
+
+    assert [item["id"] for item in searched["items"]] == ["inbound-literal"]
+    assert as_document(relayed)["relay_state"] == "sent"
+    assert as_document(failed)["relay_state"] == "failed"
+    assert as_document(retried)["relay_state"] == "pending"
+    assert as_document(replied)["latest_reply_at"] == clock.value
+    assert collection.query_timeouts
+
+
+@pytest.mark.asyncio
+async def test_delivery_failure_rejects_non_allowlisted_error_text():
+    from email_inbox import MongoEmailDeliveryRepository
+
+    instant = datetime(2026, 9, 4, 16, tzinfo=timezone.utc)
+    collection = AsyncCollection()
+    repository = MongoEmailDeliveryRepository(
+        collection,
+        clock=lambda: instant,
+        id_factory=lambda: "delivery-safe-error",
+    )
+    delivery = await repository.create_or_get(
+        kind="inbound_relay",
+        idempotency_key="inbound-relay/inbound-safe-error",
+        recipient="owner@example.com",
+        related_inbound_message_id="inbound-safe-error",
+    )
+
+    with pytest.raises(ValidationError):
+        await repository.mark_failed(
+            as_document(delivery)["id"],
+            error_code="SMTP rejected secret@example.com",
+        )
