@@ -400,6 +400,19 @@ async def receive_resend_webhook(request: Request):
     except PyMongoError:
         return _webhook_response(503)
     if not should_process:
+        try:
+            existing_message = await inbound_repository.get_internal_by_identity(
+                webhook_id=webhook_id,
+                resend_email_id=email_id,
+            )
+            if existing_message is not None and existing_message.relay_state != "sent":
+                await inbound_relay_service.retry(existing_message)
+        except (ResendError, InboundRelayError):
+            return _webhook_response(503)
+        except InboundIdentityConflict:
+            return _webhook_response(400)
+        except PyMongoError:
+            return _webhook_response(503)
         return _webhook_response(204)
 
     try:

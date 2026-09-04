@@ -72,10 +72,21 @@ class FakeInboundRepository:
         self.events.append("persist")
         if self.upsert_failure is not None:
             raise self.upsert_failure
-        message = SimpleNamespace(id="inbound-001", **deepcopy(payload))
+        message = SimpleNamespace(
+            id="inbound-001", relay_state="pending", **deepcopy(payload)
+        )
         self.messages.append(message)
         self.completed.add((payload["webhook_id"], payload["resend_email_id"]))
         return message
+
+    async def get_internal_by_identity(self, *, webhook_id, resend_email_id):
+        for message in self.messages:
+            if (
+                message.webhook_id == webhook_id
+                and message.resend_email_id == resend_email_id
+            ):
+                return message
+        return None
 
 
 class FakeResendClient:
@@ -111,7 +122,13 @@ class FakeRelayService:
         self.events.append("relay")
         self.messages.append(message)
         if self.failure is not None:
+            message.relay_state = "failed"
             raise self.failure
+        message.relay_state = "sent"
+
+    async def retry(self, message):
+        self.events.append("retry")
+        return await self.relay(message)
 
 
 @pytest.fixture
@@ -270,3 +287,30 @@ async def test_database_and_relay_failures_are_retryable_without_leaking_details
     assert events == ["reserve", "reserve", "fetch", "persist", "relay"]
     assert len(server.inbound_repository.messages) == 1
     assert "password" not in database_failure.text + relay_failure.text
+
+
+@pytest.mark.asyncio
+async def test_completed_webhook_retries_only_a_failed_relay(webhook_server):
+    server, events = webhook_server
+    server.inbound_relay_service.failure = ResendError("provider_unavailable")
+    body = event_body()
+    async with api_client(server) as client:
+        failed = await client.post(
+            "/api/webhooks/resend", content=body, headers=signed_headers(body)
+        )
+        server.inbound_relay_service.failure = None
+        retried = await client.post(
+            "/api/webhooks/resend", content=body, headers=signed_headers(body)
+        )
+
+    assert failed.status_code == 503
+    assert retried.status_code == 204
+    assert events == [
+        "reserve",
+        "fetch",
+        "persist",
+        "relay",
+        "reserve",
+        "retry",
+        "relay",
+    ]

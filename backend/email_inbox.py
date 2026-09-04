@@ -473,6 +473,28 @@ class MongoEmailDeliveryRepository:
         )
         return _delivery(document)
 
+    async def reset_failed(self, delivery_id: str) -> EmailDelivery | None:
+        now = _aware_utc(self.clock())
+        document = await self.collection.find_one_and_update(
+            {
+                "id": _bounded_string(delivery_id, MAX_IDENTIFIER_LENGTH, strip=True),
+                "state": "failed",
+            },
+            {
+                "$set": {
+                    "state": "pending",
+                    "resend_email_id": None,
+                    "error_code": None,
+                    "sent_at": None,
+                    "updated_at": now,
+                }
+            },
+            return_document=ReturnDocument.AFTER,
+            projection=DELIVERY_FIELDS,
+            maxTimeMS=QUERY_TIMEOUT_MS,
+        )
+        return _delivery(document)
+
     async def get_current_quote_notification(
         self, quote_id: str
     ) -> EmailDelivery | None:
@@ -538,7 +560,7 @@ class InboundRelayService:
         )
         return f"Email primit — {subject}", text, html_body
 
-    async def relay(self, message: InboundMessage):
+    async def _deliver(self, message: InboundMessage, *, retry: bool):
         if self.delivery_repository is None or self.resend_client is None:
             raise InboundRelayError("not_configured")
 
@@ -552,7 +574,18 @@ class InboundRelayService:
         if delivery.state == "sent":
             return delivery
         if delivery.state == "failed":
-            raise InboundRelayError(delivery.error_code or "delivery_failed")
+            if not retry:
+                raise InboundRelayError(delivery.error_code or "delivery_failed")
+            delivery = await self.delivery_repository.reset_failed(delivery.id)
+            if delivery is None:
+                delivery = await self.delivery_repository.create_or_get(
+                    kind="inbound_relay",
+                    idempotency_key=key,
+                    recipient=self.recipient,
+                    related_inbound_message_id=message.id,
+                )
+            if delivery.state != "pending":
+                return delivery
 
         subject, text, html_body = self._message(message)
         try:
@@ -578,6 +611,12 @@ class InboundRelayService:
         )
         await self.inbound_repository.mark_relay_sent(message.id)
         return delivery
+
+    async def relay(self, message: InboundMessage):
+        return await self._deliver(message, retry=False)
+
+    async def retry(self, message: InboundMessage):
+        return await self._deliver(message, retry=True)
 
 
 class MongoInboundMessageRepository:
@@ -916,6 +955,31 @@ class MongoInboundMessageRepository:
             INBOUND_INTERNAL_FIELDS,
             max_time_ms=QUERY_TIMEOUT_MS,
         )
+        return _inbound(document)
+
+    async def get_internal_by_identity(
+        self, *, webhook_id: str, resend_email_id: str
+    ) -> InboundMessage | None:
+        """Return a stored message only when both provider identities match."""
+
+        document = await self.collection.find_one(
+            self._identity_query(webhook_id, resend_email_id),
+            INBOUND_INTERNAL_FIELDS,
+            max_time_ms=QUERY_TIMEOUT_MS,
+        )
+        if document is None:
+            return None
+        normalized_webhook_id = _bounded_string(
+            webhook_id, MAX_IDENTIFIER_LENGTH, strip=True
+        )
+        normalized_resend_email_id = _bounded_string(
+            resend_email_id, MAX_IDENTIFIER_LENGTH, strip=True
+        )
+        if not (
+            document.get("webhook_id") == normalized_webhook_id
+            and document.get("resend_email_id") == normalized_resend_email_id
+        ):
+            raise InboundIdentityConflict()
         return _inbound(document)
 
     async def _transition_relay(
