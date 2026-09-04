@@ -34,6 +34,7 @@ QUERY_TIMEOUT_MS = 2_000
 MAX_IDENTIFIER_LENGTH = 200
 MAX_IDEMPOTENCY_KEY_LENGTH = 500
 MAX_SEARCH_LENGTH = 200
+MAX_PAGE = 1_000
 MAX_PAGE_SIZE = 100
 MAX_RELATED_DELIVERIES = 100
 
@@ -134,7 +135,8 @@ def _normalized_attachments(value: Any) -> list[dict[str, Any]]:
 
 def _aware_utc(value: datetime) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
-        raise ValueError("datetime must include timezone information")
+        # PyMongo returns naive UTC datetimes unless tz_aware is enabled.
+        return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
 
 
@@ -242,6 +244,10 @@ class InboundPage(StrictModel):
     total: int = Field(ge=0)
     page: int = Field(ge=1)
     page_size: int = Field(ge=1, le=MAX_PAGE_SIZE)
+
+
+class InboundIdentityConflict(RuntimeError):
+    """A webhook/provider ID was already reserved for a different pair."""
 
 
 DELIVERY_FIELDS = {"_id": 0, **dict.fromkeys(EmailDelivery.model_fields, 1)}
@@ -546,6 +552,13 @@ class MongoInboundMessageRepository:
     ) -> bool:
         existing = await self._find_identity(webhook_id, resend_email_id)
         if existing is not None:
+            if not (
+                existing.get("webhook_id")
+                == _bounded_string(webhook_id, MAX_IDENTIFIER_LENGTH, strip=True)
+                and existing.get("resend_email_id")
+                == _bounded_string(resend_email_id, MAX_IDENTIFIER_LENGTH, strip=True)
+            ):
+                return False
             return existing.get("ingest_state", "received") != "received"
 
         now = _aware_utc(self.clock())
@@ -642,6 +655,18 @@ class MongoInboundMessageRepository:
                 raise RuntimeError("stored inbound message is unavailable")
             return result
 
+        normalized_webhook_id = _bounded_string(
+            webhook_id, MAX_IDENTIFIER_LENGTH, strip=True
+        )
+        normalized_resend_email_id = _bounded_string(
+            resend_email_id, MAX_IDENTIFIER_LENGTH, strip=True
+        )
+        if existing is not None and not (
+            existing.get("webhook_id") == normalized_webhook_id
+            and existing.get("resend_email_id") == normalized_resend_email_id
+        ):
+            raise InboundIdentityConflict()
+
         now = _aware_utc(self.clock())
         identifier = (
             existing.get("id")
@@ -669,7 +694,12 @@ class MongoInboundMessageRepository:
 
         if existing is not None:
             saved = await self.collection.find_one_and_update(
-                {"id": identifier, "ingest_state": {"$ne": "received"}},
+                {
+                    "id": identifier,
+                    "webhook_id": normalized_webhook_id,
+                    "resend_email_id": normalized_resend_email_id,
+                    "ingest_state": {"$ne": "received"},
+                },
                 {"$set": document},
                 return_document=ReturnDocument.AFTER,
                 projection=INBOUND_INTERNAL_FIELDS,
@@ -692,10 +722,32 @@ class MongoInboundMessageRepository:
             return result
         except DuplicateKeyError:
             winner = await self._find_identity(webhook_id, resend_email_id)
+            if winner is not None and winner.get("ingest_state") == "received":
+                result = _inbound(winner)
+                if result is not None:
+                    return result
+            if winner is not None and not (
+                winner.get("webhook_id") == normalized_webhook_id
+                and winner.get("resend_email_id") == normalized_resend_email_id
+            ):
+                raise InboundIdentityConflict()
             if winner is not None and winner.get("ingest_state") != "received":
                 saved = await self.collection.find_one_and_update(
-                    {"id": winner.get("id"), "ingest_state": {"$ne": "received"}},
-                    {"$set": document | {"id": winner.get("id")}},
+                    {
+                        "id": winner.get("id"),
+                        "webhook_id": normalized_webhook_id,
+                        "resend_email_id": normalized_resend_email_id,
+                        "ingest_state": {"$ne": "received"},
+                    },
+                    {
+                        "$set": document
+                        | {
+                            "id": winner.get("id"),
+                            "created_at": winner.get(
+                                "created_at", document["created_at"]
+                            ),
+                        }
+                    },
                     return_document=ReturnDocument.AFTER,
                     projection=INBOUND_INTERNAL_FIELDS,
                     maxTimeMS=QUERY_TIMEOUT_MS,
@@ -714,7 +766,7 @@ class MongoInboundMessageRepository:
         page: int = 1,
         page_size: int = 20,
     ) -> InboundPage:
-        if page < 1 or page_size < 1 or page_size > MAX_PAGE_SIZE:
+        if page < 1 or page > MAX_PAGE or page_size < 1 or page_size > MAX_PAGE_SIZE:
             raise ValueError("invalid pagination")
         query: dict[str, Any] = {"ingest_state": {"$ne": "reserved"}}
         if category is not None:

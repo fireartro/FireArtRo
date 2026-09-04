@@ -882,3 +882,66 @@ async def test_delivery_failure_rejects_non_allowlisted_error_text():
             as_document(delivery)["id"],
             error_code="SMTP rejected secret@example.com",
         )
+
+
+@pytest.mark.asyncio
+async def test_inbound_repository_normalizes_naive_bson_dates_and_bounds_page_offset():
+    from email_inbox import MAX_PAGE, MongoInboundMessageRepository
+
+    naive_received_at = datetime(2026, 9, 4, 17)
+    collection = AsyncCollection([inbound_document("inbound-naive", naive_received_at)])
+    repository = MongoInboundMessageRepository(collection)
+
+    page = await repository.list(page=1, page_size=10)
+
+    assert page.items[0].received_at == naive_received_at.replace(tzinfo=timezone.utc)
+    with pytest.raises(ValueError):
+        await repository.list(page=MAX_PAGE + 1, page_size=10)
+
+
+@pytest.mark.asyncio
+async def test_inbound_repository_rejects_mismatched_reserved_identity_without_overwrite():
+    from email_inbox import InboundIdentityConflict, MongoInboundMessageRepository
+
+    instant = datetime(2026, 9, 4, 18, tzinfo=timezone.utc)
+    collection = AsyncCollection()
+    repository = MongoInboundMessageRepository(
+        collection,
+        clock=lambda: instant,
+        id_factory=lambda: "inbound-identity-001",
+    )
+    await repository.create_indexes()
+
+    assert (
+        await repository.reserve_webhook_event(
+            webhook_id="webhook-identity-001",
+            resend_email_id="provider-identity-001",
+        )
+        is True
+    )
+    assert (
+        await repository.reserve_webhook_event(
+            webhook_id="webhook-identity-001",
+            resend_email_id="provider-identity-002",
+        )
+        is False
+    )
+
+    with pytest.raises(InboundIdentityConflict):
+        await repository.upsert_received(
+            webhook_id="webhook-identity-001",
+            resend_email_id="provider-identity-002",
+            message_id="<identity@example.com>",
+            references=[],
+            sender="sender@example.com",
+            recipients=["contact@inbound.example.com"],
+            subject="Must not overwrite",
+            text="Must not overwrite",
+            html="<p>Must not overwrite</p>",
+            attachments=[],
+            category="contact",
+            received_at=instant,
+        )
+
+    assert collection.documents[0]["webhook_id"] == "webhook-identity-001"
+    assert collection.documents[0]["resend_email_id"] == "provider-identity-001"
