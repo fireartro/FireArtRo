@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { handleUpload } from '@vercel/blob/client';
 import { head as blobHead } from '@vercel/blob';
-import { getDatabase } from '../lib/mongodb.js';
-import { header, requestOrigin, requireAdminUploadSession, UploadError } from '../lib/admin-session.js';
+import { getDatabase } from '../../serverless/lib/mongodb.js';
+import { header, requestOrigin, requireAdminUploadSession, UploadError } from '../../serverless/lib/admin-session.js';
 
 const TYPES = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif',

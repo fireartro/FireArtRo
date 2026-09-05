@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { getPayloadFromClientToken } from '@vercel/blob/client';
 import { test } from 'node:test';
-import { createBlobUploadHandler } from './blob-upload.js';
-import { hashToken, requireAdminUploadSession } from '../lib/admin-session.js';
-import { resolveMongoUri } from '../lib/mongodb.js';
+import { createBlobUploadHandler } from '../api/admin/blob-upload.js';
+import { hashToken, requireAdminUploadSession } from '../serverless/lib/admin-session.js';
+import { resolveMongoUri } from '../serverless/lib/mongodb.js';
 
 const env = {
   ADMIN_USERNAME: 'administrator', ADMIN_SESSION_SECRET: 'local-test-secret'.repeat(3),

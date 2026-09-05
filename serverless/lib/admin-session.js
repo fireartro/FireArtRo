@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
+// Shared by serverless handlers, but kept outside api/ so Vercel does not expose it as a route.
+
 export class UploadError extends Error {
   constructor(status, message = 'Cererea media nu este permisă.') {
     super(message);

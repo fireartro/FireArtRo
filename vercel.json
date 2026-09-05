@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
   "installCommand": "npm ci && cd frontend && corepack yarn install --frozen-lockfile",
   "buildCommand": "cd frontend && corepack yarn build",
   "outputDirectory": "frontend/build",

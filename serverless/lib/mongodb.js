@@ -1,5 +1,7 @@
 import { MongoClient } from 'mongodb';
 
+// Shared by serverless handlers, but kept outside api/ so Vercel does not expose it as a route.
+
 let connection;
 
 export function resolveMongoUri(env = process.env) {
