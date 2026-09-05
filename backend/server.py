@@ -185,6 +185,7 @@ quote_rate_limiter = MongoQuoteRateLimiter(
 )
 media_repository = MongoMediaRepository(db)
 media_service = MediaService(media_repository, VercelBlobClient())
+blog_media_store = GridFsBlogMediaStore(None)
 
 
 async def ensure_indexes():
@@ -208,6 +209,12 @@ async def lifespan(application):
     try:
         if db is not None:
             try:
+                # GridFS reads the Motor client's loop when its bucket is
+                # created.  Bind it here so Vercel's runtime loop owns every
+                # MongoDB future instead of the separate import-time loop.
+                blog_media_store.bucket = AsyncIOMotorGridFSBucket(
+                    client[database_name], bucket_name="blog_media"
+                )
                 await asyncio.wait_for(ensure_indexes(), timeout=5)
                 application.state.indexes_ready = True
             except (PyMongoError, asyncio.TimeoutError):
@@ -216,6 +223,7 @@ async def lifespan(application):
         yield
     finally:
         application.state.indexes_ready = False
+        blog_media_store.bucket = None
         if client is not None:
             client.close()
         await resend_http_client.aclose()
@@ -502,9 +510,6 @@ app.include_router(
 app.include_router(create_media_router(media_service))
 
 blog_repository = MongoBlogRepository(db.blog_posts if db is not None else None)
-blog_media_store = GridFsBlogMediaStore(
-    AsyncIOMotorGridFSBucket(db, bucket_name="blog_media") if db is not None else None
-)
 blog_service = BlogService(blog_repository, blog_media_store)
 app.include_router(create_blog_router(blog_service))
 

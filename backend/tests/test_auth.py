@@ -902,6 +902,19 @@ def server_client(server):
     )
 
 
+def test_server_lifespan_can_start_on_a_fresh_event_loop(server_loader):
+    server = server_loader(
+        MONGODB_URI="mongodb://127.0.0.1:27184/?serverSelectionTimeoutMS=10",
+        DB_NAME="fireartro_fresh_loop_test",
+    )
+
+    async def start_and_stop():
+        async with server.app.router.lifespan_context(server.app):
+            assert server.app.state.indexes_ready is False
+
+    asyncio.run(start_and_stop())
+
+
 @pytest.mark.asyncio
 async def test_server_missing_env_imports_and_fails_closed(server_loader, monkeypatch):
     for name in ("ADMIN_USERNAME", "ADMIN_PASSWORD_HASH", "ADMIN_SESSION_SECRET"):
