@@ -834,6 +834,47 @@
   white-space: nowrap;
 }
 
+/* Keep the real names visible when an optional GPU scene cannot be loaded. */
+.fa-partners[data-gpu="fallback"] {
+  height: auto;
+}
+
+.fa-partners[data-gpu="fallback"] .fa-partners__sticky {
+  position: relative;
+  height: auto;
+  min-height: min(46rem, 100svh);
+  padding: 7rem var(--nr-gutter);
+}
+
+.fa-partners[data-gpu="fallback"] .fa-partners__copy {
+  position: relative;
+  top: auto;
+  left: auto;
+  margin: 0 auto 4rem;
+  transform: none;
+}
+
+.fa-partners[data-gpu="fallback"] .fa-partners__names {
+  position: relative;
+  display: grid;
+  width: min(62rem, 100%);
+  height: auto;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 1rem;
+  margin: 0 auto;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+}
+
+.fa-partners[data-gpu="fallback"] .fa-partners__names span {
+  padding: 1rem 0;
+  color: rgba(243, 246, 251, 0.72);
+  font-size: var(--nr-type-small);
+  text-align: center;
+}
+
 /* Full-bleed brief close. */
 .fa-brief {
   position: relative;

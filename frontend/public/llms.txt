@@ -1,0 +1,20 @@
+# FireArtRo
+
+> FireArtRo planifică și produce spectacole cu drone, artificii profesionale și efecte scenice pentru evenimente în România.
+
+## Pagini publice
+
+- [Acasă](https://fireart.ro/): prezentarea echipei și a spectacolelor.
+- [Pachete](https://fireart.ro/pachete): formate de spectacol și opțiuni de configurare.
+- [Galerie](https://fireart.ro/galerie): imagini și clipuri din spectacole.
+- [Întrebări frecvente](https://fireart.ro/intrebari-frecvente): informații înainte de rezervare.
+- [Blog](https://fireart.ro/blog): articole publicate de echipa FireArtRo.
+- [Contact](https://fireart.ro/contact): solicitări de ofertă și date de contact.
+
+## Informații legale
+
+- [Confidențialitate](https://fireart.ro/confidentialitate)
+- [Termeni și condiții](https://fireart.ro/termeni-si-conditii)
+- [Cookies](https://fireart.ro/cookies)
+
+Pagina fiecărui pachet este sursa pentru configurația disponibilă. Detaliile și oferta finală se confirmă direct cu echipa pentru evenimentul respectiv.

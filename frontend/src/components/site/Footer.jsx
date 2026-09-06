@@ -4,7 +4,7 @@ import { OPEN_COOKIE_SETTINGS_EVENT } from "@/components/site/CookieConsent";
 import { WhatsAppIcon } from "@/components/site/BrandIcons";
 
 import useManagedContent from "@/hooks/useManagedContent";
-import { buildWhatsappLink, LOGO_URL } from "@/lib/constants";
+import { buildWhatsappLink, LOGO_SRC_SET, LOGO_URL } from "@/lib/constants";
 import "@/styles/night-footer.css";
 
 export const Footer = () => {
@@ -29,7 +29,7 @@ export const Footer = () => {
         <div className="fa-footer__upper">
           <div className="fa-footer__mast">
             <a className="fa-footer__brand" href="/#acasa" aria-label="FireArtRo, pagina principală">
-              <img src={LOGO_URL} alt="FireArtRo" width="720" height="311" loading="lazy" decoding="async" />
+              <img src={LOGO_URL} srcSet={LOGO_SRC_SET} sizes="136px" alt="FireArtRo" width="720" height="311" loading="lazy" decoding="async" />
             </a>
             <p>{copy.tagline}</p>
           </div>

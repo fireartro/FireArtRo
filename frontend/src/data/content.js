@@ -22,45 +22,45 @@ import {
 /* ------------------------------------------------------------------ */
 /*  Cinematic media                                                    */
 /* ------------------------------------------------------------------ */
-export const HERO_POSTER = "/media/fireart-hero-wide.webp?v=20260902-safe-title";
+export const HERO_POSTER = "/media/fireart-hero-wide.webp?v=20260906";
 
 export const HERO_MEDIA = {
   variants: {
     wide: {
-      src: "/media/fireart-hero-wide.mp4?v=20260902-safe-title",
-      poster: "/media/fireart-hero-wide.webp?v=20260902-safe-title",
-      width: 1920,
-      height: 1200,
+      src: "/media/fireart-hero-wide.mp4?v=20260906",
+      poster: "/media/fireart-hero-wide.webp?v=20260906",
+      width: 1536,
+      height: 960,
     },
     ultrawide: {
-      src: "/media/fireart-hero-ultrawide.mp4?v=20260902-safe-title",
-      poster: "/media/fireart-hero-ultrawide.webp?v=20260902-safe-title",
-      width: 1920,
-      height: 900,
+      src: "/media/fireart-hero-ultrawide.mp4?v=20260906",
+      poster: "/media/fireart-hero-ultrawide.webp?v=20260906",
+      width: 1536,
+      height: 720,
     },
     "tablet-landscape": {
-      src: "/media/fireart-hero-tablet-landscape.mp4?v=20260902-safe-title",
-      poster: "/media/fireart-hero-tablet-landscape.webp?v=20260902-safe-title",
-      width: 1440,
-      height: 1080,
+      src: "/media/fireart-hero-tablet-landscape.mp4?v=20260906",
+      poster: "/media/fireart-hero-tablet-landscape.webp?v=20260906",
+      width: 1152,
+      height: 864,
     },
     "tablet-portrait": {
-      src: "/media/fireart-hero-tablet-portrait.mp4?v=20260902-safe-title",
-      poster: "/media/fireart-hero-tablet-portrait.webp?v=20260902-safe-title",
-      width: 1080,
-      height: 1440,
+      src: "/media/fireart-hero-tablet-portrait.mp4?v=20260906",
+      poster: "/media/fireart-hero-tablet-portrait.webp?v=20260906",
+      width: 864,
+      height: 1152,
     },
     mobile: {
-      src: "/media/fireart-hero-mobile.mp4?v=20260902-safe-title",
-      poster: "/media/fireart-hero-mobile.webp?v=20260902-safe-title",
-      width: 900,
-      height: 1600,
+      src: "/media/fireart-hero-mobile.mp4?v=20260906",
+      poster: "/media/fireart-hero-mobile.webp?v=20260906",
+      width: 720,
+      height: 1280,
     },
     "mobile-tall": {
-      src: "/media/fireart-hero-mobile-tall.mp4?v=20260902-safe-title",
-      poster: "/media/fireart-hero-mobile-tall.webp?v=20260902-safe-title",
-      width: 900,
-      height: 1950,
+      src: "/media/fireart-hero-mobile-tall.mp4?v=20260906",
+      poster: "/media/fireart-hero-mobile-tall.webp?v=20260906",
+      width: 720,
+      height: 1560,
     },
   },
   label: "Spectacol cinematic FireArtRo cu drone, artificii și formații luminoase",

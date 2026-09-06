@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import useManagedContent from "@/hooks/useManagedContent";
-import { LOGO_URL } from "@/lib/constants";
+import { LOGO_SRC_SET, LOGO_URL } from "@/lib/constants";
 import { getHeaderOffset, navigateToHref, scrollToHash, syncScrollOffset } from "@/lib/scrollNavigation";
 
 const publicHref = (href) => (href.startsWith("#") ? `/${href}` : href);
@@ -26,7 +26,7 @@ const Logo = ({ onClick }) => (
     data-testid="nav-logo"
     className="site-navbar-brand"
   >
-    <img src={LOGO_URL} alt="FireArtRo" width="720" height="311" />
+    <img src={LOGO_URL} srcSet={LOGO_SRC_SET} sizes="(max-width: 767px) 110px, 180px" alt="FireArtRo" width="720" height="311" />
   </a>
 );
 

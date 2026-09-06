@@ -1,13 +1,15 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import PartnerOrbitCanvas from "@/components/night/PartnerOrbitCanvas";
+import useNearViewport from "@/hooks/useNearViewport";
+import SceneBoundary from "./SceneBoundary";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import useManagedContent from "@/hooks/useManagedContent";
 import { Link } from "react-router-dom";
 
 gsap.registerPlugin(ScrollTrigger);
+const PartnerOrbitCanvas = lazy(() => import("@/components/night/PartnerOrbitCanvas"));
 
 export default function HomePartners() {
   const homePage = useManagedContent("homePage", CMS_DEFAULTS.homePage);
@@ -19,10 +21,16 @@ export default function HomePartners() {
     return managedPartners.map((partner) => ({ ...partner, logo: mediaById.get(partner.logoMediaId)?.src }));
   }, [managedPartners, mediaItems]);
   const sectionRef = useRef(null);
+  const nearViewport = useNearViewport(sectionRef);
   const canvasRef = useRef(null);
   const reduceMotion = useReducedMotion();
   const [gpuState, setGpuState] = useState("warming");
-  const setReady = useCallback((state) => setGpuState(state), []);
+  const setReady = useCallback((state) => {
+    setGpuState(state);
+    const trigger = ScrollTrigger.getById("fireart-partner-orbit");
+    if (state === "ready" && trigger) canvasRef.current?.setProgress(trigger.progress);
+  }, []);
+  const setUnavailable = useCallback(() => setGpuState("fallback"), []);
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
@@ -56,8 +64,12 @@ export default function HomePartners() {
           {copy.ctaLabel && <Link to={copy.ctaHref}>{copy.ctaLabel}</Link>}
         </header>
 
-        {!reduceMotion && partners.length > 0 && (
-          <PartnerOrbitCanvas ref={canvasRef} partners={partners} onReady={setReady} />
+        {nearViewport && !reduceMotion && partners.length > 0 && (
+          <SceneBoundary onUnavailable={setUnavailable}>
+            <Suspense fallback={null}>
+              <PartnerOrbitCanvas ref={canvasRef} partners={partners} onReady={setReady} />
+            </Suspense>
+          </SceneBoundary>
         )}
 
         <div className="fa-partners__names" aria-label="Partenerii FireArtRo">
