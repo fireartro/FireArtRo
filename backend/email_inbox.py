@@ -1567,7 +1567,7 @@ def create_inbound_admin_router(
         if detail is None:
             raise _inbox_error(404, "Mesajul nu a fost găsit.")
         replies = await reply_repository.list_for_message(message_id)
-        payload = detail.model_dump(mode="json")
+        payload = detail.model_dump(mode="json", by_alias=True)
         payload["replies"] = [item.model_dump(mode="json") for item in replies]
         return payload
 
@@ -1585,7 +1585,7 @@ def create_inbound_admin_router(
                 page=page,
                 page_size=page_size,
             )
-            return response(listing.model_dump(mode="json"))
+            return response(listing.model_dump(mode="json", by_alias=True))
         except (PyMongoError, ValidationError, RuntimeError):
             raise _inbox_error(503, "Mesajele nu sunt disponibile momentan.") from None
 
@@ -1598,7 +1598,7 @@ def create_inbound_admin_router(
                 page=command.page,
                 page_size=command.page_size,
             )
-            return response(listing.model_dump(mode="json"))
+            return response(listing.model_dump(mode="json", by_alias=True))
         except (PyMongoError, ValidationError, RuntimeError):
             raise _inbox_error(503, "Mesajele nu sunt disponibile momentan.") from None
 

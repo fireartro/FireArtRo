@@ -179,6 +179,32 @@ def test_list_is_safe_summary_and_detail_is_no_store(inbox_domain):
     assert "html" not in detail.json()
 
 
+@pytest.mark.parametrize("method", ["get", "post"])
+def test_inbox_listing_exposes_sender_under_the_ui_from_field(inbox_domain, method):
+    client, _, _, _, _ = inbox_domain
+    headers = authorize(client)
+    if method == "get":
+        result = client.get("/api/admin/inbox", headers=headers)
+    else:
+        result = client.post("/api/admin/inbox/search", headers=headers, json={})
+
+    assert result.status_code == 200
+    item = result.json()["items"][0]
+    assert item.get("from") == "sender-inbound-001@example.com"
+    assert "sender" not in item
+
+
+def test_inbox_detail_exposes_the_ui_address_fields(inbox_domain):
+    client, _, _, _, _ = inbox_domain
+    result = client.get("/api/admin/inbox/inbound-001", headers=authorize(client))
+
+    assert result.status_code == 200
+    assert result.json().get("from") == "sender-inbound-001@example.com"
+    assert result.json().get("to") == ["contact@inbound.example.com"]
+    assert "sender" not in result.json()
+    assert "recipients" not in result.json()
+
+
 def test_private_search_uses_protected_request_body(inbox_domain):
     client, _, _, _, _ = inbox_domain
     response = client.post(
@@ -229,6 +255,8 @@ def test_reply_uses_stored_sender_thread_headers_and_stable_delivery(inbox_domai
     assert sender.persisted_at_send == [(1, 1)]
     assert reply_collection.documents[0]["text"] == "Răspuns trimis"
     assert response.json()["replies"][0]["text"] == "Răspuns trimis"
+    assert response.json().get("from") == "sender-inbound-001@example.com"
+    assert response.json().get("to") == ["contact@inbound.example.com"]
 
     duplicate = client.post(
         "/api/admin/inbox/inbound-001/reply",
@@ -410,3 +438,5 @@ def test_relay_retry_is_only_allowed_for_failed_message(inbox_domain):
     assert retried.status_code == 200
     assert sender.calls[0]["idempotency_key"] == "inbound-relay/provider-inbound-001"
     assert retried.json()["relay_state"] == "sent"
+    assert retried.json().get("from") == "sender-inbound-001@example.com"
+    assert retried.json().get("to") == ["contact@inbound.example.com"]
