@@ -609,7 +609,7 @@ class RequestSecurityMiddleware:
 
 allowed_origins = [
     origin.strip()
-    for origin in os.environ.get("CORS_ORIGINS", "https://www.fireartro.ro").split(",")
+    for origin in os.environ.get("CORS_ORIGINS", "https://fireart.ro").split(",")
     if origin.strip()
 ]
 

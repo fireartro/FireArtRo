@@ -1,4 +1,5 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import { CANONICAL_SITE_URL } from "@/data/businessContent";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -59,7 +60,6 @@ export default function GalleryPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const media = useManagedContent("mediaItems", CMS_DEFAULTS.mediaItems);
-  const siteDetails = useManagedContent("siteDetails", CMS_DEFAULTS.siteDetails);
   const photos = useMemo(
     () => [...media]
       .filter((item) => item.type === "image")
@@ -84,8 +84,8 @@ export default function GalleryPage() {
     ? (imageRatios[expandedItem.id] || expandedItem.aspectRatio || 16 / 9)
     : 16 / 9;
   const schema = useMemo(
-    () => gallerySchema(photos, siteDetails.siteUrl),
-    [photos, siteDetails.siteUrl],
+    () => gallerySchema(photos, CANONICAL_SITE_URL),
+    [photos],
   );
 
   usePageMeta({

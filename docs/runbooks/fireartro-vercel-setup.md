@@ -91,3 +91,10 @@ Fișierele locale `backend/.env` sunt excluse explicit din pachetul Python; nu l
 ## După conectare
 
 Păstrează acest runbook cu acces de administrator. Dacă se schimbă Blob store-ul, actualizează `VERCEL_BLOB_MEDIA_ORIGIN` în toate mediile înainte de orice încărcare nouă.
+
+## Regula pentru schimbările de configurare
+
+- Publicarea unui text, articol sau imagine din Admin actualizează numai conținutul publicat; nu creează commit, push sau deployment Vercel.
+- Orice modificare a unei variabile Vercel se aplică numai mediului selectat (Preview sau Production) și devine activă după un nou deployment al acelui mediu. Publică din nou branchul sau declanșează redeployul explicit după salvarea variabilei.
+- Nu folosi Preview pentru a testa cu baze, tokenuri Blob, emailuri sau secrete de Production. Verifică mai întâi `/api/health`, apoi un flux neconfidențial din Admin.
+- După rotația unui secret de sesiune, toate sesiunile Admin sunt invalidate. Confirmă accesul operatorului înainte de rotație și nu nota valoarea secretului în tichete, documente sau Git.

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { HERO_MEDIA, HERO_POSTER } from "@/data/content";
+import { canPlayHeroVideo } from "./heroPlayback";
 
 // Choose one composition atomically from the CSS viewport. Independent media
 // query updates can briefly select an intermediate source during rotation.
@@ -22,6 +23,9 @@ export const HeroVideo = ({ mediaOverride }) => {
   const poster = media.poster || HERO_POSTER;
   const objectPosition = HERO_MEDIA.position || "50% 50%";
   const [videoFailed, setVideoFailed] = useState(false);
+  const [bundledVideoSupported] = useState(() => typeof document === "undefined"
+    || canPlayHeroVideo(document.createElement("video")));
+  const usePoster = videoFailed || (!mediaOverride && !bundledVideoSupported);
 
   useEffect(() => {
     const updateVariant = () => setMediaVariant(readMediaVariant());
@@ -43,7 +47,7 @@ export const HeroVideo = ({ mediaOverride }) => {
   }, [source]);
 
   useEffect(() => {
-    if (videoFailed) return undefined;
+    if (usePoster) return undefined;
     const video = videoRef.current;
     if (!video) return undefined;
     const scene = video.closest("#acasa") || video;
@@ -204,11 +208,11 @@ export const HeroVideo = ({ mediaOverride }) => {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("online", onOnline);
     };
-  }, [source, videoFailed]);
+  }, [source, usePoster]);
 
   return (
     <div className="hero-video-stage absolute inset-0 z-0 overflow-hidden">
-      {videoFailed || (mediaOverride && mediaOverride.type !== "video") ? (
+      {usePoster || (mediaOverride && mediaOverride.type !== "video") ? (
         <img
           src={mediaOverride ? (mediaOverride.type === "youtube" ? poster : source) : poster}
           alt={mediaOverride?.alt || "Spectacol de drone și artificii FireArtRo"}

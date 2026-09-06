@@ -6,6 +6,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import useManagedContent from "@/hooks/useManagedContent";
+import { homeImageProps } from "@/lib/homeImage";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -286,7 +287,7 @@ export default function HomeGallery() {
                       </a>
                     ) : (
                       <Link to={item.ctaHref} aria-label={item.ctaLabel} title={item.shortText}>
-                        <img src={item.media.src} alt={item.media.alt} loading="lazy" decoding="async" />
+                        <img {...homeImageProps(item.media.src)} alt={item.media.alt} loading="lazy" decoding="async" />
                       </Link>
                     )}
                   </figure>

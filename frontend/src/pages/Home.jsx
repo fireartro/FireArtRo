@@ -1,4 +1,5 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import { CANONICAL_SITE_URL } from "@/data/businessContent";
 import Navbar from "@/components/site/Navbar";
 import Hero from "@/components/site/Hero";
 import PageEnd from "@/components/site/PageEnd";
@@ -27,7 +28,7 @@ export default function Home() {
           "@type": ["Organization", "LocalBusiness", "ProfessionalService"],
           name: siteDetails.name,
           legalName: siteDetails.legalName,
-          url: siteDetails.siteUrl,
+          url: CANONICAL_SITE_URL,
           email: siteDetails.email,
           taxID: siteDetails.taxId,
           address: {

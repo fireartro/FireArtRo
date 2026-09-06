@@ -1,8 +1,10 @@
 import importedGalleryItems from "@/data/importedGalleryItems.json";
 
+export const CANONICAL_SITE_URL = "https://fireart.ro";
+
 export const SITE_DETAILS = {
   name: "FireArtRo",
-  siteUrl: "https://www.fireartro.ro",
+  siteUrl: CANONICAL_SITE_URL,
   email: "contact@fireart.ro",
   googleReviewsUrl: process.env.REACT_APP_GOOGLE_REVIEWS_URL || "",
   areaServed: "România",

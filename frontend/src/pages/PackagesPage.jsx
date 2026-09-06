@@ -1,4 +1,5 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import { CANONICAL_SITE_URL } from "@/data/businessContent";
 import Navbar from "@/components/site/Navbar";
 import ScrollProgress from "@/components/site/ScrollProgress";
 import Packages from "@/components/site/Packages";
@@ -11,7 +12,6 @@ import "@/styles/night-packages.css";
 export default function PackagesPage() {
   const copy = useManagedContent("packagesPage", CMS_DEFAULTS.packagesPage);
   const packages = useManagedContent("packages", CMS_DEFAULTS.packages);
-  const siteDetails = useManagedContent("siteDetails", CMS_DEFAULTS.siteDetails);
 
   usePageMeta({
     title: copy.seoTitle,
@@ -21,7 +21,7 @@ export default function PackagesPage() {
       "@context": "https://schema.org",
       "@type": "ItemList",
       name: "Pachete FireArtRo",
-      url: `${siteDetails.siteUrl}/pachete`,
+      url: `${CANONICAL_SITE_URL}/pachete`,
       itemListElement: packages.map((item, index) => ({
         "@type": "ListItem",
         position: index + 1,

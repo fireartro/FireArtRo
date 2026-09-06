@@ -5,6 +5,7 @@ import Navbar from "@/components/site/Navbar";
 import PageEnd from "@/components/site/PageEnd";
 import ScrollProgress from "@/components/site/ScrollProgress";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import { CANONICAL_SITE_URL } from "@/data/businessContent";
 import usePageMeta from "@/hooks/usePageMeta";
 import { listPublishedPosts } from "@/lib/blogApi";
 import useManagedContent from "@/hooks/useManagedContent";
@@ -40,14 +41,14 @@ export default function BlogPage() {
     "@context": "https://schema.org",
     "@type": "Blog",
     name: `${copy.title} ${siteDetails.name}`,
-    url: `${siteDetails.siteUrl}/blog`,
+    url: `${CANONICAL_SITE_URL}/blog`,
     blogPost: state.posts.map((post) => ({
       "@type": "BlogPosting",
       headline: post.title,
       datePublished: post.published_at,
-      url: `${siteDetails.siteUrl}/blog/${post.slug}`,
+      url: `${CANONICAL_SITE_URL}/blog/${post.slug}`,
     })),
-  }), [copy.title, siteDetails.name, siteDetails.siteUrl, state.posts]);
+  }), [copy.title, siteDetails.name, state.posts]);
 
   usePageMeta({
     title: copy.seoTitle,

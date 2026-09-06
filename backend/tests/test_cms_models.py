@@ -25,7 +25,7 @@ def default_content():
         "schema_version": 1,
         "siteDetails": {
             "name": "FireArtRo",
-            "siteUrl": "https://www.fireartro.ro",
+            "siteUrl": "https://fireart.ro",
             "email": "contact@fireart.ro",
             "googleReviewsUrl": "https://maps.google.com/?cid=1",
             "areaServed": "România",

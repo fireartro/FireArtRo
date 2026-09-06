@@ -6,6 +6,7 @@ import Navbar from "@/components/site/Navbar";
 import PageEnd from "@/components/site/PageEnd";
 import ScrollProgress from "@/components/site/ScrollProgress";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import { CANONICAL_SITE_URL } from "@/data/businessContent";
 import usePageMeta from "@/hooks/usePageMeta";
 import useManagedContent from "@/hooks/useManagedContent";
 import {
@@ -66,8 +67,8 @@ export default function BlogArticlePage() {
     datePublished: state.post.published_at,
     dateModified: state.post.updated_at,
     image: state.post.cover_media_id ? image : undefined,
-    mainEntityOfPage: `${siteDetails.siteUrl}/blog/${state.post.slug}`,
-  } : undefined, [image, siteDetails.siteUrl, state.post]);
+    mainEntityOfPage: `${CANONICAL_SITE_URL}/blog/${state.post.slug}`,
+  } : undefined, [image, state.post]);
 
   usePageMeta({
     title: state.post ? `${state.post.title} — ${siteDetails.name}` : `Articol — ${siteDetails.name}`,
