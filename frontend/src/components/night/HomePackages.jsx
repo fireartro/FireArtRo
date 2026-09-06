@@ -8,6 +8,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import useManagedContent from "@/hooks/useManagedContent";
 
 import { goToContact } from "@/lib/contactNavigation";
+import useNearViewport from "@/hooks/useNearViewport";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -21,7 +22,9 @@ export default function HomePackages() {
   const homePage = useManagedContent("homePage", CMS_DEFAULTS.homePage);
   const copy = homePage.packages;
   const sectionRef = useRef(null);
+  const nearViewport = useNearViewport(sectionRef, "240px");
   const reduceMotion = useReducedMotion();
+  const initializeScene = nearViewport && !reduceMotion;
   const managedPackages = useManagedContent("packages", CMS_DEFAULTS.packages);
   const featuredPackages = useMemo(
     () => FEATURED_PACKAGE_IDS
@@ -40,7 +43,7 @@ export default function HomePackages() {
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
-    if (!section) return undefined;
+    if (!section || !initializeScene) return undefined;
 
     const revealFocusedPanel = (event) => {
       if (!event.target?.matches?.(":focus-visible")) return;
@@ -52,10 +55,6 @@ export default function HomePackages() {
     };
 
     section.addEventListener("focusin", revealFocusedPanel);
-
-    if (reduceMotion) {
-      return () => section.removeEventListener("focusin", revealFocusedPanel);
-    }
 
     const context = gsap.context(() => {
       gsap.fromTo(
@@ -80,7 +79,7 @@ export default function HomePackages() {
       section.removeEventListener("focusin", revealFocusedPanel);
       context.revert();
     };
-  }, [featuredPackages.length, reduceMotion]);
+  }, [featuredPackages.length, initializeScene]);
 
   return (
     <section
@@ -88,7 +87,7 @@ export default function HomePackages() {
       className="fa-packages"
       data-home-scene="packages"
       data-testid="home-packages"
-      data-motion={reduceMotion ? "static" : "reveal"}
+      data-motion={initializeScene ? "reveal" : "static"}
       aria-labelledby="fa-packages-title"
     >
       <div className="fa-packages__inner nr-shell">

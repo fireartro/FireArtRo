@@ -28,3 +28,15 @@ test('Vercel deploys the CRA build alongside only the intended API functions', a
     'api/index.py',
   ]);
 });
+
+test('the SPA fallback preserves real 404s for missing static assets', async () => {
+  const config = JSON.parse(await readFile(path.join(projectRoot, 'vercel.json'), 'utf8'));
+  const fallback = config.rewrites.at(-1);
+  const matcher = new RegExp(`^${fallback.source}$`);
+
+  assert.equal(fallback.destination, '/index.html');
+  assert.match('/pachete', matcher);
+  assert.doesNotMatch('/media/inexistent.webp', matcher);
+  assert.doesNotMatch('/static/js/inexistent.js', matcher);
+  assert.doesNotMatch('/favicon.ico', matcher);
+});

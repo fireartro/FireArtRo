@@ -21,9 +21,10 @@ export default function HomePartners() {
     return managedPartners.map((partner) => ({ ...partner, logo: mediaById.get(partner.logoMediaId)?.src }));
   }, [managedPartners, mediaItems]);
   const sectionRef = useRef(null);
-  const nearViewport = useNearViewport(sectionRef);
+  const nearViewport = useNearViewport(sectionRef, "400px");
   const canvasRef = useRef(null);
   const reduceMotion = useReducedMotion();
+  const initializeScene = nearViewport && !reduceMotion;
   const [gpuState, setGpuState] = useState("warming");
   const setReady = useCallback((state) => {
     setGpuState(state);
@@ -34,7 +35,7 @@ export default function HomePartners() {
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
-    if (!section || reduceMotion) return undefined;
+    if (!section || !initializeScene) return undefined;
 
     const trigger = ScrollTrigger.create({
       id: "fireart-partner-orbit",
@@ -45,7 +46,7 @@ export default function HomePartners() {
       onUpdate: ({ progress }) => canvasRef.current?.setProgress(progress),
     });
     return () => trigger.kill();
-  }, [reduceMotion]);
+  }, [initializeScene]);
 
   return (
     <section
@@ -64,7 +65,7 @@ export default function HomePartners() {
           {copy.ctaLabel && <Link to={copy.ctaHref}>{copy.ctaLabel}</Link>}
         </header>
 
-        {nearViewport && !reduceMotion && partners.length > 0 && (
+        {initializeScene && partners.length > 0 && (
           <SceneBoundary onUnavailable={setUnavailable}>
             <Suspense fallback={null}>
               <PartnerOrbitCanvas ref={canvasRef} partners={partners} onReady={setReady} />

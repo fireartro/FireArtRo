@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { HERO_MEDIA, HERO_POSTER } from "@/data/content";
-import { canPlayHeroVideo } from "./heroPlayback";
+import {
+  canPlayHeroVideo,
+  getHeroAutoplayPolicy,
+  scheduleHeroVideoPlayback,
+} from "./heroPlayback";
 
 // Choose one composition atomically from the CSS viewport. Independent media
 // query updates can briefly select an intermediate source during rotation.
@@ -25,7 +29,22 @@ export const HeroVideo = ({ mediaOverride }) => {
   const [videoFailed, setVideoFailed] = useState(false);
   const [bundledVideoSupported] = useState(() => typeof document === "undefined"
     || canPlayHeroVideo(document.createElement("video")));
-  const usePoster = videoFailed || (!mediaOverride && !bundledVideoSupported);
+  const [autoplayEligible, setAutoplayEligible] = useState(
+    () => typeof window === "undefined" || getHeroAutoplayPolicy(window),
+  );
+  const [activatedSource, setActivatedSource] = useState("");
+  const [readyPoster, setReadyPoster] = useState("");
+  const isVideoMedia = !mediaOverride || mediaOverride.type === "video";
+  const canMountVideo = isVideoMedia
+    && !videoFailed
+    && (Boolean(mediaOverride) || bundledVideoSupported)
+    && autoplayEligible;
+  const usePoster = !canMountVideo || activatedSource !== source;
+  const fallbackImage = mediaOverride && mediaOverride.type !== "video"
+    ? (mediaOverride.type === "youtube" ? poster : source)
+    : poster;
+  const customVideoStill = usePoster && mediaOverride?.type === "video" && !mediaOverride.poster;
+  const videoPoster = mediaOverride?.type === "video" && !mediaOverride.poster ? undefined : poster;
 
   useEffect(() => {
     const updateVariant = () => setMediaVariant(readMediaVariant());
@@ -43,8 +62,25 @@ export const HeroVideo = ({ mediaOverride }) => {
   }, []);
 
   useEffect(() => {
+    const updateAutoplayPolicy = () => setAutoplayEligible(getHeroAutoplayPolicy(window));
+    const motionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    const connection = window.navigator?.connection;
+    motionQuery?.addEventListener?.("change", updateAutoplayPolicy);
+    connection?.addEventListener?.("change", updateAutoplayPolicy);
+    return () => {
+      motionQuery?.removeEventListener?.("change", updateAutoplayPolicy);
+      connection?.removeEventListener?.("change", updateAutoplayPolicy);
+    };
+  }, []);
+
+  useEffect(() => {
     setVideoFailed(false);
   }, [source]);
+
+  useEffect(() => {
+    if (!canMountVideo || (videoPoster && readyPoster !== videoPoster)) return undefined;
+    return scheduleHeroVideoPlayback(() => setActivatedSource(source), window);
+  }, [canMountVideo, source, videoPoster, readyPoster]);
 
   useEffect(() => {
     if (usePoster) return undefined;
@@ -212,9 +248,23 @@ export const HeroVideo = ({ mediaOverride }) => {
 
   return (
     <div className="hero-video-stage absolute inset-0 z-0 overflow-hidden">
-      {usePoster || (mediaOverride && mediaOverride.type !== "video") ? (
+      {customVideoStill ? (
+        <video
+          key={`still-${source}`}
+          src={source}
+          muted
+          playsInline
+          preload="metadata"
+          className="hero-media-surface hero-media-video absolute inset-0 h-full w-full object-cover"
+          style={{ objectPosition }}
+          data-crop-profile={mediaVariant}
+          aria-label="Cadru video FireArtRo"
+        />
+      ) : usePoster || (mediaOverride && mediaOverride.type !== "video") ? (
         <img
-          src={mediaOverride ? (mediaOverride.type === "youtube" ? poster : source) : poster}
+          src={fallbackImage}
+          onLoad={() => setReadyPoster(fallbackImage)}
+          onError={() => setReadyPoster(fallbackImage)}
           alt={mediaOverride?.alt || "Spectacol de drone și artificii FireArtRo"}
           width={media.width}
           height={media.height}
@@ -230,7 +280,7 @@ export const HeroVideo = ({ mediaOverride }) => {
           key={source}
           ref={videoRef}
           src={source}
-          poster={poster || HERO_POSTER}
+          poster={videoPoster}
           autoPlay
           muted
           loop

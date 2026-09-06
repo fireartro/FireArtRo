@@ -7,6 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { MEDIA } from "@/data/content";
 import useManagedContent from "@/hooks/useManagedContent";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import useNearViewport from "@/hooks/useNearViewport";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -14,11 +15,13 @@ export default function HomeBrief() {
   const homePage = useManagedContent("homePage", CMS_DEFAULTS.homePage);
   const copy = homePage.brief;
   const sectionRef = useRef(null);
+  const nearViewport = useNearViewport(sectionRef, "400px");
   const reduceMotion = useReducedMotion();
+  const initializeScene = nearViewport && !reduceMotion;
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
-    if (!section || reduceMotion) return undefined;
+    if (!section || !initializeScene) return undefined;
     const image = section.querySelector(".fa-brief__image");
     const context = gsap.context(() => {
       gsap.fromTo(image, { yPercent: -7, scale: 1.16 }, {
@@ -34,7 +37,7 @@ export default function HomeBrief() {
       });
     }, section);
     return () => context.revert();
-  }, [reduceMotion]);
+  }, [initializeScene]);
 
   return (
     <section
