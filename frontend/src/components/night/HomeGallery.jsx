@@ -7,6 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import useManagedContent from "@/hooks/useManagedContent";
 import { homeImageProps } from "@/lib/homeImage";
+import { createSettlingTicker } from "@/lib/settlingTicker";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -175,11 +176,11 @@ export default function HomeGallery() {
         );
       };
 
-      const syncTouchMotion = () => {
-        const targetProgress = getTouchTarget();
-        if (targetProgress === undefined) return;
-        advanceTouchMotion(targetProgress);
-      };
+      const touchMotion = createSettlingTicker(gsap.ticker, {
+        readTarget: getTouchTarget,
+        readCurrent: () => motion.progress,
+        advance: advanceTouchMotion,
+      });
 
       const syncTouchBoundary = () => {
         const targetProgress = getTouchTarget();
@@ -187,9 +188,15 @@ export default function HomeGallery() {
         advanceTouchMotion(targetProgress);
       };
 
+      const onTouchScroll = () => {
+        syncTouchBoundary();
+        touchMotion.wake();
+      };
+
       if (touchDriven) {
-        gsap.ticker.add(syncTouchMotion);
-        window.addEventListener("scroll", syncTouchBoundary, { passive: true });
+        onTouchScroll();
+        window.addEventListener("scroll", onTouchScroll, { passive: true });
+        window.addEventListener("pageshow", onTouchScroll);
       }
 
       const refreshGeometry = () => {
@@ -230,8 +237,9 @@ export default function HomeGallery() {
         window.cancelAnimationFrame(refreshFrame);
         window.clearTimeout(settleTimer);
         resizeObserver?.disconnect();
-        gsap.ticker.remove(syncTouchMotion);
-        window.removeEventListener("scroll", syncTouchBoundary);
+        touchMotion.stop();
+        window.removeEventListener("scroll", onTouchScroll);
+        window.removeEventListener("pageshow", onTouchScroll);
         window.removeEventListener("resize", scheduleGeometryRefresh);
         window.removeEventListener("orientationchange", scheduleGeometryRefresh);
         window.visualViewport?.removeEventListener("resize", scheduleGeometryRefresh);
