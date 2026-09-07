@@ -6,6 +6,7 @@ import NightButton from "@/components/night/NightButton";
 import { buildWhatsappLink } from "@/lib/constants";
 import { readContactPrefill } from "@/lib/contactNavigation";
 import useManagedContent from "@/hooks/useManagedContent";
+import TurnstileWidget from "./TurnstileWidget";
 
 const BACKEND_URL = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
 const API = `${BACKEND_URL}/api`;
@@ -70,6 +71,8 @@ export const QuoteForm = () => {
   const [submissionError, setSubmissionError] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
 
   const packages = useManagedContent("packages", CMS_DEFAULTS.packages);
   const siteDetails = useManagedContent("siteDetails", CMS_DEFAULTS.siteDetails);
@@ -83,6 +86,9 @@ export const QuoteForm = () => {
   const whatsAppHref = buildWhatsappLink(contactSettings.whatsappNumber);
   const email = siteDetails.email || "contact@fireart.ro";
   const minimumDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const turnstileConfigured = Boolean(
+    (process.env.REACT_APP_TURNSTILE_SITE_KEY || "").trim(),
+  );
 
   useEffect(() => {
     const storedPrefill = readContactPrefill();
@@ -148,6 +154,10 @@ export const QuoteForm = () => {
     if (form.last_name.trim().length < 2) nextErrors.last_name = "Completează prenumele.";
     if (form.phone.trim().length < 7) nextErrors.phone = "Introdu un număr de telefon valid.";
     if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) nextErrors.email = "Introdu o adresă de email validă.";
+    if (turnstileConfigured && !turnstileToken) {
+      nextErrors.turnstile = errors.turnstile
+        || "Finalizează verificarea anti-abuz înainte de trimitere.";
+    }
     if (!form.consent) nextErrors.consent = "Acceptă prelucrarea datelor pentru a trimite cererea.";
 
     if (!Object.keys(nextErrors).length) return true;
@@ -161,6 +171,7 @@ export const QuoteForm = () => {
       ["last_name", "quote-last-name"],
       ["phone", "quote-phone"],
       ["email", "quote-email"],
+      ["turnstile", "quote-turnstile"],
       ["consent", "quote-consent"],
     ];
     const firstInvalidId = focusOrder.find(([key]) => nextErrors[key])?.[1];
@@ -179,19 +190,25 @@ export const QuoteForm = () => {
     setAnnouncement("");
     setSubmissionError("");
     try {
-      await postQuote(form);
+      await postQuote({ ...form, turnstile_token: turnstileToken });
       setDone(true);
       setForm(freshForm());
       toast.success("Cererea a fost trimisă.");
     } catch (error) {
       const message = error.status === 429
         ? "Ai trimis mai multe solicitări într-un interval scurt. Încearcă mai târziu."
+        : error.status === 422 && turnstileConfigured
+          ? "Verificarea anti-abuz nu a reușit. Reîncarcă formularul și încearcă din nou."
         : error.name === "AbortError"
           ? "Trimiterea a durat prea mult. Încearcă din nou sau contactează-ne direct."
           : "Nu am putut trimite cererea. Datele au rămas în formular.";
       setSubmissionError(message);
       toast.error(message);
     } finally {
+      if (turnstileConfigured) {
+        setTurnstileToken("");
+        setTurnstileResetSignal((current) => current + 1);
+      }
       setLoading(false);
     }
   };
@@ -202,6 +219,22 @@ export const QuoteForm = () => {
     setAnnouncement("");
     setSubmissionError("");
     setForm(freshForm());
+    setTurnstileToken("");
+    setTurnstileResetSignal((current) => current + 1);
+  };
+
+  const updateTurnstileToken = (token) => {
+    setTurnstileToken(token);
+    if (token) {
+      setErrors((current) => ({ ...current, turnstile: undefined }));
+      setSubmissionError("");
+    }
+  };
+
+  const updateTurnstileAvailability = (message) => {
+    if (!message) return;
+    setTurnstileToken("");
+    setErrors((current) => ({ ...current, turnstile: message }));
   };
 
   const fieldError = (key) => errors[key]
@@ -368,6 +401,17 @@ export const QuoteForm = () => {
                 <label htmlFor="company-website">Website companie</label>
                 <input id="company-website" tabIndex={-1} autoComplete="off" value={form.company_website} onChange={(event) => update("company_website", event.target.value)} />
               </div>
+
+              {turnstileConfigured && (
+                <div className="nr-contact-turnstile-field">
+                  <TurnstileWidget
+                    onToken={updateTurnstileToken}
+                    onUnavailable={updateTurnstileAvailability}
+                    resetSignal={turnstileResetSignal}
+                  />
+                  {fieldError("turnstile")}
+                </div>
+              )}
 
               <label className="nr-contact-consent" htmlFor="quote-consent">
                 <input id="quote-consent" type="checkbox" checked={form.consent} onChange={(event) => update("consent", event.target.checked)} aria-invalid={Boolean(errors.consent)} aria-describedby={errors.consent ? "quote-consent-error" : undefined} />

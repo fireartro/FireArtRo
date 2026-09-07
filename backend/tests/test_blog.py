@@ -59,6 +59,22 @@ class FakeBlogRepository:
             )
         )
 
+    async def list_sitemap_entries(self, limit=1000):
+        items = [
+            {
+                "slug": item["slug"],
+                "updated_at": item["updated_at"],
+                "published_at": item["published_at"],
+            }
+            for item in self.posts
+            if item["status"] == "published"
+        ]
+        items.sort(key=lambda item: (item["published_at"], item["slug"]), reverse=True)
+        return [
+            {"slug": item["slug"], "updated_at": item["updated_at"]}
+            for item in deepcopy(items[:limit])
+        ]
+
     async def list_all(self):
         return deepcopy(
             sorted(self.posts, key=lambda item: item["updated_at"], reverse=True)
@@ -165,6 +181,25 @@ def test_public_list_returns_only_published_newest_first_and_honors_limit():
     assert [item["slug"] for item in response.json()] == ["nou", "mijloc"]
     assert all(item["slug"] != "draft" for item in response.json())
     assert all("body" not in item for item in response.json())
+
+
+def test_sitemap_entries_are_published_only_bounded_and_without_article_content():
+    posts = [
+        article("1", "vechi", "published", "2026-08-10T09:00:00+00:00", "Vechi"),
+        article("2", "draft-secret", "draft", None, "Draft secret"),
+        article("3", "nou", "published", "2026-08-30T09:00:00+00:00", "Nou"),
+    ]
+    service = BlogService(FakeBlogRepository(posts), FakeMediaStore())
+
+    import asyncio
+
+    entries = asyncio.run(service.list_sitemap_entries(limit=1))
+
+    assert entries == [
+        {"slug": "nou", "updated_at": "2026-08-30T10:00:00+00:00"}
+    ]
+    assert "draft-secret" not in str(entries)
+    assert "body" not in entries[0]
 
 
 def test_public_detail_hides_drafts_as_not_found():

@@ -64,9 +64,13 @@ Păstrează toate secretele exclusiv în variabilele de mediu Vercel:
 - MongoDB: \`MONGODB_URI\`, \`DB_NAME\`;
 - Admin: \`ADMIN_USERNAME\`, \`ADMIN_PASSWORD_HASH\`, \`ADMIN_SESSION_SECRET\`;
 - Media: \`BLOB_READ_WRITE_TOKEN\`, \`VERCEL_BLOB_MEDIA_ORIGIN\`;
+- Formular: \`TURNSTILE_ENABLED\`, iar la activare \`TURNSTILE_SECRET_KEY\` și \`REACT_APP_TURNSTILE_SITE_KEY\`;
+- Analytics: \`REACT_APP_GA_MEASUREMENT_ID\` este public și opțional; rămâne gol până la crearea proprietății GA4;
 - Recenzii: \`GOOGLE_PLACES_API_KEY\`, \`GOOGLE_PLACE_ID\`, \`META_PAGE_ID\`, \`META_PAGE_ACCESS_TOKEN\`.
 
 Nu publica aceste valori în \`REACT_APP_*\` și nu le adăuga în Git. Pentru lista completă de pași, citește:
 
 - [configurarea Vercel](./docs/runbooks/fireartro-vercel-setup.md);
-- [operarea CMS-ului](./docs/runbooks/fireartro-cms-operations.md).
+- [operarea CMS-ului](./docs/runbooks/fireartro-cms-operations.md);
+- [Turnstile și Analytics](./docs/runbooks/fireartro-turnstile-and-analytics.md);
+- [monitorizare și recuperare](./docs/runbooks/fireartro-monitoring-and-recovery.md).

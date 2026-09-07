@@ -876,6 +876,7 @@ def server_loader(monkeypatch, password_hash):
     monkeypatch.setenv("ADMIN_PASSWORD_HASH", password_hash)
     monkeypatch.setenv("ADMIN_SESSION_SECRET", "task3-test-secret-at-least-32-bytes")
     monkeypatch.setenv("CORS_ORIGINS", "https://fireart.test")
+    monkeypatch.setenv("TURNSTILE_ENABLED", "false")
     modules = []
 
     def load(**environment):

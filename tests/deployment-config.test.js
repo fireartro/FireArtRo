@@ -40,3 +40,33 @@ test('the SPA fallback preserves real 404s for missing static assets', async () 
   assert.doesNotMatch('/static/js/inexistent.js', matcher);
   assert.doesNotMatch('/favicon.ico', matcher);
 });
+
+test('the production CSP permits only the Cloudflare origin required by Turnstile', async () => {
+  const config = JSON.parse(await readFile(path.join(projectRoot, 'vercel.json'), 'utf8'));
+  const globalHeaders = config.headers.find(({ source }) => source === '/(.*)').headers;
+  const policy = globalHeaders.find(({ key }) => key === 'Content-Security-Policy').value;
+
+  for (const directive of ['script-src', 'frame-src', 'connect-src']) {
+    const value = policy.split(';')
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${directive} `));
+    assert.match(value, /(?:^|\s)https:\/\/challenges\.cloudflare\.com(?:\s|$)/);
+  }
+  assert.doesNotMatch(policy, /(?:^|\s)https:(?:\s|;|$)/);
+});
+
+test('the production CSP permits only the exact GA4 script and collection origins', async () => {
+  const config = JSON.parse(await readFile(path.join(projectRoot, 'vercel.json'), 'utf8'));
+  const globalHeaders = config.headers.find(({ source }) => source === '/(.*)').headers;
+  const policy = globalHeaders.find(({ key }) => key === 'Content-Security-Policy').value;
+  const directives = Object.fromEntries(policy.split(';').map((part) => {
+    const [name, ...values] = part.trim().split(/\s+/);
+    return [name, values];
+  }));
+
+  assert.ok(directives['script-src'].includes('https://www.googletagmanager.com'));
+  assert.ok(directives['connect-src'].includes('https://www.google-analytics.com'));
+  assert.ok(directives['connect-src'].includes('https://region1.google-analytics.com'));
+  assert.ok(!directives['script-src'].includes('https:'));
+  assert.ok(!directives['connect-src'].includes('https:'));
+});

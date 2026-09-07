@@ -3,6 +3,7 @@ import "@/App.css";
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
 import Home from "@/pages/Home";
 import CookieConsent from "@/components/site/CookieConsent";
+import AnalyticsLoader from "@/components/site/AnalyticsLoader";
 import RouteShutter from "@/components/night/RouteShutter";
 import { scrollToHash, scrollToTop, syncScrollOffset } from "@/lib/scrollNavigation";
 import { ManagedContentProvider, useManagedContentSnapshot } from "@/content/ManagedContentProvider";
@@ -34,7 +35,10 @@ function RouteScrollManager() {
 function GlobalUi() {
   const location = useLocation();
 
-  return location.pathname !== "/admin" ? <CookieConsent /> : null;
+  return location.pathname !== "/admin" ? <>
+    <AnalyticsLoader />
+    <CookieConsent />
+  </> : null;
 }
 
 function AppRoutes() {

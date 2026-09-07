@@ -190,6 +190,16 @@ def test_server_mounts_cms_and_preserves_its_public_cache_and_body_limits(monkey
             headers={"Cache-Control": "no-cache, must-revalidate"},
         )
 
+    @inner.get("/api/sitemap.xml")
+    async def public_sitemap():
+        return Response(
+            content="<urlset />",
+            media_type="application/xml",
+            headers={
+                "Cache-Control": "public, max-age=300, stale-while-revalidate=3600"
+            },
+        )
+
     @inner.put("/api/admin/content/draft")
     async def draft_content(request: Request):
         return {"bytes": len(await request.body())}
@@ -197,6 +207,11 @@ def test_server_mounts_cms_and_preserves_its_public_cache_and_body_limits(monkey
     with TestClient(server.RequestSecurityMiddleware(inner)) as secured_client:
         public = secured_client.get("/api/content")
         assert public.headers["cache-control"] == "no-cache, must-revalidate"
+
+        sitemap = secured_client.get("/api/sitemap.xml")
+        assert sitemap.headers["cache-control"] == (
+            "public, max-age=300, stale-while-revalidate=3600"
+        )
 
         draft = secured_client.put(
             "/api/admin/content/draft",

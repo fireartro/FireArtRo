@@ -11,7 +11,8 @@ $required = @(
   'ADMIN_PASSWORD_HASH',
   'ADMIN_SESSION_SECRET',
   'BLOB_READ_WRITE_TOKEN',
-  'VERCEL_BLOB_MEDIA_ORIGIN'
+  'VERCEL_BLOB_MEDIA_ORIGIN',
+  'TURNSTILE_ENABLED'
 )
 
 $listing = & npx.cmd vercel@latest env ls $Environment 2>&1 | Out-String
@@ -31,3 +32,4 @@ if ($missing.Count -gt 0) {
 }
 
 Write-Output "Numele variabilelor CMS sunt prezente pentru mediul $Environment."
+Write-Output 'Dacă TURNSTILE_ENABLED este true, verifică separat existența perechii TURNSTILE_SECRET_KEY + REACT_APP_TURNSTILE_SITE_KEY.'

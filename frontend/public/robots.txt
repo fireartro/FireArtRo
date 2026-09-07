@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
+Allow: /api/sitemap.xml
 Disallow: /admin
 Disallow: /api/
 
-Sitemap: https://fireart.ro/sitemap.xml
+Sitemap: https://fireart.ro/api/sitemap.xml

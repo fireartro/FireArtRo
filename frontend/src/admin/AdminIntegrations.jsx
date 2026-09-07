@@ -5,11 +5,15 @@ import { useAdminSession } from './AdminSessionContext';
 const INTEGRATIONS = [
   ['database', 'Baza de date'],
   ['blob', 'Biblioteca media'],
+  ['resend', 'Email Resend'],
+  ['turnstile', 'Protecție formular'],
+  ['analytics', 'Google Analytics'],
   ['google', 'Recenzii Google'],
   ['facebook', 'Recenzii Facebook'],
 ];
 
 function stateCopy(value) {
+  if (value?.message === 'Dezactivat') return 'Dezactivat';
   if (!value?.configured) return 'Necesită configurare';
   if (value.healthy === true) return 'Funcțional';
   if (value.healthy === false) return 'Eroare temporară';

@@ -26,6 +26,7 @@ def valid_payload(**overrides):
         "message": "Solicitare de test.",
         "consent": True,
         "company_website": "",
+        "turnstile_token": "",
     }
     payload.update(overrides)
     return payload
@@ -43,11 +44,28 @@ class QuoteCollection:
 
 
 class QuoteRateLimiter:
-    def __init__(self):
+    def __init__(self, events=None):
         self.client_ips = []
+        self.events = events
 
     async def enforce(self, client_ip):
         self.client_ips.append(client_ip)
+        if self.events is not None:
+            self.events.append("rate-limited")
+
+
+class FakeTurnstileVerifier:
+    def __init__(self, events=None, *, failure=None):
+        self.events = events
+        self.failure = failure
+        self.calls = []
+
+    async def verify(self, token, client_ip):
+        self.calls.append((token, client_ip))
+        if self.events is not None:
+            self.events.append("turnstile")
+        if self.failure is not None:
+            raise self.failure
 
 
 class FakeNotificationDeliveryRepository:
@@ -112,6 +130,7 @@ def public_server(monkeypatch):
     monkeypatch.setenv(
         "ADMIN_SESSION_SECRET", "quote-route-test-secret-at-least-32-bytes"
     )
+    monkeypatch.setenv("TURNSTILE_ENABLED", "false")
 
     spec = importlib.util.spec_from_file_location(
         "fireart_quotes_" + uuid.uuid4().hex,
@@ -164,6 +183,7 @@ async def test_public_submission_acknowledges_without_leaking_customer_details(
     assert stored["internal_note"] == ""
     assert stored["version"] == 0
     assert "company_website" not in stored
+    assert "turnstile_token" not in stored
 
 
 @pytest.mark.asyncio
@@ -254,3 +274,71 @@ async def test_honeypot_submission_receives_acknowledgement_without_persistence(
     assert response.status_code == 200
     assert response.json() == {"accepted": True}
     assert collection.documents == []
+
+
+@pytest.mark.asyncio
+async def test_real_submission_verifies_turnstile_before_rate_limit_and_persistence(
+    public_server,
+):
+    server, collection, _ = public_server
+    events = []
+    verifier = FakeTurnstileVerifier(events)
+    limiter = QuoteRateLimiter(events)
+    server.turnstile_verifier = verifier
+    server.quote_rate_limiter = limiter
+    collection.events = events
+
+    async with api_client(server) as client:
+        response = await client.post(
+            "/api/quotes",
+            json=valid_payload(turnstile_token="single-use-browser-token"),
+        )
+
+    assert response.status_code == 200
+    assert events[:3] == ["turnstile", "rate-limited", "inserted"]
+    assert verifier.calls == [("single-use-browser-token", "198.51.100.7")]
+    assert "turnstile_token" not in collection.documents[0]
+
+
+@pytest.mark.asyncio
+async def test_honeypot_does_not_contact_turnstile_or_rate_limiter(public_server):
+    server, collection, limiter = public_server
+    verifier = FakeTurnstileVerifier()
+    server.turnstile_verifier = verifier
+
+    async with api_client(server) as client:
+        response = await client.post(
+            "/api/quotes",
+            json=valid_payload(
+                company_website="spam.example",
+                turnstile_token="must-not-be-used",
+            ),
+        )
+
+    assert response.status_code == 200
+    assert collection.documents == []
+    assert verifier.calls == []
+    assert limiter.client_ips == []
+
+
+@pytest.mark.asyncio
+async def test_turnstile_failure_creates_no_quote_and_leaks_no_token(public_server):
+    from turnstile import TurnstileError, VERIFICATION_MESSAGE
+
+    server, collection, limiter = public_server
+    verifier = FakeTurnstileVerifier(
+        failure=TurnstileError("verification_failed", 422, VERIFICATION_MESSAGE)
+    )
+    server.turnstile_verifier = verifier
+
+    async with api_client(server) as client:
+        response = await client.post(
+            "/api/quotes",
+            json=valid_payload(turnstile_token="private-browser-token"),
+        )
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": VERIFICATION_MESSAGE}
+    assert "private-browser-token" not in response.text
+    assert collection.documents == []
+    assert limiter.client_ips == []

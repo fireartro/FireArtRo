@@ -149,6 +149,9 @@ class BlogRepository(Protocol):
     async def get_published_by_slug(self, slug):
         raise NotImplementedError
 
+    async def list_sitemap_entries(self, limit=1000):
+        raise NotImplementedError
+
     async def list_all(self):
         raise NotImplementedError
 
@@ -186,6 +189,14 @@ class MongoBlogRepository:
             {"slug": slug, "status": "published"},
             {"_id": 0},
         )
+
+    async def list_sitemap_entries(self, limit=1000):
+        safe_limit = min(max(int(limit), 1), 1000)
+        cursor = self.collection.find(
+            {"status": "published"},
+            {"_id": 0, "slug": 1, "updated_at": 1},
+        ).sort([("published_at", -1), ("slug", 1)]).limit(safe_limit)
+        return await cursor.to_list(length=safe_limit)
 
     async def list_all(self):
         cursor = self.collection.find({}, {"_id": 0}).sort("updated_at", -1)
@@ -258,6 +269,10 @@ class BlogService:
         if not item:
             raise HTTPException(status_code=404, detail="Articolul nu a fost găsit.")
         return item
+
+    async def list_sitemap_entries(self, limit=1000):
+        safe_limit = min(max(int(limit), 1), 1000)
+        return await self.repository.list_sitemap_entries(safe_limit)
 
     async def _unique_slug(self, title):
         base = slugify_ro(title)

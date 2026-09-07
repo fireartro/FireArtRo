@@ -50,11 +50,15 @@ Această procedură se face o singură dată, după ce codul este aprobat. O pub
 | `BLOB_READ_WRITE_TOKEN` | secret | furnizat de Blob |
 | `VERCEL_BLOB_MEDIA_ORIGIN` | normal | de exemplu `https://store-id.public.blob.vercel-storage.com` |
 | `CORS_ORIGINS` | normal | domeniul final și, dacă e nevoie, cel Preview |
+| `TURNSTILE_ENABLED` | normal | obligatoriu; `false` până când ambele chei de mai jos sunt configurate în același mediu |
+| `TURNSTILE_SECRET_KEY` | secret | obligatoriu numai când `TURNSTILE_ENABLED=true`; nu ajunge în browser |
+| `REACT_APP_TURNSTILE_SITE_KEY` | public | cheia publică a aceluiași widget și mediu; necesită rebuild |
+| `REACT_APP_GA_MEASUREMENT_ID` | public | opțional, format `G-...`; fără el Analytics nu se încarcă |
 | `GOOGLE_PLACES_API_KEY`, `GOOGLE_PLACE_ID` | secret | opțional; fără ambele Google rămâne ascuns |
 | `META_PAGE_ID`, `META_PAGE_ACCESS_TOKEN` | secret | opțional; fără ambele Facebook rămâne ascuns |
 | `META_GRAPH_API_VERSION` | normal | opțional; păstrează versiunea aprobată |
 
-Nu crea niciodată variabile `REACT_APP_*` pentru secrete. Browserul nu primește parole, hashuri, tokenuri Blob sau tokenuri Google/Meta.
+Nu crea niciodată variabile `REACT_APP_*` pentru secrete. Cele două valori publice permise sunt cheia de site Turnstile și Measurement ID-ul GA4; browserul nu primește parola Admin, hashuri, tokenuri Blob, cheia secretă Turnstile sau tokenuri Google/Meta.
 Fișierele locale `backend/.env` sunt excluse explicit din pachetul Python; nu le urca și nu le folosi ca mecanism de configurare în Vercel.
 
 ## Validare Preview
@@ -70,7 +74,7 @@ Fișierele locale `backend/.env` sunt excluse explicit din pachetul Python; nu l
 3. Deschide `/api/health`. Starea trebuie să fie `ready` și fără `configuration_errors`.
 4. Deschide `/admin`, autentifică-te, inițializează conținutul o singură dată și verifică:
 
-   - panoul „Starea integrărilor”: MongoDB funcțional, Blob configurat și furnizorii de recenzii în starea așteptată;
+   - panoul „Starea integrărilor”: MongoDB funcțional, Blob și Resend configurate, Turnstile/Analytics în starea aleasă și furnizorii de recenzii în starea așteptată;
    - autosave în draft;
    - previzualizare desktop/tabletă/telefon;
    - publicare și refresh public;
@@ -86,7 +90,7 @@ Fișierele locale `backend/.env` sunt excluse explicit din pachetul Python; nu l
 - `api/index.py` servește FastAPI sub `/api/*`.
 - `api/admin/blob-upload.js` este funcția Node separată pentru tokenurile Vercel Blob.
 - Precedența filesystem-ului Vercel păstrează funcția de upload înainte de rewrite-ul API general; fallbackul SPA se aplică numai după API.
-- CSP permite doar aceeași origine, YouTube și domeniile publice Vercel Blob pentru imagini/video și încărcări. Nu lărgi `connect-src` sau `media-src` la `https:` generic.
+- CSP permite doar aceeași origine și originile exacte necesare pentru YouTube, Vercel Blob, Cloudflare Turnstile și GA4. Nu lărgi `script-src`, `connect-src` sau `media-src` la `https:` generic.
 
 ## După conectare
 

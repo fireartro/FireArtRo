@@ -42,6 +42,17 @@ def environment(**changes):
         "GOOGLE_PLACE_ID": "place-id",
         "META_PAGE_ID": "page-id",
         "META_PAGE_ACCESS_TOKEN": "meta-secret-value",
+        "RESEND_ENABLED": "true",
+        "RESEND_API_KEY": "resend-secret-value",
+        "RESEND_WEBHOOK_SECRET": "webhook-secret-value",
+        "RESEND_FROM_EMAIL": "FireArtRo <contact@fireart.ro>",
+        "RESEND_NOTIFICATION_TO": "fireartro@gmail.com",
+        "RESEND_INBOUND_DOMAIN": "fireart.ro",
+        "RESEND_INBOUND_ADDRESS": "contact@fireart.ro",
+        "TURNSTILE_ENABLED": "true",
+        "TURNSTILE_SECRET_KEY": "turnstile-secret-value",
+        "REACT_APP_TURNSTILE_SITE_KEY": "turnstile-public-value",
+        "REACT_APP_GA_MEASUREMENT_ID": "G-ABC123XYZ",
         **changes,
     }
 
@@ -61,9 +72,15 @@ def test_status_is_authenticated_redacts_secrets_and_throttles_refreshes():
         assert response.headers["cache-control"] == "no-store"
         assert "google-secret-value" not in response.text
         assert "meta-secret-value" not in response.text
+        assert "resend-secret-value" not in response.text
+        assert "webhook-secret-value" not in response.text
         body = response.json()
         assert body["database"] == {"configured": True, "healthy": True, "checked_at": body["database"]["checked_at"], "message": ""}
         assert body["blob"]["configured"] is True
+        assert body["resend"]["configured"] is True
+        assert body["resend"]["healthy"] is None
+        assert body["turnstile"]["configured"] is True
+        assert body["analytics"]["configured"] is True
         assert body["google"]["configured"] is True
         assert body["google"]["healthy"] is True
         assert body["facebook"]["healthy"] is False
@@ -84,6 +101,11 @@ def test_unconfigured_or_unavailable_services_return_only_safe_states():
             GOOGLE_PLACE_ID="",
             META_PAGE_ID="",
             META_PAGE_ACCESS_TOKEN="",
+            RESEND_API_KEY="",
+            TURNSTILE_ENABLED="false",
+            TURNSTILE_SECRET_KEY="",
+            REACT_APP_TURNSTILE_SITE_KEY="",
+            REACT_APP_GA_MEASUREMENT_ID="",
         ),
     )
 
@@ -92,6 +114,11 @@ def test_unconfigured_or_unavailable_services_return_only_safe_states():
     assert state.database.healthy is False
     assert state.blob.configured is False
     assert state.blob.healthy is None
+    assert state.resend.configured is False
+    assert state.resend.healthy is None
+    assert state.turnstile.configured is False
+    assert state.turnstile.message == "Dezactivat"
+    assert state.analytics.configured is False
     assert state.google.configured is False
     assert state.google.healthy is None
     assert state.facebook.configured is False

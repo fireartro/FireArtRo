@@ -6,6 +6,7 @@ import useManagedContent from "@/hooks/useManagedContent";
 
 export const COOKIE_CONSENT_STORAGE_KEY = "fireartro-cookie-consent-v1";
 export const OPEN_COOKIE_SETTINGS_EVENT = "fireartro-open-cookie-settings";
+export const COOKIE_CONSENT_UPDATED_EVENT = "fireartro-cookie-consent-updated";
 
 const defaultChoice = {
   necessary: true,
@@ -13,7 +14,7 @@ const defaultChoice = {
   marketing: false,
 };
 
-const readConsent = () => {
+export const readCookieConsent = () => {
   try {
     const value = JSON.parse(window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY) || "null");
     if (!value?.savedAt) return null;
@@ -31,7 +32,7 @@ const persistConsent = (choice, retentionDays) => {
     expiresAt: new Date(Date.now() + retentionDays * 86_400_000).toISOString(),
   };
   window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify(payload));
-  window.dispatchEvent(new CustomEvent("fireartro-cookie-consent-updated", { detail: payload }));
+  window.dispatchEvent(new CustomEvent(COOKIE_CONSENT_UPDATED_EVENT, { detail: payload }));
   return payload;
 };
 
@@ -43,7 +44,7 @@ export default function CookieConsent() {
   const firstButtonRef = useRef(null);
 
   useEffect(() => {
-    const stored = readConsent();
+    const stored = readCookieConsent();
     const expired = stored?.expiresAt && new Date(stored.expiresAt).getTime() <= Date.now();
     if (!stored || expired) {
       if (expired) window.localStorage.removeItem(COOKIE_CONSENT_STORAGE_KEY);
@@ -57,7 +58,7 @@ export default function CookieConsent() {
     }
 
     const openSettings = () => {
-      const current = readConsent();
+      const current = readCookieConsent();
       if (current) setChoice({ necessary: true, analytics: !!current.analytics, marketing: !!current.marketing });
       setCustomizing(true);
       setVisible(true);
@@ -70,7 +71,7 @@ export default function CookieConsent() {
     if (!visible) return;
     firstButtonRef.current?.focus();
     const onKeyDown = (event) => {
-      if (event.key === "Escape" && readConsent()) setVisible(false);
+      if (event.key === "Escape" && readCookieConsent()) setVisible(false);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -100,7 +101,7 @@ export default function CookieConsent() {
             <h2 id="cookie-consent-title">{settings.title}</h2>
             <p id="cookie-consent-summary">{settings.summary}</p>
           </div>
-          {readConsent() && (
+          {readCookieConsent() && (
             <button type="button" onClick={() => setVisible(false)} aria-label="Închide setările cookies">
               <X />
             </button>

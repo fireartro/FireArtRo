@@ -69,6 +69,8 @@ from media import (
     create_media_router,
 )
 from integrations import IntegrationsService, create_integrations_router
+from sitemap import create_sitemap_router
+from turnstile import TurnstileError, TurnstileVerifier
 
 
 ROOT_DIR = Path(__file__).parent
@@ -183,6 +185,7 @@ quote_rate_limiter = MongoQuoteRateLimiter(
     db.quote_rate_limits if db is not None else None,
     os.environ.get("ADMIN_SESSION_SECRET", ""),
 )
+turnstile_verifier = TurnstileVerifier.from_env(os.environ)
 media_repository = MongoMediaRepository(db)
 media_service = MediaService(media_repository, VercelBlobClient())
 blog_media_store = GridFsBlogMediaStore(None)
@@ -275,6 +278,7 @@ class QuoteCreate(BaseModel):
     message: Optional[str] = Field(default="", max_length=3000)
     consent: bool = False
     company_website: Optional[str] = Field(default="", max_length=200)
+    turnstile_token: str = Field(default="", max_length=4096)
 
     @field_validator(
         "first_name",
@@ -347,6 +351,7 @@ async def health():
     configuration_errors = [
         *database_configuration_errors,
         *auth_service.configuration_errors,
+        *turnstile_verifier.configuration_errors,
     ]
     database_state = "not_configured" if db is None else "not_checked"
     if db is not None and not configuration_errors:
@@ -480,11 +485,19 @@ async def receive_resend_webhook(request: Request):
 async def create_quote(input: QuoteCreate, request: Request):
     if not input.consent:
         raise HTTPException(status_code=422, detail="Consimțământul este obligatoriu.")
-    await quote_rate_limiter.enforce(request_ip(request))
-    payload = input.model_dump(exclude={"company_website"})
-    quote = Quote(**payload)
     if input.company_website:
         return QuoteAcknowledgement()
+    client_ip = request_ip(request)
+    try:
+        await turnstile_verifier.verify(input.turnstile_token, client_ip)
+    except TurnstileError as error:
+        raise HTTPException(
+            status_code=error.status_code,
+            detail=error.public_message,
+        ) from None
+    await quote_rate_limiter.enforce(client_ip)
+    payload = input.model_dump(exclude={"company_website", "turnstile_token"})
+    quote = Quote(**payload)
     doc = quote.model_dump()
     doc["internal_note"] = ""
     doc["version"] = 0
@@ -512,6 +525,9 @@ app.include_router(create_media_router(media_service))
 blog_repository = MongoBlogRepository(db.blog_posts if db is not None else None)
 blog_service = BlogService(blog_repository, blog_media_store)
 app.include_router(create_blog_router(blog_service))
+app.include_router(
+    create_sitemap_router(blog_service, database_available=lambda: db is not None)
+)
 
 reviews_service = ReviewsService(os.environ)
 app.include_router(create_reviews_router(reviews_service))
@@ -548,7 +564,7 @@ class RequestSecurityMiddleware:
                 headers["X-Frame-Options"] = "DENY"
                 headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
                 if (
-                    path not in {"/api/content"}
+                    path not in {"/api/content", "/api/sitemap.xml"}
                     and not path.startswith("/api/blog/media/")
                 ) or message["status"] >= 400:
                     headers["Cache-Control"] = "no-store"

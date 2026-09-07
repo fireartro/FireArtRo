@@ -25,6 +25,9 @@ test('renders only safe integration states and refreshes explicitly through the 
   mockRequest.mockResolvedValue({
     database: { configured: true, healthy: true, message: '' },
     blob: { configured: false, healthy: null, message: 'Necesită configurare' },
+    resend: { configured: true, healthy: null, message: 'Configurat' },
+    turnstile: { configured: false, healthy: null, message: 'Dezactivat' },
+    analytics: { configured: true, healthy: null, message: 'Configurat' },
     google: { configured: true, healthy: null, message: 'Configurat' },
     facebook: { configured: true, healthy: false, message: 'Eroare temporară' },
   });
@@ -35,6 +38,10 @@ test('renders only safe integration states and refreshes explicitly through the 
   await act(async () => root.render(<AdminIntegrations />));
 
   expect(container.textContent).toContain('Baza de date');
+  expect(container.textContent).toContain('Email Resend');
+  expect(container.textContent).toContain('Protecție formular');
+  expect(container.textContent).toContain('Google Analytics');
+  expect(container.textContent).toContain('Dezactivat');
   expect(container.textContent).toContain('Funcțional');
   expect(container.textContent).toContain('Necesită configurare');
   expect(container.textContent).toContain('Eroare temporară');

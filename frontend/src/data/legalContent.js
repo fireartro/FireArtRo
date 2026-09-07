@@ -10,7 +10,7 @@ export const LEGAL_PAGE_PRESENTATION = {
     title: "Politica de confidențialitate",
     description:
       "Cum colectează, folosește și protejează FireArtRo datele transmise prin site.",
-    updated: "25 iulie 2026",
+    updated: "7 septembrie 2026",
     sections: [
       {
         title: "Operatorul datelor",
@@ -24,7 +24,8 @@ export const LEGAL_PAGE_PRESENTATION = {
         body: [
           "Prin formularul de ofertă putem colecta numele, prenumele, telefonul, emailul, localitatea, locația și data evenimentului, tipul evenimentului, serviciile selectate, pachetul preferat și mesajul transmis.",
           "Colectăm numai informațiile necesare pentru a analiza solicitarea și a continua discuția comercială.",
-          "Pentru protecția site-ului împotriva folosirii abuzive a formularului, reținem temporar, în memoria serverului și nu în baza de date, adresa IP a solicitării, strict pentru a limita numărul de trimiteri de la aceeași sursă într-un interval scurt de timp.",
+          "Pentru protecția formularului împotriva folosirii abuzive, mecanismul de limitare generează din adresa IP un identificator pseudonimizat prin HMAC. Mecanismul nu păstrează IP-ul în clar; identificatorul și numărul de trimiteri sunt stocate temporar în MongoDB, într-o fereastră de 10 minute, apoi expiră automat.",
+          "Dacă protecția Cloudflare Turnstile este activată, widgetul prelucrează semnale tehnice despre browser și vizitator, inclusiv adresa IP, strict pentru diferențierea utilizării legitime de traficul automat. Tokenul rezultat este verificat de server și nu este păstrat împreună cu solicitarea; Cloudflare nu primește prin această integrare câmpurile completate în formular.",
         ],
       },
       {
@@ -38,7 +39,10 @@ export const LEGAL_PAGE_PRESENTATION = {
         title: "Păstrare și destinatari",
         body: [
           "Datele sunt păstrate numai cât este necesar pentru scopul comunicat și pentru obligațiile legale aplicabile. Nu vindem date personale.",
-          "Accesul poate fi acordat furnizorilor tehnici strict necesari operării site-ului și comunicării, în baza unor obligații de confidențialitate și securitate.",
+          "Solicitările de ofertă, mesajele primite la adresa de contact și răspunsurile trimise din Admin pot fi stocate în baza de date a aplicației. Vercel găzduiește aplicația, MongoDB Atlas furnizează baza de date, iar Resend procesează trimiterea și primirea emailurilor pentru contact@fireart.ro.",
+          "Cloudflare poate furniza verificarea anti-abuz a formularului atunci când aceasta este activată. Google poate furniza măsurarea Google Analytics 4 numai după consimțământul explicit pentru categoria Analiză și numai pe domeniul public de producție.",
+          "Biblioteca Vercel Blob este destinată materialelor publice ale site-ului, precum imagini și clipuri. Documentele clienților și atașamentele mesajelor nu sunt publicate în această bibliotecă.",
+          "Accesul este limitat la operatorii autorizați și la furnizorii tehnici strict necesari operării site-ului și comunicării, conform rolului lor.",
         ],
       },
       {
@@ -46,6 +50,12 @@ export const LEGAL_PAGE_PRESENTATION = {
         body: [
           "Poți solicita accesul, rectificarea, ștergerea, restricționarea sau portabilitatea datelor și te poți opune anumitor prelucrări. Îți poți retrage consimțământul atunci când acesta este temeiul utilizat.",
           "Ai și dreptul de a depune o plângere la Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal.",
+        ],
+      },
+      {
+        title: "Revizuirea documentului",
+        body: [
+          "Acest document descrie fluxurile tehnice configurate la data actualizării. Retenția finală, temeiurile aplicabile fiecărei colaborări și textul juridic trebuie validate periodic de operator și, înaintea acceptării finale, de un specialist juridic.",
         ],
       },
     ],
@@ -66,7 +76,7 @@ export const LEGAL_PAGE_PRESENTATION = {
     title: "Termeni și condiții",
     description:
       "Regulile generale pentru utilizarea site-ului și solicitarea serviciilor FireArtRo.",
-    updated: "25 iulie 2026",
+    updated: "7 septembrie 2026",
     sections: [
       {
         title: "Furnizorul serviciilor",
@@ -120,6 +130,12 @@ export const LEGAL_PAGE_PRESENTATION = {
           "Acești termeni sunt guvernați de legislația română. Orice litigiu care nu poate fi soluționat pe cale amiabilă sau prin procedurile de mai sus este de competența instanțelor române.",
         ],
       },
+      {
+        title: "Revizuirea documentului",
+        body: [
+          "Acești termeni descriu utilizarea tehnică și comercială generală a site-ului la data actualizării. Condițiile contractuale concrete și textul juridic final trebuie validate de operator și de un specialist juridic înaintea acceptării definitive.",
+        ],
+      },
     ],
     sources: [
       {
@@ -138,7 +154,7 @@ export const LEGAL_PAGE_PRESENTATION = {
     title: "Politica de cookies",
     description:
       "Ce tehnologii de stocare poate utiliza site-ul FireArtRo și cum le poți controla.",
-    updated: "24 iunie 2026",
+    updated: "7 septembrie 2026",
     sections: [
       {
         title: "Ce stocăm în browser",
@@ -157,8 +173,9 @@ export const LEGAL_PAGE_PRESENTATION = {
       {
         title: "Analiză opțională",
         body: [
-          "Categoria Analiză este dezactivată implicit. Ea poate fi folosită numai dacă FireArtRo configurează ulterior un instrument de măsurare și numai după acceptul explicit al vizitatorului.",
-          "În starea actuală, acceptarea categoriei pregătește preferința, dar nu activează automat un furnizor de analiză neconfigurat.",
+          "Categoria Analiză este dezactivată implicit. Integrarea pregătită pentru Google Analytics 4 se poate activa numai după acceptul explicit al vizitatorului: nu încarcă scriptul Google și nu transmite date înainte de această alegere, iar fără un identificator de măsurare configurat nu pornește deloc.",
+          "După acceptare, măsurarea poate transmite către Google calea paginii fără parametrii din adresă, titlul paginii și date tehnice generate de browser. Nu este activată în Admin sau în mediile Preview, nu trimitem deliberat câmpurile formularului ori alți identificatori personali și păstrăm funcțiile de publicitate și personalizare dezactivate.",
+          "Când Google Analytics 4 este activ, poate crea identificatori de analiză în cookie-uri precum _ga. Dacă alegerea este retrasă din Setări cookies, site-ul oprește evenimentele viitoare de măsurare.",
         ],
       },
       {
@@ -186,7 +203,16 @@ export const LEGAL_PAGE_PRESENTATION = {
         title: "Lista actuală a stocării locale",
         body: [
           "fireartro-cookie-consent-v1: păstrează categoriile acceptate, data salvării și data expirării.",
-          "fireartro-managed-content-v1: este utilizată numai de pagina locală de administrare pentru previzualizarea drafturilor în browserul în care au fost editate; nu este un cookie de urmărire.",
+          "fireartro-contact-prefill: folosește temporar sessionStorage pentru a transfera către pagina Contact pachetul sau serviciul ales; valoarea este eliminată după citire ori la închiderea sesiunii browserului.",
+          "fireartro-managed-content-v1: poate exista numai ca urmă a vechii administrări locale și este citită exclusiv de instrumentul autentificat de migrare din Admin; nu controlează conținutul public și nu este folosită pentru urmărire.",
+          "_ga și _ga_ID: pot fi create de Google Analytics 4 numai după acceptarea categoriei Analiză și numai dacă integrarea este configurată.",
+          "Sesiunea de autentificare Admin folosește un cookie strict necesar, securizat și inaccesibil JavaScriptului. Acesta nu este creat pentru vizitatorii site-ului public.",
+        ],
+      },
+      {
+        title: "Revizuirea documentului",
+        body: [
+          "Lista trebuie revizuită înainte de activarea oricărui furnizor nou de analiză, marketing sau protecție anti-abuz și validată juridic înaintea acceptării finale.",
         ],
       },
     ],

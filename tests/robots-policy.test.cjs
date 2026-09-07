@@ -7,5 +7,6 @@ test('public robots policy avoids crawling private administration and API endpoi
   const robots = fs.readFileSync(path.resolve(__dirname, '../frontend/public/robots.txt'), 'utf8');
   assert.match(robots, /^Disallow: \/admin$/m);
   assert.match(robots, /^Disallow: \/api\/$/m);
-  assert.match(robots, /^Sitemap: https:\/\/fireart\.ro\/sitemap\.xml$/m);
+  assert.match(robots, /^Allow: \/api\/sitemap\.xml$/m);
+  assert.match(robots, /^Sitemap: https:\/\/fireart\.ro\/api\/sitemap\.xml$/m);
 });

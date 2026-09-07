@@ -15,6 +15,7 @@ from auth import require_admin_session
 
 
 BLOB_ORIGIN = re.compile(r"https://[a-z0-9]+\.public\.blob\.vercel-storage\.com")
+GA_MEASUREMENT_ID = re.compile(r"G-[A-Z0-9]+")
 
 
 def utc_now():
@@ -35,6 +36,9 @@ class IntegrationState(BaseModel):
 class IntegrationsResponse(BaseModel):
     database: IntegrationState
     blob: IntegrationState
+    resend: IntegrationState
+    turnstile: IntegrationState
+    analytics: IntegrationState
     google: IntegrationState
     facebook: IntegrationState
 
@@ -71,6 +75,58 @@ class IntegrationsService:
             configured=configured,
             healthy=None,
             message="" if configured else "Necesită configurare.",
+        )
+
+    def _resend_state(self):
+        configured = (
+            self.env.get("RESEND_ENABLED") == "true"
+            and all(
+                _present(self.env.get(name, ""))
+                for name in (
+                    "RESEND_API_KEY",
+                    "RESEND_WEBHOOK_SECRET",
+                    "RESEND_FROM_EMAIL",
+                    "RESEND_NOTIFICATION_TO",
+                    "RESEND_INBOUND_DOMAIN",
+                    "RESEND_INBOUND_ADDRESS",
+                )
+            )
+        )
+        return IntegrationState(
+            configured=configured,
+            healthy=None,
+            message="Configurat" if configured else "Necesită configurare.",
+        )
+
+    def _turnstile_state(self):
+        enabled = self.env.get("TURNSTILE_ENABLED")
+        if enabled == "false":
+            return IntegrationState(
+                configured=False,
+                healthy=None,
+                message="Dezactivat",
+            )
+        configured = (
+            enabled == "true"
+            and _present(self.env.get("TURNSTILE_SECRET_KEY", ""))
+            and _present(self.env.get("REACT_APP_TURNSTILE_SITE_KEY", ""))
+        )
+        return IntegrationState(
+            configured=configured,
+            healthy=None,
+            message="Configurat" if configured else "Necesită configurare.",
+        )
+
+    def _analytics_state(self):
+        measurement_id = self.env.get("REACT_APP_GA_MEASUREMENT_ID", "")
+        configured = bool(
+            isinstance(measurement_id, str)
+            and GA_MEASUREMENT_ID.fullmatch(measurement_id.strip())
+        )
+        return IntegrationState(
+            configured=configured,
+            healthy=None,
+            message="Configurat" if configured else "Necesită configurare.",
         )
 
     async def _database_state(self, checked_at):
@@ -135,6 +191,9 @@ class IntegrationsService:
         self._cached = IntegrationsResponse(
             database=await self._database_state(checked_at),
             blob=self._blob_state(),
+            resend=self._resend_state(),
+            turnstile=self._turnstile_state(),
+            analytics=self._analytics_state(),
             google=reviews["google"],
             facebook=reviews["facebook"],
         )
