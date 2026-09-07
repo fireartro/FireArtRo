@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "engines": { "node": ">=20.19.0" },
-  "scripts": { "test:api": "node --test tests/blob-upload.test.js tests/deployment-config.test.js" },
+  "scripts": {
+    "test:api": "node --test tests/blob-upload.test.js tests/deployment-config.test.js",
+    "test:artifacts": "node --test tests/canonical-domain.test.cjs tests/favicon-assets.test.cjs tests/public-bundle-budget.test.cjs tests/robots-policy.test.cjs tests/structured-data.test.cjs"
+  },
   "dependencies": {
     "@vercel/blob": "2.8.0",
     "mongodb": "7.6.0"

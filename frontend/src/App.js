@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
-import { Toaster } from "@/components/ui/sonner";
 import Home from "@/pages/Home";
 import CookieConsent from "@/components/site/CookieConsent";
 import RouteShutter from "@/components/night/RouteShutter";
@@ -35,12 +34,7 @@ function RouteScrollManager() {
 function GlobalUi() {
   const location = useLocation();
 
-  return (
-    <>
-      {location.pathname !== "/admin" && <CookieConsent />}
-      <Toaster position="top-center" richColors />
-    </>
-  );
+  return location.pathname !== "/admin" ? <CookieConsent /> : null;
 }
 
 function AppRoutes() {

@@ -45,3 +45,5 @@ jobs:
         run: yarn --cwd frontend build
         env:
           NODE_OPTIONS: --max-old-space-size=4096
+      - name: Check production artifacts and bundle budgets
+        run: npm run test:artifacts

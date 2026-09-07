@@ -2,6 +2,7 @@ import Navbar from "@/components/site/Navbar";
 import ScrollProgress from "@/components/site/ScrollProgress";
 import QuoteForm from "@/components/site/QuoteForm";
 import PageEnd from "@/components/site/PageEnd";
+import { Toaster } from "@/components/ui/sonner";
 import usePageMeta from "@/hooks/usePageMeta";
 import useManagedContent from "@/hooks/useManagedContent";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
@@ -17,11 +18,14 @@ export default function ContactPage() {
   });
 
   return (
-    <main className="contact-page nr-contact-page" data-design="night-runway">
-      <ScrollProgress />
-      <Navbar />
-      <QuoteForm />
-      <PageEnd />
-    </main>
+    <>
+      <main className="contact-page nr-contact-page" data-design="night-runway">
+        <ScrollProgress />
+        <Navbar />
+        <QuoteForm />
+        <PageEnd />
+      </main>
+      <Toaster position="top-center" richColors />
+    </>
   );
 }
