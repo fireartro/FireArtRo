@@ -29,6 +29,7 @@ export default function Home() {
           name: siteDetails.name,
           legalName: siteDetails.legalName,
           url: CANONICAL_SITE_URL,
+          logo: `${CANONICAL_SITE_URL}/icon-512.png`,
           email: siteDetails.email,
           taxID: siteDetails.taxId,
           address: {
