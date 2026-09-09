@@ -13,6 +13,19 @@
         <link rel="icon" type="image/png" href="%PUBLIC_URL%/favicon-32x32.png" sizes="32x32" />
         <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" sizes="180x180" />
         <link rel="manifest" href="%PUBLIC_URL%/site.webmanifest" />
+        <script id="published-content-bootstrap">
+            (() => {
+                if (/^\/admin\/?$/.test(location.pathname)) return;
+                // Start the public snapshot alongside JS/CSS, never a draft or
+                // authenticated request. The provider still validates it.
+                window.__fireartContentBoot = {
+                    startedAt: Date.now(),
+                    request: fetch('/api/content', { credentials: 'omit', cache: 'no-cache' })
+                        .then(response => response.ok ? response.json() : null)
+                        .catch(() => null)
+                };
+            })();
+        </script>
         <script>
             (() => {
                 const ua = navigator.userAgent || "";

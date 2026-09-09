@@ -1,21 +1,38 @@
 import { lazy, Suspense, useEffect } from "react";
 import "@/App.css";
+// These shared styles already ship on every public route; keep their cascade
+// stable when pages and Admin previews load in different orders.
+import "@/styles/night-reviews.css";
+import "@/styles/night-blog.css";
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
-import Home from "@/pages/Home";
 import CookieConsent from "@/components/site/CookieConsent";
 import AnalyticsLoader from "@/components/site/AnalyticsLoader";
 import RouteShutter from "@/components/night/RouteShutter";
 import { scrollToHash, scrollToTop, syncScrollOffset } from "@/lib/scrollNavigation";
 import { ManagedContentProvider, useManagedContentSnapshot } from "@/content/ManagedContentProvider";
 
-const GalleryPage = lazy(() => import("@/pages/GalleryPage"));
-const PackagesPage = lazy(() => import("@/pages/PackagesPage"));
-const FaqPage = lazy(() => import("@/pages/FaqPage"));
-const ContactPage = lazy(() => import("@/pages/ContactPage"));
-const LegalPage = lazy(() => import("@/pages/LegalPage"));
+const loadHome = () => import("@/pages/Home");
+const loadGallery = () => import("@/pages/GalleryPage");
+const loadPackages = () => import("@/pages/PackagesPage");
+const loadFaq = () => import("@/pages/FaqPage");
+const loadContact = () => import("@/pages/ContactPage");
+const loadLegal = () => import("@/pages/LegalPage");
+const loadBlog = () => import("@/pages/BlogPage");
+const loadArticle = () => import("@/pages/BlogArticlePage");
+const Home = lazy(loadHome);
+const GalleryPage = lazy(loadGallery);
+const PackagesPage = lazy(loadPackages);
+const FaqPage = lazy(loadFaq);
+const ContactPage = lazy(loadContact);
+const LegalPage = lazy(loadLegal);
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
-const BlogPage = lazy(() => import("@/pages/BlogPage"));
-const BlogArticlePage = lazy(() => import("@/pages/BlogArticlePage"));
+const BlogPage = lazy(loadBlog);
+const BlogArticlePage = lazy(loadArticle);
+const publicRouteLoaders = {
+  '/': loadHome, '/galerie': loadGallery, '/pachete': loadPackages,
+  '/intrebari-frecvente': loadFaq, '/contact': loadContact, '/blog': loadBlog,
+  '/confidentialitate': loadLegal, '/termeni-si-conditii': loadLegal, '/cookies': loadLegal,
+};
 
 function RouteScrollManager() {
   const location = useLocation();
@@ -44,6 +61,14 @@ function GlobalUi() {
 function AppRoutes() {
   const location = useLocation();
   const content = useManagedContentSnapshot();
+
+  useEffect(() => {
+    // Fetch only the requested public page in parallel with the CMS snapshot.
+    // Interior routes never download homepage scenes or Admin code.
+    const path = location.pathname.replace(/\/$/, '') || '/';
+    const loadPage = publicRouteLoaders[path] || (path.startsWith('/blog/') ? loadArticle : null);
+    loadPage?.().catch(() => {});
+  }, [location.pathname]);
 
   if (location.pathname !== "/admin" && !["ready", "fallback"].includes(content.status)) {
     return <main className="route-loading" role="status" aria-live="polite">

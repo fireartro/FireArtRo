@@ -8,6 +8,52 @@ let root;
 const render = (element) => act(() => root.render(element));
 const loadPoster = () => act(() => container.querySelector('img').dispatchEvent(new Event('load')));
 
+test('can play verified efficient AV1 even when the H264 fallback is unsupported', async () => {
+  jest.useFakeTimers();
+  jest.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+  const previous = Object.getOwnPropertyDescriptor(navigator, 'mediaCapabilities');
+  Object.defineProperty(navigator, 'mediaCapabilities', { configurable: true, value: {
+    decodingInfo: async () => ({ supported: true, smooth: true, powerEfficient: true }),
+  } });
+  try {
+    await act(async () => root.render(<HeroVideo />));
+    loadPoster();
+    act(() => jest.advanceTimersByTime(2_000));
+    expect(container.querySelector('video')?.getAttribute('src')).toContain('-av1.mp4');
+  } finally {
+    if (previous) Object.defineProperty(navigator, 'mediaCapabilities', previous);
+    else delete navigator.mediaCapabilities;
+  }
+});
+
+test('chooses a single efficient source before mounting video and can fall back on a decoder error', async () => {
+  jest.useFakeTimers();
+  jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ top: 0, left: 0, right: 1024, bottom: 768, width: 1024, height: 768 });
+  jest.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('probably');
+  const previous = Object.getOwnPropertyDescriptor(navigator, 'mediaCapabilities');
+  let finish;
+  Object.defineProperty(navigator, 'mediaCapabilities', { configurable: true, value: {
+    decodingInfo: () => new Promise(resolve => { finish = resolve; }),
+  } });
+  try {
+    render(<HeroVideo />);
+    loadPoster();
+    expect(container.querySelector('video')).toBeNull();
+    await act(async () => finish({ supported: true, smooth: true, powerEfficient: true }));
+    act(() => jest.advanceTimersByTime(2_000));
+    let video = container.querySelector('video');
+    expect(video.getAttribute('src')).toContain('-av1.mp4');
+    act(() => video.dispatchEvent(new Event('error')));
+    act(() => jest.advanceTimersByTime(2_000));
+    video = container.querySelector('video');
+    expect(video.getAttribute('src')).toContain('.mp4');
+    expect(video.getAttribute('src')).not.toContain('-av1.mp4');
+  } finally {
+    if (previous) Object.defineProperty(navigator, 'mediaCapabilities', previous);
+    else delete navigator.mediaCapabilities;
+  }
+});
+
 beforeEach(() => {
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -182,4 +228,42 @@ test('does not attach the bundled poster when a posterless admin video activates
   } finally {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalWidth });
   }
+});
+
+test('keeps the decoded mobile source when browser chrome changes only viewport height', () => {
+  jest.useFakeTimers();
+  const originalWidth = window.innerWidth;
+  const originalHeight = window.innerHeight;
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 414 });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 896 });
+  jest.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('probably');
+  try {
+    render(<HeroVideo />);
+    loadPoster();
+    act(() => jest.advanceTimersByTime(2_000));
+    const video = container.querySelector('video');
+    const source = video.getAttribute('src');
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 780 });
+    act(() => window.dispatchEvent(new Event('resize')));
+    expect(container.querySelector('video')).toBe(video);
+    expect(video.getAttribute('src')).toBe(source);
+  } finally {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalWidth });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight });
+  }
+});
+
+test('does not start downloading the video until a background tab becomes visible', () => {
+  jest.useFakeTimers();
+  let visibility = 'hidden';
+  jest.spyOn(document, 'visibilityState', 'get').mockImplementation(() => visibility);
+  jest.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('probably');
+  render(<HeroVideo />);
+  loadPoster();
+  act(() => jest.advanceTimersByTime(3_000));
+  expect(container.querySelector('video')).toBeNull();
+  visibility = 'visible';
+  act(() => document.dispatchEvent(new Event('visibilitychange')));
+  act(() => jest.advanceTimersByTime(2_000));
+  expect(container.querySelector('video')?.hasAttribute('autoplay')).toBe(true);
 });

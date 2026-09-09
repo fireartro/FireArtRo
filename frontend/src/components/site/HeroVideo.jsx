@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import HeroKineticTitles from "./HeroKineticTitles";
 import { HERO_MEDIA, HERO_POSTER } from "@/data/content";
 import {
   canPlayHeroVideo,
   getHeroAutoplayPolicy,
   scheduleHeroVideoPlayback,
+  selectHeroSource,
 } from "./heroPlayback";
 
 // Choose one composition atomically from the CSS viewport. Independent media
@@ -21,9 +23,17 @@ const readMediaVariant = () => {
 
 export const HeroVideo = ({ mediaOverride }) => {
   const videoRef = useRef(null);
+  const viewportRef = useRef(null);
+  const [pageVisible, setPageVisible] = useState(
+    () => typeof document === "undefined" || document.visibilityState !== "hidden",
+  );
   const [mediaVariant, setMediaVariant] = useState(readMediaVariant);
   const media = mediaOverride || HERO_MEDIA.variants[mediaVariant] || HERO_MEDIA.variants.wide;
-  const source = media.src;
+  const [delivery, setDelivery] = useState(null);
+  const needsCodecChoice = !mediaOverride && Boolean(media.av1Src)
+    && typeof navigator !== 'undefined' && typeof navigator.mediaCapabilities?.decodingInfo === 'function';
+  const source = !mediaOverride && delivery?.original === media.src ? delivery.src : media.src;
+  const codecReady = !needsCodecChoice || delivery?.original === media.src;
   const poster = media.poster || HERO_POSTER;
   const objectPosition = HERO_MEDIA.position || "50% 50%";
   const [videoFailed, setVideoFailed] = useState(false);
@@ -36,8 +46,9 @@ export const HeroVideo = ({ mediaOverride }) => {
   const [readyPoster, setReadyPoster] = useState("");
   const isVideoMedia = !mediaOverride || mediaOverride.type === "video";
   const canMountVideo = isVideoMedia
+    && codecReady
     && !videoFailed
-    && (Boolean(mediaOverride) || bundledVideoSupported)
+    && (Boolean(mediaOverride) || bundledVideoSupported || source === media.av1Src)
     && autoplayEligible;
   const usePoster = !canMountVideo || activatedSource !== source;
   const fallbackImage = mediaOverride && mediaOverride.type !== "video"
@@ -47,7 +58,28 @@ export const HeroVideo = ({ mediaOverride }) => {
   const videoPoster = mediaOverride?.type === "video" && !mediaOverride.poster ? undefined : poster;
 
   useEffect(() => {
-    const updateVariant = () => setMediaVariant(readMediaVariant());
+    if (!needsCodecChoice || !autoplayEligible) return undefined;
+    let cancelled = false;
+    selectHeroSource(media, navigator).then(src => {
+      if (!cancelled) setDelivery({ original: media.src, src });
+    });
+    return () => { cancelled = true; };
+  }, [media, needsCodecChoice, autoplayEligible]);
+
+  useEffect(() => {
+    const updateVariant = () => {
+      const next = { width: window.innerWidth, height: window.innerHeight };
+      const previous = viewportRef.current;
+      viewportRef.current = next;
+      const mobileViewport = next.width <= 768 || window.navigator?.maxTouchPoints > 0;
+      const heightOnly = previous && previous.width === next.width
+        && (previous.width <= previous.height) === (next.width <= next.height);
+      // Browser toolbars and the keyboard resize the visible mobile viewport.
+      // Keep the selected file/decoder; a real width change or rotation still
+      // selects the appropriate composition atomically.
+      if (mobileViewport && heightOnly) return;
+      setMediaVariant(readMediaVariant());
+    };
     updateVariant();
     window.addEventListener("resize", updateVariant, { passive: true });
     window.addEventListener("orientationchange", updateVariant, { passive: true });
@@ -59,6 +91,12 @@ export const HeroVideo = ({ mediaOverride }) => {
       window.removeEventListener("pageshow", updateVariant);
       window.visualViewport?.removeEventListener("resize", updateVariant);
     };
+  }, []);
+
+  useEffect(() => {
+    const updateVisibility = () => setPageVisible(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () => document.removeEventListener("visibilitychange", updateVisibility);
   }, []);
 
   useEffect(() => {
@@ -78,9 +116,9 @@ export const HeroVideo = ({ mediaOverride }) => {
   }, [source]);
 
   useEffect(() => {
-    if (!canMountVideo || (videoPoster && readyPoster !== videoPoster)) return undefined;
+    if (!pageVisible || !canMountVideo || (videoPoster && readyPoster !== videoPoster)) return undefined;
     return scheduleHeroVideoPlayback(() => setActivatedSource(source), window);
-  }, [canMountVideo, source, videoPoster, readyPoster]);
+  }, [pageVisible, canMountVideo, source, videoPoster, readyPoster]);
 
   useEffect(() => {
     if (usePoster) return undefined;
@@ -189,6 +227,10 @@ export const HeroVideo = ({ mediaOverride }) => {
     };
     const onError = () => {
       if (disposed || !mediaVisible || !video.getAttribute("src")) return;
+      if (!mediaOverride && source !== media.src) {
+        setDelivery({ original: media.src, src: media.src });
+        return;
+      }
       if (errorAttempts < 2) {
         errorAttempts += 1;
         clearRetry();
@@ -244,7 +286,7 @@ export const HeroVideo = ({ mediaOverride }) => {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("online", onOnline);
     };
-  }, [source, usePoster]);
+  }, [source, usePoster, media.src, mediaOverride]);
 
   return (
     <div className="hero-video-stage absolute inset-0 z-0 overflow-hidden">
@@ -265,7 +307,7 @@ export const HeroVideo = ({ mediaOverride }) => {
           src={fallbackImage}
           onLoad={() => setReadyPoster(fallbackImage)}
           onError={() => setReadyPoster(fallbackImage)}
-          alt={mediaOverride?.alt || "Spectacol de drone și artificii FireArtRo"}
+          alt={mediaOverride?.alt || HERO_MEDIA.label}
           width={media.width}
           height={media.height}
           className="hero-media-surface hero-media-webp absolute inset-0 h-full w-full object-cover"
@@ -290,7 +332,7 @@ export const HeroVideo = ({ mediaOverride }) => {
           style={{ objectPosition }}
           data-media-variant={mediaVariant}
           data-crop-profile={mediaVariant}
-          aria-label="Spectacol video cu drone și artificii FireArtRo"
+          aria-label={mediaOverride?.alt || HERO_MEDIA.label}
         />
       )}
 
@@ -299,6 +341,7 @@ export const HeroVideo = ({ mediaOverride }) => {
       <div className="hero-video-overlay hero-video-overlay--vertical" />
       <div className="hero-video-overlay hero-video-overlay--horizontal" />
       <div className="hero-video-overlay hero-video-overlay--vignette" />
+      <HeroKineticTitles videoRef={videoRef} enabled={!mediaOverride && !usePoster && pageVisible} source={source} />
     </div>
   );
 };

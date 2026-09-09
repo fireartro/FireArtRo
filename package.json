@@ -5,7 +5,7 @@
   "engines": { "node": ">=20.19.0" },
   "scripts": {
     "test:api": "node --test tests/blob-upload.test.js tests/deployment-config.test.js tests/verify-production.test.js",
-    "test:artifacts": "node --test tests/canonical-domain.test.cjs tests/favicon-assets.test.cjs tests/public-bundle-budget.test.cjs tests/robots-policy.test.cjs tests/seo-metadata.test.cjs tests/structured-data.test.cjs",
+    "test:artifacts": "node --test tests/canonical-domain.test.cjs tests/favicon-assets.test.cjs tests/public-bundle-budget.test.cjs tests/robots-policy.test.cjs tests/seo-metadata.test.cjs tests/structured-data.test.cjs tests/public-content-bootstrap.test.cjs",
     "verify:production": "node scripts/verify-production.mjs"
   },
   "dependencies": {

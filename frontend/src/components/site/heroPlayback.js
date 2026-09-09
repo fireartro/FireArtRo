@@ -4,6 +4,25 @@ export function canPlayHeroVideo(video) {
   return Boolean(video.canPlayType('video/mp4; codecs="avc1.640028"'));
 }
 
+// A smaller codec is not an optimization if it forces expensive software
+// decoding. Query before attaching a source; never download both formats.
+export async function selectHeroSource(media, navigatorLike) {
+  const capabilities = navigatorLike?.mediaCapabilities;
+  if (!media.av1Src || typeof capabilities?.decodingInfo !== 'function') return media.src;
+  let timer;
+  try {
+    const result = await Promise.race([
+      capabilities.decodingInfo({ type: 'file', video: {
+        contentType: 'video/mp4; codecs="av01.0.08M.08"',
+        width: media.width, height: media.height, bitrate: 9_000_000, framerate: 24,
+      } }),
+      new Promise(resolve => { timer = setTimeout(() => resolve(null), 200); }),
+    ]);
+    return result?.supported && result.smooth && result.powerEfficient ? media.av1Src : media.src;
+  } catch { return media.src; }
+  finally { clearTimeout(timer); }
+}
+
 export const HERO_VIDEO_IDLE_TIMEOUT_MS = 1_200;
 
 export function shouldAutoplayHeroVideo({

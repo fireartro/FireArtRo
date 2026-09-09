@@ -248,7 +248,7 @@ export default function GalleryPage() {
                     <img
                       src={item.thumbnail || item.src}
                       alt={item.alt}
-                      loading="eager"
+                      loading={index < 8 ? 'eager' : 'lazy'}
                       decoding="async"
                       onLoad={(event) => rememberRatio(item.id, event)}
                     />

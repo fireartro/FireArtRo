@@ -1,0 +1,74 @@
+@font-face {
+  font-family: "FireArt Film";
+  src: url("../../public/fonts/montserrat-black-hero.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
+.hero-kinetic {
+  position: absolute;
+  z-index: 2;
+  top: 47%;
+  right: 4.5%;
+  left: 58%;
+  height: 37%;
+  pointer-events: none;
+  user-select: none;
+  color: #f6f1e8;
+  font-family: "FireArt Film", "Arial Black", sans-serif;
+  font-size: clamp(32px, 4.5vw, 100px);
+  font-weight: 900;
+  line-height: .94;
+  letter-spacing: -.055em;
+  text-align: left;
+}
+
+.hero-kinetic__cue {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-size: calc(1em * var(--cue-scale, 1));
+}
+
+.hero-kinetic__cue[data-motion="stack"] { font-size: .88em; }
+.hero-kinetic__cue[data-motion="stack"] .hero-kinetic__lead { color: #d9ff00; }
+
+.hero-kinetic__line {
+  position: relative;
+  white-space: nowrap;
+  padding-block: .09em;
+}
+
+.hero-kinetic__lead {
+  display: block;
+  text-shadow: 0 2px 24px rgb(0 0 0 / 38%);
+}
+
+.hero-kinetic__line--accent .hero-kinetic__lead { color: var(--cue-accent); }
+
+.hero-kinetic__echo {
+  position: absolute;
+  inset: .09em 0 auto;
+  color: transparent;
+  -webkit-text-stroke: 1px #f6f1e8;
+}
+
+.hero-kinetic__echo--solid { color: #f6f1e8; -webkit-text-stroke: 0; }
+
+@media (max-width: 900px), (orientation: portrait) {
+  .hero-kinetic {
+    top: var(--kinetic-top, 62%);
+    right: 5%;
+    left: 5%;
+    height: var(--kinetic-height, 24%);
+    font-size: var(--kinetic-size, clamp(28px, 9.3vw, 68px));
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-kinetic { display: none; }
+}
