@@ -1,6 +1,6 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { CANONICAL_SITE_URL } from "@/data/businessContent";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -9,11 +9,13 @@ import PageEnd from "@/components/site/PageEnd";
 import ScrollProgress from "@/components/site/ScrollProgress";
 import usePageMeta from "@/hooks/usePageMeta";
 import useManagedContent from "@/hooks/useManagedContent";
+import { buildCategoryRanges, getCategoryLabel, isGalleryVisible } from "@/lib/categoryNavigation";
 
 import "@/styles/night-gallery.css";
+import "@/styles/category-navigation.css";
 import ManagedPageMedia from "@/components/site/ManagedPageMedia";
 
-const GALLERY_CATEGORIES = ["Artificii de zi", "Artificii de noapte", "Drone show"];
+const GALLERY_CATEGORIES = ["Artificii de noapte", "Artificii de zi", "Drone show"];
 
 const getGalleryFrameRatio = (ratio) => {
   if (!Number.isFinite(ratio) || ratio <= 0) return 4 / 3;
@@ -62,12 +64,17 @@ export default function GalleryPage() {
   const media = useManagedContent("mediaItems", CMS_DEFAULTS.mediaItems);
   const photos = useMemo(
     () => [...media]
-      .filter((item) => item.type === "image")
+      .filter((item) => item.type === "image" && isGalleryVisible(item))
       .sort((a, b) => (a.order || 0) - (b.order || 0)),
     [media],
   );
   const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const categories = useMemo(() => ["Toate", ...new Set([...GALLERY_CATEGORIES, ...photos.map((item) => item.category)])], [photos]);
+  const categories = useMemo(() => {
+    const populated = buildCategoryRanges(photos).map((range) => range.category);
+    const known = GALLERY_CATEGORIES.filter((item) => populated.includes(item));
+    const custom = populated.filter((item) => !known.includes(item));
+    return ["Toate", ...known, ...custom];
+  }, [photos]);
   const requestedFilter = params.get("filtru") || "Toate";
   const activeFilter = categories.includes(requestedFilter) ? requestedFilter : "Toate";
   const visiblePhotos = useMemo(
@@ -79,6 +86,7 @@ export default function GalleryPage() {
   const [expandedIndex, setExpandedIndex] = useState(-1);
   const [imageRatios, setImageRatios] = useState({});
   const [previewFrame, setPreviewFrame] = useState(null);
+  const filterRefs = useRef([]);
   const expandedItem = visiblePhotos[expandedIndex];
   const previewRatio = expandedItem
     ? (imageRatios[expandedItem.id] || expandedItem.aspectRatio || 16 / 9)
@@ -144,6 +152,18 @@ export default function GalleryPage() {
     replaceQuery({ filtru: nextFilter === "Toate" ? null : nextFilter, media: null });
   };
 
+  const handleFilterKeyDown = (event, index) => {
+    let nextIndex = null;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (index + 1) % categories.length;
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (index - 1 + categories.length) % categories.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = categories.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    selectFilter(categories[nextIndex]);
+    window.requestAnimationFrame(() => filterRefs.current[nextIndex]?.focus());
+  };
+
   const rememberRatio = (itemId, event) => {
     const { naturalWidth, naturalHeight } = event.currentTarget;
     if (!naturalWidth || !naturalHeight) return;
@@ -207,20 +227,24 @@ export default function GalleryPage() {
           </header>
           <ManagedPageMedia mediaId={copy.heroMediaId} />
 
-          <nav className="nr-gallery-filters" data-testid="gallery-filters" aria-label="Filtre galerie">
-            {categories.map((category) => {
+          <nav className="nr-gallery-filters" data-testid="gallery-filters" role="tablist" aria-label="Filtre galerie">
+            {categories.map((category, index) => {
               const count = category === "Toate"
                 ? photos.length
                 : photos.filter((item) => item.category === category).length;
               return (
                 <button
                   key={category}
+                  ref={(node) => { filterRefs.current[index] = node; }}
                   type="button"
-                  aria-pressed={activeFilter === category}
+                  role="tab"
+                  aria-selected={activeFilter === category}
+                  tabIndex={activeFilter === category ? 0 : -1}
                   className={activeFilter === category ? "is-active" : ""}
                   onClick={() => selectFilter(category)}
+                  onKeyDown={(event) => handleFilterKeyDown(event, index)}
                 >
-                  <span>{category}</span>
+                  <span>{getCategoryLabel(category)}</span>
                   <small>{count}</small>
                 </button>
               );

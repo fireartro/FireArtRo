@@ -41,11 +41,11 @@ export default function Home() {
           areaServed: { "@type": "Country", name: siteDetails.areaServed },
           openingHours: businessHours.schema,
           description:
-            "Producție de spectacole cu drone, artificii profesionale și efecte speciale pentru evenimente.",
+            "Show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice pentru evenimente.",
         },
         {
           "@type": "Service",
-          name: "Spectacole cu drone și artificii",
+          name: "Show-uri de artificii profesionale și drone",
           provider: { "@type": "Organization", name: siteDetails.name },
           areaServed: { "@type": "Country", name: siteDetails.areaServed },
         },

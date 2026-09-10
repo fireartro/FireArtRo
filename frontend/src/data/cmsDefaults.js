@@ -13,6 +13,8 @@ import { NAV_LINKS } from "./content";
 import { HOME_GALLERY, PARTNER_PLACEHOLDERS } from "./homeExperience";
 import { FAQ_DEFAULTS } from "./faqContent";
 import { LEGAL_PAGES_DEFAULT } from "./legalContent";
+import ownerRevision from "./ownerRevision.json";
+import { applyOwnerRevision } from "../content/ownerRevision";
 
 export const MEDIA_TEMPLATE = {
   id: "media", type: "image", title: "", shortDescription: "",
@@ -43,7 +45,7 @@ const links = (items, prefix) => items.map((item) => ({ id: `${prefix}-${optionI
 
 // The single, JSON-only SiteContent v1 fallback shared by public rendering and Admin.
 // Empty published arrays are intentional: consumers must never repopulate them.
-export const CMS_DEFAULTS = {
+export const CMS_DEFAULTS = applyOwnerRevision({
   schema_version: 1,
   siteDetails: {
     ...SITE_DETAILS,
@@ -168,4 +170,4 @@ export const CMS_DEFAULTS = {
   },
   cookieSettings: COOKIE_SETTINGS_DEFAULT,
   legalPages: LEGAL_PAGES_DEFAULT,
-};
+}, ownerRevision);

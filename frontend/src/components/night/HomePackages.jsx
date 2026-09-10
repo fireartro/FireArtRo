@@ -6,17 +6,23 @@ import { useReducedMotion } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import useManagedContent from "@/hooks/useManagedContent";
-
-import { goToContact } from "@/lib/contactNavigation";
 import useNearViewport from "@/hooks/useNearViewport";
+import { MEDIA } from "@/data/content";
+import { buildCategoryRanges, getCategoryLabel, getCategoryPhoto } from "@/lib/categoryNavigation";
+import { homeImageProps } from "@/lib/homeImage";
+
+import "@/styles/category-navigation.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const FEATURED_PACKAGE_IDS = [
-  "fireworks-multicolor-2026",
-  "fireworks-gold-2026",
-  "fireworks-diamond-piromusical-2026",
-];
+const fallbackVisuals = {
+  "Artificii de noapte": MEDIA.fireworksSky,
+  "Artificii de zi": MEDIA.corporate,
+  "Show drone": MEDIA.droneShow,
+  "Drone + artificii": MEDIA.hybrid,
+  "Efecte speciale": MEDIA.coldSparks,
+  "Corporate / Festival": MEDIA.crowd,
+};
 
 export default function HomePackages() {
   const homePage = useManagedContent("homePage", CMS_DEFAULTS.homePage);
@@ -26,20 +32,12 @@ export default function HomePackages() {
   const reduceMotion = useReducedMotion();
   const initializeScene = nearViewport && !reduceMotion;
   const managedPackages = useManagedContent("packages", CMS_DEFAULTS.packages);
-  const featuredPackages = useMemo(
-    () => FEATURED_PACKAGE_IDS
-      .map((id) => managedPackages.find((item) => item.id === id))
-      .filter(Boolean),
+  const mediaItems = useManagedContent("mediaItems", CMS_DEFAULTS.mediaItems);
+  const mediaById = useMemo(() => new Map(mediaItems.map((item) => [item.id, item])), [mediaItems]);
+  const categoryRanges = useMemo(
+    () => buildCategoryRanges(managedPackages, { includeDroneRequest: true }),
     [managedPackages],
   );
-
-  const requestPackage = (item) => item.ctaHref && item.ctaHref !== "/contact"
-    ? window.location.assign(item.ctaHref)
-    : goToContact({
-    package_id: item.id,
-    package_title: item.title,
-    services: [item.category],
-  });
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
@@ -79,7 +77,7 @@ export default function HomePackages() {
       section.removeEventListener("focusin", revealFocusedPanel);
       context.revert();
     };
-  }, [featuredPackages.length, initializeScene]);
+  }, [categoryRanges.length, initializeScene]);
 
   return (
     <section
@@ -97,28 +95,33 @@ export default function HomePackages() {
           {copy.description && <p>{copy.description}</p>}
         </header>
 
-        <div className="fa-packages__triptych" data-package-triptych>
-          {featuredPackages.map((item, index) => (
-            <article data-package-panel data-package-id={item.id} className="fa-package-panel" key={item.id}>
-              <div className="fa-package-panel__topline">
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <span>{item.category}</span>
-              </div>
-              <div className="fa-package-panel__body">
-                {item.badge && <p className="fa-package-panel__badge">{item.badge}</p>}
-                <h3>{item.title}</h3>
-                <p>{item.shortDescription}</p>
-                <dl>
-                  <div><dt>Durată</dt><dd>{item.duration}</dd></div>
-                  <div><dt>Potrivit pentru</dt><dd>{item.bestFor}</dd></div>
-                </dl>
-                <ul>{item.highlights.slice(0, 3).map((value) => <li key={value}>{value}</li>)}</ul>
-              </div>
-              <button type="button" data-package-request onClick={() => requestPackage(item)}>
-                <span>{item.cta}</span><ArrowUpRight aria-hidden="true" />
-              </button>
-            </article>
-          ))}
+        <div className="fa-category-cards" data-package-triptych>
+          {categoryRanges.map((range, index) => {
+            const visual = mediaById.get(range.imageMediaId)?.src || getCategoryPhoto(range.category, mediaById) || fallbackVisuals[range.category] || MEDIA.fireworksSky;
+            const label = getCategoryLabel(range.category);
+            return (
+              <Link
+                data-package-panel
+                data-package-category={range.category}
+                className="fa-category-card"
+                key={range.category}
+                to={`/pachete?categorie=${encodeURIComponent(range.category)}`}
+                aria-label={`Vezi ${label}`}
+              >
+                <img {...homeImageProps(visual)} sizes="(max-width: 700px) 100vw, 55vw" alt="" loading="lazy" decoding="async" />
+                <span className="fa-category-card__shade" aria-hidden="true" />
+                <span className="fa-category-card__index">{String(index + 1).padStart(2, "0")}</span>
+                <span className="fa-category-card__content">
+                  <strong>{label}</strong>
+                  <span>{range.description}</span>
+                  <span className="fa-category-card__action">
+                    {range.count ? `${range.count} ${range.count === 1 ? "opțiune" : "opțiuni"}` : "Ofertă personalizată"}
+                    <ArrowUpRight aria-hidden="true" />
+                  </span>
+                </span>
+              </Link>
+            );
+          })}
         </div>
 
         {copy.ctaLabel && <Link className="fa-line-link fa-packages__all" to={copy.ctaHref}>

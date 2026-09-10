@@ -110,7 +110,7 @@ export const ADMIN_MODULES = {
     id(), select("type", "Tip", ["image", "video", "youtube", "promo"]),
     text("title", "Titlu"), textarea("shortDescription", "Descriere"),
     select("category", "Categorie", ["Artificii de zi", "Artificii de noapte", "Drone show", "Drone + artificii", "Efecte speciale", "Corporate / Festival", "Festival", "Nuntă", "Corporate", "Promoții"]),
-    field("tags", "tags", "Etichete"), field("media", "thumbnail", "Miniatură"),
+    field("tags", "tags", "Etichete", { help: "Adaugă ascuns-din-galerie pentru a ascunde fotografia din galeria publică, fără a șterge originalul." }), field("media", "thumbnail", "Miniatură"),
     field("media", "poster", "Poster"), field("media", "src", "Fișier media"),
     url("youtubeUrl", "Link YouTube"), textarea("alt", "Text alternativ", { required: true }),
     checkbox("featured", "Evidențiat"), field("date", "date", "Dată"),
@@ -128,7 +128,7 @@ export const ADMIN_MODULES = {
     text("badge", "Etichetă"), text("cta", "Text buton"), url("ctaHref", "Destinație buton"),
     mediaId("imageMediaId", "Imagine proprie"), field("tags", "highlights", "Caracteristici"),
     textarea("bonus", "Bonus / elemente incluse"), url("videoUrl", "Video principal"),
-    textarea("videoNote", "Notă video"), lines("moreVideoUrls", "Alte videoclipuri", { help: "Câte un link pe rând." }),
+    textarea("videoNote", "Notă video"), lines("moreVideoUrls", "Alte videoclipuri", { help: "Câte un link YouTube pe rând. După Publică, toate apar în lista de videoclipuri a pachetului, alături de videoul principal." }),
   ], { subtitleKey: "category" }), "Opțiuni și configurații comerciale"),
   faqs: moduleDefinition(collection("faqs", "Întrebări", { id: "faq", q: "", a: "" }, [
     id(), textarea("q", "Întrebare"), textarea("a", "Răspuns", { rows: 5 }),

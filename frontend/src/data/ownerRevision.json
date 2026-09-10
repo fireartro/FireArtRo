@@ -1,0 +1,57 @@
+{
+  "copy": {
+    "siteDetails.seoTitle": "Show-uri de artificii profesionale și drone | FireArtRo",
+    "siteDetails.seoDescription": "FireArtRo produce show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice pentru nunți, evenimente corporate și festivaluri din România.",
+    "footer.tagline": "Show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice.",
+    "homePage.hero.eyebrow": "Artificii profesionale · drone · efecte pirotehnice",
+    "homePage.gallery.title": "Artificii. Drone.\nSpectacol, în fiecare cadru.",
+    "homePage.packages.title": "Alege spectacolul\nevenimentului tău.",
+    "homePage.packages.description": "Descoperă gamele de artificii de noapte, artificii de zi, spectacole de drone și efecte pirotehnice. Intră în fiecare gamă pentru pachete și videoclipuri.",
+    "homePage.about.body": ["FireArtRo planifică și produce în România show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice. Coordonăm conceptul, partea tehnică, logistica și execuția pentru fiecare eveniment."],
+    "galleryPage.description": "Cadre reale din show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice.",
+    "galleryPage.seoTitle": "Galerie artificii profesionale și spectacole de drone | FireArtRo",
+    "galleryPage.seoDescription": "Fotografii din show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice realizate de FireArtRo.",
+    "packagesPage.description": "Alege gama, descoperă pachetele și urmărește videoclipurile. Configurația finală se stabilește în funcție de eveniment și locație.",
+    "packagesPage.seoTitle": "Pachete artificii profesionale și spectacole de drone | FireArtRo",
+    "packagesPage.seoDescription": "Descoperă pachetele FireArtRo pentru show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice, cu fotografii și videoclipuri.",
+    "faqPage.seoTitle": "Întrebări despre artificii profesionale și drone | FireArtRo",
+    "faqPage.seoDescription": "Răspunsuri despre rezervare, durată, locație și ofertă pentru show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice.",
+    "blogPage.seoDescription": "Articole FireArtRo despre show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice."
+  },
+  "faqAnswers": {
+    "faq-booking": "Pentru majoritatea evenimentelor, recomandăm să ne contactezi cât mai din timp, deoarece datele disponibile se ocupă pe zi ce trece. Cu cât rezervi evenimentul mai devreme, cu atât cresc șansele să putem onora solicitarea.",
+    "faq-duration": "De regulă, între 2 și 15 minute. Durata finală depinde de tipul de spectacol (drone sau artificii), buget, preferințe și locație.",
+    "faq-price": "Oferta ține cont de locație, durată, timpul rămas până la eveniment, tipul de show (drone sau spectacol de artificii), tipul efectelor, preferințele clientului, cerințele de siguranță și logistică."
+  },
+  "categoryImageIds": {
+    "Artificii de noapte": "gallery-import-110",
+    "Artificii de zi": "gallery-import-008",
+    "Show drone": "gallery-import-drone-021",
+    "Efecte speciale": "gallery-import-019"
+  },
+  "hiddenMediaIds": [
+    "gallery-import-001", "gallery-import-045", "gallery-import-038", "gallery-import-042",
+    "gallery-import-043", "gallery-import-025", "gallery-import-035", "gallery-import-044",
+    "gallery-import-037", "gallery-import-039", "gallery-import-036", "gallery-import-049",
+    "gallery-import-052", "gallery-import-060", "gallery-import-091", "gallery-import-101",
+    "gallery-import-088", "gallery-import-090", "gallery-import-104", "gallery-import-096",
+    "gallery-import-099", "gallery-import-106", "gallery-import-134", "gallery-import-053",
+    "gallery-import-094", "gallery-import-086", "gallery-import-063",
+    "gallery-import-drone-003", "gallery-import-drone-014", "gallery-import-drone-025",
+    "gallery-import-drone-026", "gallery-import-drone-031", "gallery-import-drone-045",
+    "gallery-import-drone-049", "gallery-import-drone-050", "gallery-import-drone-051",
+    "gallery-import-drone-052", "gallery-import-drone-053", "gallery-import-drone-054",
+    "gallery-import-drone-059", "gallery-import-drone-060", "gallery-import-drone-067",
+    "gallery-import-drone-070", "gallery-import-drone-072", "gallery-import-drone-073",
+    "gallery-import-drone-074", "gallery-import-drone-075", "gallery-import-drone-078",
+    "gallery-import-drone-079", "gallery-import-drone-085", "gallery-import-drone-086",
+    "gallery-import-drone-088", "gallery-import-drone-090", "gallery-import-drone-091",
+    "gallery-import-drone-092", "gallery-import-drone-093", "gallery-import-drone-094",
+    "gallery-import-drone-095", "gallery-import-drone-099", "gallery-import-drone-100",
+    "gallery-import-drone-102", "gallery-import-drone-118", "gallery-import-drone-124",
+    "gallery-import-drone-125", "gallery-import-drone-126", "gallery-import-drone-128",
+    "gallery-import-drone-132", "gallery-import-drone-151", "gallery-import-drone-152",
+    "gallery-import-drone-153", "gallery-import-drone-154", "gallery-import-drone-155",
+    "gallery-import-drone-156"
+  ]
+}

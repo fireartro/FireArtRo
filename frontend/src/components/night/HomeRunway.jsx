@@ -7,6 +7,7 @@ import HomeBrief from "@/components/night/HomeBrief";
 export default function HomeRunway() {
   return (
     <div className="fa-home fa-film" data-testid="home-showcase">
+      <div className="fa-home__atmosphere" aria-hidden="true" />
       <HomeGallery />
       <HomePackages />
       <HomeAbout />

@@ -4,6 +4,10 @@ const variants = {
   '/media/gallery/fireartro-drone-show-focsani-dji-0768-enhanced-nr.webp': ['drone', 1800],
   '/media/gallery/fireartro-artificii-noapte-spectacol-091.webp': ['night', 1600],
   '/media/gallery/fireartro-artificii-zi-festival-biserica.webp': ['day', 1920],
+  '/media/gallery/fireartro-artificii-noapte-spectacol-110.webp': ['owner-night', 1280],
+  '/media/gallery/fireartro-artificii-zi-spectacol-008.webp': ['owner-day', 1576],
+  '/media/gallery/fireartro-drone-show-baia-mare-img-5524-2.webp': ['owner-drone', 1800],
+  '/media/gallery/fireartro-nunta-spectacol-019.webp': ['owner-effects', 1920],
 };
 
 export function homeImageProps(src) {

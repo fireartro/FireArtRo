@@ -30,7 +30,7 @@ export default function ServicesOverview() {
         </div>
         <div>
           <p>
-            Drone, artificii și efecte de scenă reunite într-o producție gândită pentru loc, public și ritmul evenimentului.
+            Show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice într-o producție gândită pentru loc, public și ritmul evenimentului.
           </p>
           <a href="/pachete" onClick={(event) => goTo(event, "/pachete")}>
             Vezi opțiunile <ArrowUpRight aria-hidden="true" />

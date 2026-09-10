@@ -298,7 +298,7 @@ export const HeroVideo = ({ mediaOverride }) => {
           playsInline
           preload="metadata"
           className="hero-media-surface hero-media-video absolute inset-0 h-full w-full object-cover"
-          style={{ objectPosition }}
+          style={{ objectPosition, objectFit: mediaOverride ? "cover" : "contain" }}
           data-crop-profile={mediaVariant}
           aria-label="Cadru video FireArtRo"
         />
@@ -311,7 +311,7 @@ export const HeroVideo = ({ mediaOverride }) => {
           width={media.width}
           height={media.height}
           className="hero-media-surface hero-media-webp absolute inset-0 h-full w-full object-cover"
-          style={{ objectPosition }}
+          style={{ objectPosition, objectFit: mediaOverride ? "cover" : "contain" }}
           data-crop-profile={mediaVariant}
           fetchPriority="high"
           decoding="async"
@@ -329,7 +329,7 @@ export const HeroVideo = ({ mediaOverride }) => {
           playsInline
           preload="metadata"
           className="hero-media-surface hero-media-video absolute inset-0 h-full w-full object-cover"
-          style={{ objectPosition }}
+          style={{ objectPosition, objectFit: mediaOverride ? "cover" : "contain" }}
           data-media-variant={mediaVariant}
           data-crop-profile={mediaVariant}
           aria-label={mediaOverride?.alt || HERO_MEDIA.label}

@@ -3,8 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 
-const EXPECTED_TITLE = 'Spectacole cu drone și artificii pentru evenimente | FireArtRo';
-const EXPECTED_DESCRIPTION = 'FireArtRo creează spectacole cu drone, artificii și efecte scenice pentru nunți, evenimente corporate și festivaluri din România.';
+const EXPECTED_TITLE = 'Show-uri de artificii profesionale și drone | FireArtRo';
+const EXPECTED_DESCRIPTION = 'FireArtRo produce show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice pentru nunți, evenimente corporate și festivaluri din România.';
 
 test('the initial homepage response describes the services before the brand', () => {
   const html = fs.readFileSync(

@@ -88,7 +88,7 @@
   z-index: 1;
   margin-top: -1px;
   color: #f4f7fc;
-  background: rgb(var(--nr-handoff-color));
+  background: transparent;
 }
 
 .fa-work__sticky {
@@ -98,10 +98,9 @@
   overflow: clip;
   isolation: isolate;
   backface-visibility: hidden;
-  background: var(--fa-atmosphere-base);
+  background: transparent;
 }
 
-.fa-work__sticky::before,
 .fa-packages::before,
 .fa-about__image {
   position: absolute;
@@ -110,7 +109,7 @@
   content: "";
   pointer-events: none;
   opacity: var(--fa-atmosphere-opacity);
-  background: var(--fa-atmosphere-image) var(--fa-atmosphere-position) / cover no-repeat fixed;
+  background: var(--fa-atmosphere-image) var(--fa-atmosphere-position) / cover no-repeat;
   filter: var(--fa-atmosphere-filter);
 }
 
@@ -131,8 +130,7 @@
       rgb(var(--nr-handoff-color) / 0.36) 52%,
       rgb(var(--nr-handoff-color) / 0.16) 68%,
       rgb(var(--nr-handoff-color) / 0.04) 84%,
-      rgb(var(--nr-handoff-color) / 0) 100%) top / 100% var(--nr-handoff-depth) no-repeat,
-    var(--fa-atmosphere-scrim);
+      rgb(var(--nr-handoff-color) / 0) 100%) top / 100% var(--nr-handoff-depth) no-repeat;
 }
 
 .fa-work__viewport {
@@ -1414,24 +1412,39 @@
   }
 }
 
-/* Keep the gallery, packages, and about scenes on one continuous atmosphere. */
+/* A single viewport-sized paint surface follows the showcase. Unlike a fixed
+   background on a page-height filtered pseudo-element, this can be composited
+   while the gallery is pinned without repainting the full scroll runway. */
 .fa-home {
   isolation: isolate;
-  background: var(--fa-atmosphere-base);
+  background: var(--fa-night);
 }
 
-.fa-home::before {
+.fa-home__atmosphere {
+  position: sticky;
+  top: 0;
+  z-index: 0;
+  height: 100lvh;
+  margin-bottom: -100lvh;
+  overflow: clip;
+  contain: paint;
+  pointer-events: none;
+  background: var(--fa-atmosphere-base);
+  transform: translateZ(0);
+}
+
+.fa-home__atmosphere::before {
   position: absolute;
   z-index: 0;
-  inset: 0;
+  inset: -32px;
   content: "";
   pointer-events: none;
   opacity: var(--fa-atmosphere-opacity);
-  background: var(--fa-atmosphere-image) var(--fa-atmosphere-position) / cover no-repeat fixed;
+  background: var(--fa-atmosphere-image) var(--fa-atmosphere-position) / cover no-repeat;
   filter: var(--fa-atmosphere-filter);
 }
 
-.fa-home::after {
+.fa-home__atmosphere::after {
   position: absolute;
   z-index: 0;
   inset: 0;

@@ -1,5 +1,5 @@
 {
-  "version": "20260908-kinetic",
+  "version": "20260909-owner-v4",
   "duration": 32,
   "cues": [
     {"id":"lift", "start":0.45, "end":2.6, "motion":"rise", "lines":["CERUL", "IA FORMĂ."]},
@@ -7,6 +7,6 @@
     {"id":"rhythm", "start":9.5, "end":11.8, "motion":"stack", "lines":["RITM."]},
     {"id":"movement", "start":11.8, "end":13.8, "motion":"slide", "lines":["MIȘCARE."]},
     {"id":"sync", "start":22.8, "end":25, "motion":"rise", "lines":["TOTUL,", "ÎN SINCRON."]},
-    {"id":"combined", "start":25, "end":30.8, "motion":"punch", "accent":"#fa5949", "lines":["DRONE", "× ARTIFICII."]}
+    {"id":"combined", "start":25, "end":30.8, "motion":"punch", "accent":"#fa5949", "lines":["ARTIFICII", "× DRONE."]}
   ]
 }

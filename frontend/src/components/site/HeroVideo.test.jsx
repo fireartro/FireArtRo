@@ -75,6 +75,7 @@ test('shows the existing poster without mounting a video when H264 is unsupporte
   render(<HeroVideo />);
   expect(container.querySelector('video')).toBeNull();
   expect(container.querySelector('img')?.getAttribute('fetchpriority')).toBe('high');
+  expect(container.querySelector('img')?.style.objectFit).toBe('contain');
 });
 
 test('paints the poster before mounting a compatible desktop hero video', () => {
@@ -90,6 +91,7 @@ test('paints the poster before mounting a compatible desktop hero video', () => 
   loadPoster();
   act(() => jest.advanceTimersByTime(2_000));
   expect(container.querySelector('video')?.hasAttribute('autoplay')).toBe(true);
+  expect(container.querySelector('video')?.style.objectFit).toBe('contain');
   expect(container.querySelector('img')).toBeNull();
 });
 

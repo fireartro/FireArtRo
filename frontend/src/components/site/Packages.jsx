@@ -1,13 +1,24 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { ArrowUpRight, ExternalLink, Play } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useLocation, useNavigate } from "react-router-dom";
 import { PACKAGE_CATEGORIES } from "@/data/businessContent";
 import { MEDIA } from "@/data/content";
 import useManagedContent from "@/hooks/useManagedContent";
 import { goToContact } from "@/lib/contactNavigation";
 import ManagedPageMedia from "@/components/site/ManagedPageMedia";
+import {
+  buildCategoryRanges,
+  collectPackageVideos,
+  DRONE_REQUEST_CATEGORY,
+  getCategoryLabel,
+  getCategoryPhoto,
+  resolveCategory,
+} from "@/lib/categoryNavigation";
+
+import "@/styles/category-navigation.css";
 
 const visualByCategory = {
   "Artificii de zi": MEDIA.corporate,
@@ -17,8 +28,6 @@ const visualByCategory = {
   "Efecte speciale": MEDIA.coldSparks,
   "Corporate / Festival": MEDIA.crowd,
 };
-
-const DRONE_REQUEST_CATEGORY = "Show drone";
 
 const packageConfiguration = (item) => {
   if (item.droneCount && item.effectsCount) return `${item.droneCount} drone + ${item.effectsCount} grupe de efecte`;
@@ -65,21 +74,22 @@ const getPackageVisual = (item, mediaById) => (
 );
 
 export const Packages = ({ items }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const copy = useManagedContent("packagesPage", CMS_DEFAULTS.packagesPage);
   const mediaItems = useManagedContent("mediaItems", CMS_DEFAULTS.mediaItems);
   const mediaById = useMemo(() => new Map(mediaItems.map((item) => [item.id, item])), [mediaItems]);
   const managedPackages = useManagedContent("packages", CMS_DEFAULTS.packages);
   const packages = Array.isArray(items) ? items : managedPackages;
-  const categories = useMemo(
-    () => PACKAGE_CATEGORIES.filter(
-      (category) => (
-        category !== "Toate"
-        && (category === DRONE_REQUEST_CATEGORY || packages.some((item) => item.category === category))
-      ),
-    ),
-    [packages],
+  const categories = useMemo(() => {
+    const ordered = buildCategoryRanges(packages, { includeDroneRequest: true }).map((range) => range.category);
+    return ordered.filter((item) => PACKAGE_CATEGORIES.includes(item) || packages.some((pkg) => pkg.category === item));
+  }, [packages]);
+  const requestedCategory = useMemo(
+    () => new URLSearchParams(location.search).get("categorie") || "",
+    [location.search],
   );
-  const initialCategory = categories.includes("Drone + artificii") ? "Drone + artificii" : categories[0];
+  const initialCategory = resolveCategory(requestedCategory, categories);
   const initialPackage = packages.find((item) => item.category === initialCategory) || packages[0];
   const [category, setCategory] = useState(initialCategory);
   const [selectedId, setSelectedId] = useState(initialPackage?.id || "");
@@ -87,6 +97,7 @@ export const Packages = ({ items }) => {
   const [transitionState, setTransitionState] = useState("idle");
   const [videoPackageId, setVideoPackageId] = useState("");
   const variantRefs = useRef([]);
+  const categoryRefs = useRef([]);
   const timersRef = useRef([]);
   const reduceMotion = useReducedMotion();
 
@@ -100,9 +111,7 @@ export const Packages = ({ items }) => {
   const primaryVideoUrl = activePackage?.videoUrl?.trim() || "";
   const videoEmbedUrl = getYouTubeEmbedUrl(primaryVideoUrl);
   const packageThumbnail = getPackageVisual(activePackage, mediaById);
-  const additionalVideos = Array.isArray(activePackage?.moreVideoUrls)
-    ? activePackage.moreVideoUrls.filter(Boolean)
-    : [];
+  const packageVideos = collectPackageVideos(activePackage);
   const isVideoOpen = Boolean(primaryVideoUrl) && videoPackageId === activePackage?.id;
 
   useEffect(() => () => timersRef.current.forEach(window.clearTimeout), []);
@@ -119,6 +128,24 @@ export const Packages = ({ items }) => {
       setVideoPackageId("");
     }
   }, [categories, category, packages, selectedId]);
+
+  useEffect(() => {
+    const nextCategory = resolveCategory(requestedCategory, categories);
+    if (!nextCategory || nextCategory === category) return;
+    const first = packages.find((item) => item.category === nextCategory);
+    timersRef.current.forEach(window.clearTimeout);
+    setCategory(nextCategory);
+    setSelectedId(first?.id || "");
+    setDisplayedId(first?.id || "");
+    setTransitionState("idle");
+    setVideoPackageId("");
+  }, [categories, category, packages, requestedCategory]);
+
+  const updateCategoryQuery = useCallback((nextCategory) => {
+    const params = new URLSearchParams(location.search);
+    params.set("categorie", nextCategory);
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+  }, [location.pathname, location.search, navigate]);
 
   const swapPackage = (nextPackage) => {
     if (!nextPackage || nextPackage.id === selectedId) return;
@@ -141,12 +168,25 @@ export const Packages = ({ items }) => {
   const changeCategory = (nextCategory) => {
     const first = packages.find((item) => item.category === nextCategory);
     setCategory(nextCategory);
+    updateCategoryQuery(nextCategory);
     if (!first) return;
     if (first.id === selectedId) {
       setDisplayedId(first.id);
       return;
     }
     swapPackage(first);
+  };
+
+  const handleCategoryKeyDown = (event, index) => {
+    let nextIndex = null;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (index + 1) % categories.length;
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (index - 1 + categories.length) % categories.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = categories.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    changeCategory(categories[nextIndex]);
+    window.requestAnimationFrame(() => categoryRefs.current[nextIndex]?.focus());
   };
 
   const chooseVariant = (index, focus = false) => {
@@ -196,16 +236,19 @@ export const Packages = ({ items }) => {
         <ManagedPageMedia mediaId={copy.heroMediaId} />
 
         <nav className="nr-package-categories" role="tablist" aria-label="Categorii de spectacol">
-          {categories.map((item) => (
+          {categories.map((item, index) => (
             <button
               key={item}
+              ref={(node) => { categoryRefs.current[index] = node; }}
               type="button"
               role="tab"
               aria-selected={category === item}
+              tabIndex={category === item ? 0 : -1}
               className={category === item ? "is-active" : ""}
               onClick={() => changeCategory(item)}
+              onKeyDown={(event) => handleCategoryKeyDown(event, index)}
             >
-              {item}
+              {getCategoryLabel(item)}
             </button>
           ))}
         </nav>
@@ -233,7 +276,7 @@ export const Packages = ({ items }) => {
                 >
                   <span className="nr-package-variant-strip__index">{String(index + 1).padStart(2, "0")}</span>
                   <span className="nr-package-variant-strip__copy">
-                    <small>{item.category}</small>
+                    <small>{getCategoryLabel(item.category)}</small>
                     <strong>{item.title}</strong>
                   </span>
                   <ArrowUpRight aria-hidden="true" />
@@ -267,7 +310,7 @@ export const Packages = ({ items }) => {
                       <span>Vezi clipul</span>
                     </button>
                   )}
-                  <figcaption>{activePackage.category}</figcaption>
+                  <figcaption>{getCategoryLabel(activePackage.category)}</figcaption>
                 </figure>
 
                 <div className="nr-package-stage__content">
@@ -292,13 +335,13 @@ export const Packages = ({ items }) => {
                     {activePackage.bonus && <p className="nr-package-bonus"><strong>Inclus:</strong> {activePackage.bonus}</p>}
                     {activePackage.videoNote && <p className="nr-package-video-note">{activePackage.videoNote}</p>}
 
-                    {additionalVideos.length > 0 && (
-                      <details className="nr-package-more-videos">
-                        <summary>Alte videoclipuri ({additionalVideos.length})</summary>
+                    {packageVideos.length > 0 && (
+                      <details className="nr-package-more-videos" open>
+                        <summary>Videoclipuri pentru acest pachet ({packageVideos.length})</summary>
                         <div>
-                          {additionalVideos.map((url, index) => (
+                          {packageVideos.map((url, index) => (
                             <a key={`${url}-${index}`} href={url} target="_blank" rel="noopener noreferrer">
-                              Video {index + 2} <ExternalLink aria-hidden="true" />
+                              {index === 0 ? "Video principal" : `Video ${index + 1}`} <ExternalLink aria-hidden="true" />
                             </a>
                           ))}
                         </div>
@@ -320,18 +363,18 @@ export const Packages = ({ items }) => {
           </>
         )}
 
-        {isDroneShowCategory && (
+        {isDroneShowCategory && !hasPackageVariants && (
           <section className="nr-package-drone-request" data-testid="drone-show-quote" aria-labelledby="drone-show-quote-title">
             <figure>
               <img
-                src={getPackageVisual({ category: DRONE_REQUEST_CATEGORY })}
+                src={getCategoryPhoto(DRONE_REQUEST_CATEGORY, mediaById) || getPackageVisual({ category: DRONE_REQUEST_CATEGORY })}
                 alt="Spectacol cu drone FireArtRo"
                 loading="eager"
                 decoding="async"
               />
             </figure>
             <div>
-              <p>Drone show</p>
+              <p>Spectacole de drone</p>
               <h2 id="drone-show-quote-title">Ofertă personalizată pentru un show cu drone.</h2>
               <span>Trimite data, locația și direcția dorită, iar propunerea se construiește după brief.</span>
               <button type="button" data-testid="drone-show-quote-cta" onClick={requestDroneQuote}>

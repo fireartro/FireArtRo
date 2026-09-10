@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync, spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
-const root = path.join(repo, 'output/fireart-cinema/kinetic-v3');
+const root = path.join(repo, 'output/fireart-cinema/kinetic-v4');
 const inventory = JSON.parse(fs.readFileSync(path.join(repo, 'output/hero-cinema-audit/sources.json'), 'utf8'));
 const profiles = {
   wide: [1920, 1200], ultrawide: [1920, 900],
@@ -12,20 +12,20 @@ const profiles = {
   mobile: [720, 1280], 'mobile-tall': [720, 1560],
 };
 const shots = [
-  { id: 'rise', start: 0, end: 2.8, photo: 'baia-mare-img-5524-2', portrait: 'militari-shopping-cxe03307-enhanced-nr' },
-  { id: 'purple', start: 2.8, end: 5, index: '05', at: 35.1, y: .78 },
-  { id: 'face', start: 5, end: 7.3, photo: 'baia-mare-img-5527-2', portrait: 'neversea-show-img-4351' },
-  { id: 'gold', start: 7.3, end: 9.5, index: '14', at: 74.9, y: .54 },
-  { id: 'gates', start: 9.5, end: 11.8, photo: 'adam-show-img-7638-3', portrait: 'iasi-img-8646' },
-  { id: 'sky', start: 11.8, end: 13.8, index: '24', at: 80.4, y: .35 },
-  { id: 'story', start: 13.8, end: 16, photo: 'baia-mare-img-5528-2', portrait: 'iasi-revelion-img-7451' },
-  { id: 'heart', start: 16, end: 18.5, photo: 'militari-shopping-img-1776', portrait: 'galati-img-3195' },
-  { id: 'spark', start: 18.5, end: 20.4, index: '09', at: 67.9, y: .4 },
-  { id: 'scale', start: 20.4, end: 22.8, photo: 'adam-show-img-7640', portrait: 'iasi-img-8674' },
-  { id: 'higher', start: 22.8, end: 25, index: '05', at: 41.5, y: .42 },
-  { id: 'together', start: 25, end: 27.2, photo: 'mastercard-img-5104', portrait: 'militari-shopping-cxe03330-enhanced-nr' },
-  { id: 'finale', start: 27.2, end: 32, index: '32', at: 139, x: .32, y: .5 },
-  { id: 'loop', start: 31.65, end: 32, photo: 'baia-mare-img-5524-2', portrait: 'militari-shopping-cxe03307-enhanced-nr', still: true },
+  { id: 'rise', start: 0, end: 2.8, photo: 'artificii-noapte-spectacol-070', portrait: 'artificii-noapte-spectacol-013' },
+  { id: 'purple', start: 2.8, end: 5, index: '24', at: 80.4, portraitIndex: '05', portraitAt: 35.1 },
+  { id: 'face', start: 5, end: 7.3, photo: 'drone-show-baia-mare-img-5524-2', portrait: 'drone-show-neversea-show-img-4351' },
+  { id: 'colour', start: 7.3, end: 9.5, photo: 'artificii-zi-spectacol-008', portrait: 'artificii-zi-spectacol-003' },
+  { id: 'gold', start: 9.5, end: 11.8, index: '32', at: 139, portraitIndex: '14', portraitAt: 74.9 },
+  { id: 'motion', start: 11.8, end: 13.8, photo: 'drone-show-baia-mare-2-c2c8c735-dd04-49b4-af8d-822c4a19fbd5', portrait: 'drone-show-sifi-img-3736' },
+  { id: 'day', start: 13.8, end: 16, photo: 'nunta-spectacol-132', portrait: 'nunta-spectacol-132' },
+  { id: 'night', start: 16, end: 18.5, photo: 'artificii-noapte-spectacol-110', portrait: 'artificii-noapte-spectacol-110' },
+  { id: 'spark', start: 18.5, end: 20.4, index: '24', at: 82.6, portraitIndex: '09', portraitAt: 67.9 },
+  { id: 'heart', start: 20.4, end: 22.8, photo: 'drone-show-focsani-dji-0768-enhanced-nr', portrait: 'drone-show-iasi-revelion-img-7446' },
+  { id: 'higher', start: 22.8, end: 25, index: '32', at: 143.8, portraitIndex: '05', portraitAt: 41.5 },
+  { id: 'together', start: 25, end: 27.2, photo: 'drone-show-baia-mare-img-5524-2', portrait: 'drone-show-art-is-alive-artisalive3' },
+  { id: 'finale', start: 27.2, end: 32, index: '32', at: 139, portraitIndex: '14', portraitAt: 74.9 },
+  { id: 'loop', start: 31.65, end: 32, photo: 'artificii-noapte-spectacol-070', portrait: 'artificii-noapte-spectacol-013', still: true },
 ];
 const args = process.argv.slice(2);
 const selected = args.find(arg => arg.startsWith('--profiles='))?.split('=')[1].split(',') || Object.keys(profiles);
@@ -50,26 +50,27 @@ for (const profile of selected) {
   for (const [i, shot] of shots.entries()) {
     const duration = Number((shot.end - shot.start).toFixed(3));
     const src = shot.photo
-      ? path.join(repo, 'frontend/public/media/gallery', `fireartro-drone-show-${portrait ? shot.portrait : shot.photo}.webp`)
-      : inventory.find(item => item.index === shot.index)?.file;
+      ? path.join(repo, 'frontend/public/media/gallery', `fireartro-${portrait ? shot.portrait : shot.photo}.webp`)
+      : inventory.find(item => item.index === (portrait ? shot.portraitIndex : shot.index))?.file;
     if (!src || !fs.existsSync(src)) throw new Error(`Missing source for ${shot.id}: ${src}`);
     const ext = shot.photo ? 'webp' : 'mp4';
     const asset = `${shot.id}.${ext}`;
     const assetPath = path.join(dir, 'assets', asset);
     if (shot.photo) fs.copyFileSync(src, assetPath);
     else if (!fs.existsSync(assetPath)) {
-      const crop = `crop=w='min(iw,ih*${width}/${height})':h='min(ih,iw*${height}/${width})':x='(iw-ow)*${shot.x ?? .5}':y='(ih-oh)*${shot.y ?? .5}'`;
-      ffmpeg(['-ss', String(shot.at), '-i', src, '-t', String(duration), '-an', '-vf', `${crop},scale=${width}:${height}:flags=lanczos,fps=24,setsar=1`,
+      // Preserve the entire source frame. Padding is black, never a blurred duplicate.
+      const fit = `scale=${width}:${height}:force_original_aspect_ratio=decrease:force_divisible_by=2:flags=lanczos,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=0x020305`;
+      ffmpeg(['-ss', String(portrait ? shot.portraitAt : shot.at), '-i', src, '-t', String(duration), '-an', '-vf', `${fit},fps=24,setsar=1`,
         '-c:v', 'libx264', '-preset', 'fast', '-crf', '16', '-g', '24', '-pix_fmt', 'yuv420p', '-threads', '4', '-map_metadata', '-1', '-movflags', '+faststart', '-y', assetPath]);
     }
     const media = shot.photo
       ? `<img id="${shot.id}-media" class="clip" data-start="0" data-duration="${duration}" data-track-index="0" src="../assets/${asset}" alt="Fotografie originală FireArtRo">`
       : `<video id="${shot.id}-media" class="clip" data-start="0" data-duration="${duration}" data-media-start="0" data-track-index="0" src="../assets/${asset}" muted playsinline preload="auto"></video>`;
     // Only a camera move over the photograph: no invented drone movement.
-    const scaleFrom = shot.still ? 1.01 : i % 2 ? 1.055 : 1.01;
-    const scaleTo = shot.still ? 1.01 : i % 2 ? 1.01 : 1.055;
+    const scaleFrom = shot.still ? 0.97 : i % 2 ? 1 : 0.97;
+    const scaleTo = shot.still ? 0.97 : i % 2 ? 0.97 : 1;
     fs.writeFileSync(path.join(dir, 'scenes', `${shot.id}.html`), `<!doctype html><html><body><template>
-<style>#scene{position:absolute;inset:0;overflow:hidden;background:#020305}.camera{position:absolute;inset:0;transform-origin:50% 45%;display:flex;align-items:center;justify-content:center}img,video{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 45%}${portrait ? 'img{width:100%;height:auto;max-height:100%;object-fit:contain;mask-image:linear-gradient(180deg,transparent,#000 5%,#000 88%,transparent)}' : ''}</style>
+<style>#scene{position:absolute;inset:0;overflow:hidden;background:#020305}.camera{position:absolute;inset:0;transform-origin:50% 50%;display:flex;align-items:center;justify-content:center}img,video{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}</style>
 <section id="scene" data-composition-id="${shot.id}" data-duration="${duration}" data-width="${width}" data-height="${height}"><div class="camera" data-layout-allow-overflow>${media}</div></section>
 <script>window.__timelines=window.__timelines||{};const tl=gsap.timeline({paused:true});
 ${shot.photo ? `tl.fromTo('.camera',{scale:${scaleFrom}},{scale:${scaleTo},duration:${duration},ease:'none'},0);` : ''}
