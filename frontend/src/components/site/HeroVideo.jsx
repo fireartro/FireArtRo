@@ -299,6 +299,7 @@ export const HeroVideo = ({ mediaOverride }) => {
           preload="metadata"
           className="hero-media-surface hero-media-video absolute inset-0 h-full w-full object-cover"
           style={{ objectPosition, objectFit: "cover" }}
+          data-media-variant={mediaVariant}
           data-crop-profile={mediaVariant}
           aria-label="Cadru video FireArtRo"
         />
@@ -312,6 +313,7 @@ export const HeroVideo = ({ mediaOverride }) => {
           height={media.height}
           className="hero-media-surface hero-media-webp absolute inset-0 h-full w-full object-cover"
           style={{ objectPosition, objectFit: "cover" }}
+          data-media-variant={mediaVariant}
           data-crop-profile={mediaVariant}
           fetchPriority="high"
           decoding="async"

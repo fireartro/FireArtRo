@@ -22,49 +22,49 @@ import {
 /* ------------------------------------------------------------------ */
 /*  Cinematic media                                                    */
 /* ------------------------------------------------------------------ */
-export const HERO_POSTER = "/media/fireart-hero-wide.webp?v=20260909-owner-v4";
+export const HERO_POSTER = "/media/fireart-hero-wide.webp?v=20260910-fit-v1";
 
 export const HERO_MEDIA = {
   variants: {
     wide: {
-      src: "/media/fireart-hero-wide.mp4?v=20260909-owner-v4",
-      av1Src: "/media/fireart-hero-wide-av1.mp4?v=20260909-owner-v4",
-      poster: "/media/fireart-hero-wide.webp?v=20260909-owner-v4",
+      src: "/media/fireart-hero-wide.mp4?v=20260910-fit-v1",
+      av1Src: "/media/fireart-hero-wide-av1.mp4?v=20260910-fit-v1",
+      poster: "/media/fireart-hero-wide.webp?v=20260910-fit-v1",
       width: 1920,
       height: 1200,
     },
     ultrawide: {
-      src: "/media/fireart-hero-ultrawide.mp4?v=20260909-owner-v4",
-      av1Src: "/media/fireart-hero-ultrawide-av1.mp4?v=20260909-owner-v4",
-      poster: "/media/fireart-hero-ultrawide.webp?v=20260909-owner-v4",
+      src: "/media/fireart-hero-ultrawide.mp4?v=20260910-fit-v1",
+      av1Src: "/media/fireart-hero-ultrawide-av1.mp4?v=20260910-fit-v1",
+      poster: "/media/fireart-hero-ultrawide.webp?v=20260910-fit-v1",
       width: 1920,
       height: 900,
     },
     "tablet-landscape": {
-      src: "/media/fireart-hero-tablet-landscape.mp4?v=20260909-owner-v4",
-      av1Src: "/media/fireart-hero-tablet-landscape-av1.mp4?v=20260909-owner-v4",
-      poster: "/media/fireart-hero-tablet-landscape.webp?v=20260909-owner-v4",
+      src: "/media/fireart-hero-tablet-landscape.mp4?v=20260910-fit-v1",
+      av1Src: "/media/fireart-hero-tablet-landscape-av1.mp4?v=20260910-fit-v1",
+      poster: "/media/fireart-hero-tablet-landscape.webp?v=20260910-fit-v1",
       width: 1440,
       height: 1080,
     },
     "tablet-portrait": {
-      src: "/media/fireart-hero-tablet-portrait.mp4?v=20260909-owner-v4",
-      av1Src: "/media/fireart-hero-tablet-portrait-av1.mp4?v=20260909-owner-v4",
-      poster: "/media/fireart-hero-tablet-portrait.webp?v=20260909-owner-v4",
+      src: "/media/fireart-hero-tablet-portrait.mp4?v=20260910-fit-v1",
+      av1Src: "/media/fireart-hero-tablet-portrait-av1.mp4?v=20260910-fit-v1",
+      poster: "/media/fireart-hero-tablet-portrait.webp?v=20260910-fit-v1",
       width: 1080,
       height: 1440,
     },
     mobile: {
-      src: "/media/fireart-hero-mobile.mp4?v=20260909-owner-v4",
-      av1Src: "/media/fireart-hero-mobile-av1.mp4?v=20260909-owner-v4",
-      poster: "/media/fireart-hero-mobile.webp?v=20260909-owner-v4",
+      src: "/media/fireart-hero-mobile.mp4?v=20260910-fit-v1",
+      av1Src: "/media/fireart-hero-mobile-av1.mp4?v=20260910-fit-v1",
+      poster: "/media/fireart-hero-mobile.webp?v=20260910-fit-v1",
       width: 720,
       height: 1280,
     },
     "mobile-tall": {
-      src: "/media/fireart-hero-mobile-tall.mp4?v=20260909-owner-v4",
-      av1Src: "/media/fireart-hero-mobile-tall-av1.mp4?v=20260909-owner-v4",
-      poster: "/media/fireart-hero-mobile-tall.webp?v=20260909-owner-v4",
+      src: "/media/fireart-hero-mobile-tall.mp4?v=20260910-fit-v1",
+      av1Src: "/media/fireart-hero-mobile-tall-av1.mp4?v=20260910-fit-v1",
+      poster: "/media/fireart-hero-mobile-tall.webp?v=20260910-fit-v1",
       width: 720,
       height: 1560,
     },

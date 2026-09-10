@@ -1,5 +1,20 @@
 const { expect, test } = require("@playwright/test");
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "fireartro-cookie-consent-v1",
+      JSON.stringify({
+        necessary: true,
+        analytics: false,
+        marketing: false,
+        savedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      }),
+    );
+  });
+});
+
 async function measureEdgeDetail(page, src) {
   return page.evaluate(async (imageSrc) => {
     const image = new Image();
@@ -49,7 +64,8 @@ test("ultrawide poster has real image detail at both outer edges", async ({ page
   expect(detail.ratio).toBeGreaterThan(0.55);
 });
 
-test("hero is full-bleed and cinematic gallery scales on a 32:9 viewport", async ({ page }) => {
+test("hero is full-bleed and cinematic gallery scales on a 32:9 viewport", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.startsWith("desktop"), "The 32:9 gallery contract is desktop-only.");
   await page.setViewportSize({ width: 5120, height: 1440 });
   await page.goto("/#acasa");
 
