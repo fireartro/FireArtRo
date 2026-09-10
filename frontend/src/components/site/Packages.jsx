@@ -63,7 +63,7 @@ const getYouTubeEmbedUrl = (value) => {
 
 const getYouTubeThumbnailUrl = (value) => {
   const id = getYouTubeId(value);
-  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : "";
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : "";
 };
 
 const getPackageVisual = (item, mediaById) => (

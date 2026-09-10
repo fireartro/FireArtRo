@@ -137,7 +137,7 @@ test.describe("Night Runway package stage", () => {
       const variants = page.getByRole("tablist", { name: /Variante pentru/ }).getByRole("tab");
       for (let variantIndex = 0; variantIndex < await variants.count(); variantIndex += 1) {
         await variants.nth(variantIndex).click();
-        await expect(media).toHaveAttribute("src", /https:\/\/i\.ytimg\.com\/vi\/.+\/hqdefault\.jpg/);
+        await expect(media).toHaveAttribute("src", /https:\/\/img\.youtube\.com\/vi\/.+\/hqdefault\.jpg/);
         inspectedPackages += 1;
       }
     }
@@ -167,7 +167,7 @@ test.describe("Night Runway package stage", () => {
     await expect(page.getByTestId("packages-active-title")).toHaveText("Bronze");
     await expect(page.locator(".nr-package-stage__media img")).toHaveAttribute(
       "src",
-      "https://i.ytimg.com/vi/j2BGRd88qBc/hqdefault.jpg",
+      "https://img.youtube.com/vi/j2BGRd88qBc/hqdefault.jpg",
     );
   });
 

@@ -53,6 +53,9 @@ test("opens the category requested by the landing deep link and exposes that pac
 
     expect(container.querySelector('[aria-selected="true"]')?.textContent).toContain("Artificii de zi");
     expect(container.querySelector('[data-testid="packages-active-title"]')?.textContent).toBe("Zi unu");
+    expect(container.querySelector('[data-testid="package-media"] img')?.getAttribute('src')).toBe(
+      'https://img.youtube.com/vi/day-primary/hqdefault.jpg',
+    );
     expect([...container.querySelectorAll(".nr-package-more-videos a")].map((link) => link.href)).toEqual([
       "https://youtu.be/day-primary",
       "https://youtu.be/day-extra",
