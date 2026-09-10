@@ -1,77 +1,68 @@
 /* Category navigation shared by the landing, packages and gallery surfaces. */
 .fa-category-cards {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: clamp(0.7rem, 1.2vw, 1.15rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.4rem, 3vw, 3rem);
   min-width: 0;
 }
 
 .fa-category-card {
   position: relative;
   display: grid;
-  grid-column: span 6;
+  grid-template-rows: auto 1fr;
   min-width: 0;
-  min-height: clamp(22rem, 36vw, 34rem);
-  align-items: end;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.55rem;
-  color: #fff;
-  background: #07090c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.35rem;
+  color: #f1f3f7;
+  background: rgba(7, 9, 12, 0.42);
   text-decoration: none;
-  isolation: isolate;
+  transition: border-color 200ms ease;
 }
 
-.fa-category-card:first-child { grid-column: span 7; }
-.fa-category-card:nth-child(2) { grid-column: span 5; }
+.fa-category-card__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  background: #07090c;
+}
 
-.fa-category-card > img,
-.fa-category-card__shade {
-  position: absolute;
-  inset: 0;
+.fa-category-card__media img {
+  display: block;
   width: 100%;
   height: 100%;
-}
-
-.fa-category-card > img {
-  z-index: -2;
   object-fit: cover;
-  filter: saturate(0.96) contrast(1.05) brightness(0.82);
-  transition: transform 650ms cubic-bezier(0.22, 1, 0.36, 1), filter 300ms ease;
+  object-position: center 42%;
 }
 
-.fa-category-card__shade {
-  z-index: -1;
-  background:
-    linear-gradient(180deg, rgba(2, 4, 7, 0.08) 18%, rgba(2, 4, 7, 0.88) 88%),
-    linear-gradient(90deg, rgba(2, 4, 7, 0.45), transparent 70%);
-}
-
-.fa-category-card__index {
+.fa-category-card__media::after {
+  content: "";
   position: absolute;
-  top: 1rem;
-  left: 1rem;
-  color: rgba(255, 255, 255, 0.8);
-  font: 650 var(--nr-type-label)/1 "IBM Plex Mono", monospace;
+  inset: 65% 0 0;
+  background: linear-gradient(transparent, rgba(7, 9, 12, 0.65));
+  pointer-events: none;
 }
 
 .fa-category-card__content {
   display: grid;
-  gap: 0.75rem;
-  padding: clamp(1.2rem, 2.4vw, 2.1rem);
+  grid-template-rows: auto 1fr auto;
+  gap: 0.65rem;
+  padding: clamp(1.15rem, 2.2vw, 2rem);
 }
 
-.fa-category-card__content > strong {
-  max-width: 15ch;
+.fa-category-card__content > h3 {
+  margin: 0;
   font-family: "Bricolage Grotesque", "Sora", sans-serif;
-  font-size: clamp(2rem, 4vw, 4.25rem);
-  font-weight: 480;
-  line-height: 0.95;
+  font-size: clamp(1.65rem, 2.5vw, 2.6rem);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
 }
 
 .fa-category-card__content > span:not(.fa-category-card__action) {
-  max-width: 37ch;
-  color: rgba(244, 247, 251, 0.78);
+  max-width: 44ch;
+  color: #afb3bd;
   font-size: var(--nr-type-small);
   line-height: 1.5;
 }
@@ -82,20 +73,29 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-top: 0.25rem;
-  padding-top: 0.7rem;
-  border-top: 1px solid rgba(158, 217, 242, 0.52);
-  color: #f7fbff;
-  font: 700 var(--nr-type-small)/1.2 "Sora", sans-serif;
-  text-transform: uppercase;
+  margin-top: 0.6rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.13);
+  color: #d8e7f7;
+  font: 600 var(--nr-type-small)/1.4 "Sora", sans-serif;
 }
 
-.fa-category-card__action svg { width: 1rem; height: 1rem; flex: 0 0 auto; }
+.fa-category-card__action svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  color: #9bcaff;
+  transition: transform 200ms ease;
+}
 
-.fa-category-card:hover > img,
-.fa-category-card:focus-visible > img {
-  filter: saturate(1.02) contrast(1.07) brightness(0.9);
-  transform: scale(1.025);
+.fa-category-card:hover,
+.fa-category-card:focus-visible {
+  border-color: rgba(155, 202, 255, 0.5);
+}
+
+.fa-category-card:hover .fa-category-card__action svg,
+.fa-category-card:focus-visible .fa-category-card__action svg {
+  transform: translate(2px, -2px);
 }
 
 .fa-category-card:focus-visible {
@@ -163,14 +163,6 @@
 
 @media (max-width: 700px) {
   .fa-category-cards { grid-template-columns: 1fr; }
-  .fa-category-card,
-  .fa-category-card:first-child,
-  .fa-category-card:nth-child(2) {
-    grid-column: 1;
-    min-height: clamp(22rem, 112vw, 31rem);
-  }
-
-  .fa-category-card__content > strong { font-size: clamp(2.3rem, 11vw, 3.45rem); }
 
   .nr-packages-page .nr-package-categories,
   .nr-gallery-page .nr-gallery-filters {
@@ -190,7 +182,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fa-category-card > img,
+  .fa-category-card,
+  .fa-category-card__action svg,
   .nr-packages-page .nr-package-categories button,
   .nr-gallery-page .nr-gallery-filters button {
     transition: none !important;

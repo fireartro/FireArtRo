@@ -96,7 +96,7 @@ export default function HomePackages() {
         </header>
 
         <div className="fa-category-cards" data-package-triptych>
-          {categoryRanges.map((range, index) => {
+          {categoryRanges.map((range) => {
             const visual = mediaById.get(range.imageMediaId)?.src || getCategoryPhoto(range.category, mediaById) || fallbackVisuals[range.category] || MEDIA.fireworksSky;
             const label = getCategoryLabel(range.category);
             return (
@@ -108,17 +108,17 @@ export default function HomePackages() {
                 to={`/pachete?categorie=${encodeURIComponent(range.category)}`}
                 aria-label={`Vezi ${label}`}
               >
-                <img {...homeImageProps(visual)} sizes="(max-width: 700px) 100vw, 55vw" alt="" loading="lazy" decoding="async" />
-                <span className="fa-category-card__shade" aria-hidden="true" />
-                <span className="fa-category-card__index">{String(index + 1).padStart(2, "0")}</span>
-                <span className="fa-category-card__content">
-                  <strong>{label}</strong>
+                <span className="fa-category-card__media" aria-hidden="true">
+                  <img {...homeImageProps(visual)} sizes="(max-width: 700px) 100vw, 50vw" alt="" loading="lazy" decoding="async" />
+                </span>
+                <div className="fa-category-card__content">
+                  <h3>{label}</h3>
                   <span>{range.description}</span>
                   <span className="fa-category-card__action">
-                    {range.count ? `${range.count} ${range.count === 1 ? "opțiune" : "opțiuni"}` : "Ofertă personalizată"}
+                    <span>Vezi mai multe opțiuni</span>
                     <ArrowUpRight aria-hidden="true" />
                   </span>
-                </span>
+                </div>
               </Link>
             );
           })}

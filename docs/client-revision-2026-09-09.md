@@ -99,6 +99,9 @@ Read-only diagnosis: output/landing-diagnostic-2026-09-09.md.
   overlapped the build and saw incomplete output; the post-build run passed.
 - Desktop 1440x900 category card grid visually inspected in Chrome. The staged
   live draft was rechecked: still version 4, with no unrelated unpublished changes.
+- Landing package range cards refined after owner feedback: photography is in a
+  dedicated panel above the copy, ordinal/count messaging is removed, and every
+  card now uses the action label “Vezi mai multe opțiuni”.
 
 | Profile | AV1 MiB | H264 MiB | AV1 VMAF | H264 VMAF |
 | --- | ---: | ---: | ---: | ---: |

@@ -45,6 +45,11 @@ test("renders ordered photo category cards with CMS media associations and deep 
     expect(cards[0].getAttribute("href")).toBe("/pachete?categorie=Artificii%20de%20noapte");
     expect(cards[0].querySelector("img").getAttribute("src")).toBe("/owned/night.webp");
     expect(cards[2].textContent).toContain("Spectacole de drone");
+    // A range's discovery action must not change into stock/count messaging.
+    cards.forEach(card => {
+      expect(card.querySelector('.fa-category-card__action').textContent).toContain('Vezi mai multe opțiuni');
+      expect(card.textContent).not.toMatch(/\d+\s+opțiun/);
+    });
   } finally {
     await act(async () => root.unmount());
     container.remove();
