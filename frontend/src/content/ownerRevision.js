@@ -8,9 +8,10 @@ export function applyOwnerRevision(content, revision) {
     if (parent) parent[field] = value;
   });
   const hidden = new Set(revision.hiddenMediaIds);
+  const restored = new Set(revision.restoredMediaIds || []);
   next.mediaItems = next.mediaItems.map(item => hidden.has(item.id)
     ? { ...item, tags: [...new Set([...item.tags, 'ascuns-din-galerie'])] }
-    : item);
+    : restored.has(item.id) ? { ...item, tags: item.tags.filter(tag => tag !== 'ascuns-din-galerie') } : item);
   const mediaById = new Map(next.mediaItems.map(item => [item.id, item]));
   next.packages = next.packages.map(item => {
     const imageId = revision.categoryImageIds[item.category];

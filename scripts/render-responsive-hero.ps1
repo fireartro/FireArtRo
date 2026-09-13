@@ -37,12 +37,12 @@ $taskTemporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('fireart-hero-
 [System.IO.Directory]::CreateDirectory($taskTemporaryRoot) | Out-Null
 
 $taskVariants = @(
-  [pscustomobject]@{ Name = 'wide'; Width = 1920; Height = 1200; Source = $taskLandscapeSource; Crf = 27; MaxRate = '2600k'; Buffer = '5200k'; CropX = 'iw-ow'; CropY = '(ih-oh)/2'; SizeLimitMb = 7 },
-  [pscustomobject]@{ Name = 'ultrawide'; Width = 1920; Height = 900; Source = $taskLandscapeSource; Crf = 27; MaxRate = '2400k'; Buffer = '4800k'; CropX = '(iw-ow)/2'; CropY = '(ih-oh)/2'; SizeLimitMb = 7 },
-  [pscustomobject]@{ Name = 'tablet-landscape'; Width = 1440; Height = 1080; Source = $taskLandscapeSource; Crf = 28; MaxRate = '1800k'; Buffer = '3600k'; CropX = 'iw-ow'; CropY = '(ih-oh)/2'; SizeLimitMb = 5 },
-  [pscustomobject]@{ Name = 'tablet-portrait'; Width = 1080; Height = 1440; Source = $taskPortraitSource; Crf = 28; MaxRate = '1700k'; Buffer = '3400k'; CropX = '(iw-ow)/2'; CropY = 'ih-oh'; SizeLimitMb = 5 },
-  [pscustomobject]@{ Name = 'mobile'; Width = 900; Height = 1600; Source = $taskPortraitSource; Crf = 29; MaxRate = '1500k'; Buffer = '3000k'; CropX = '(iw-ow)/2'; CropY = '(ih-oh)/2'; SizeLimitMb = 4.5 },
-  [pscustomobject]@{ Name = 'mobile-tall'; Width = 900; Height = 1950; Source = $taskPortraitSource; Crf = 29; MaxRate = '1400k'; Buffer = '2800k'; CropX = '(iw-ow)/2'; CropY = '(ih-oh)/2'; SizeLimitMb = 4.5 }
+  [pscustomobject]@{ Name = 'wide'; Width = 1536; Height = 960; Source = $taskLandscapeSource; Crf = 26; MaxRate = '1150k'; Buffer = '2300k'; CropX = '(iw-ow)/2'; CropY = '(ih-oh)/2'; SizeLimitMb = 3 },
+  [pscustomobject]@{ Name = 'ultrawide'; Width = 1536; Height = 720; Source = $taskLandscapeSource; Crf = 26; MaxRate = '1050k'; Buffer = '2100k'; CropX = '(iw-ow)/2'; CropY = '(ih-oh)/2'; SizeLimitMb = 2.8 },
+  [pscustomobject]@{ Name = 'tablet-landscape'; Width = 1152; Height = 864; Source = $taskLandscapeSource; Crf = 26; MaxRate = '950k'; Buffer = '1900k'; CropX = '(iw-ow)/2'; CropY = '(ih-oh)/2'; SizeLimitMb = 2.5 },
+  [pscustomobject]@{ Name = 'tablet-portrait'; Width = 864; Height = 1152; Source = $taskPortraitSource; Crf = 27; MaxRate = '800k'; Buffer = '1600k'; CropX = '(iw-ow)/2'; CropY = 'ih-oh'; SizeLimitMb = 2.1 },
+  [pscustomobject]@{ Name = 'mobile'; Width = 720; Height = 1280; Source = $taskPortraitSource; Crf = 27; MaxRate = '650k'; Buffer = '1300k'; CropX = '(iw-ow)/2'; CropY = '(ih-oh)/2'; SizeLimitMb = 1.8 },
+  [pscustomobject]@{ Name = 'mobile-tall'; Width = 720; Height = 1560; Source = $taskPortraitSource; Crf = 27; MaxRate = '650k'; Buffer = '1300k'; CropX = '(iw-ow)/2'; CropY = '(ih-oh)/2'; SizeLimitMb = 1.8 }
 )
 
 function Invoke-TaskNativeCommand {
@@ -89,8 +89,8 @@ function Test-TaskHeroMedia {
   if ([int]$taskStream.width -ne $Variant.Width -or [int]$taskStream.height -ne $Variant.Height) {
     throw "$($Variant.Name): expected $($Variant.Width)x$($Variant.Height), received $($taskStream.width)x$($taskStream.height)"
   }
-  if ($taskStream.r_frame_rate -ne '30/1') {
-    throw "$($Variant.Name): expected 30/1 fps, received $($taskStream.r_frame_rate)"
+  if ($taskStream.r_frame_rate -ne '24/1') {
+    throw "$($Variant.Name): expected 24/1 fps, received $($taskStream.r_frame_rate)"
   }
   if ($taskDuration -lt 19.9 -or $taskDuration -gt 20.1) {
     throw "$($Variant.Name): expected a 20 second duration, received $taskDuration"
@@ -131,9 +131,11 @@ try {
       '-maxrate', $taskVariant.MaxRate,
       '-bufsize', $taskVariant.Buffer,
       '-profile:v', 'high',
-      '-level:v', '5.0',
+      '-level:v', '4.0',
       '-pix_fmt', 'yuv420p',
-      '-r', '30',
+      '-r', '24',
+      '-g', '48',
+      '-threads', '4',
       '-an',
       '-movflags', '+faststart',
       '-map_metadata', '-1',
@@ -144,7 +146,7 @@ try {
       '-y',
       '-hide_banner',
       '-loglevel', 'warning',
-      '-ss', '0.70',
+      '-ss', '1.10',
       '-i', $taskTemporaryMp4,
       '-frames:v', '1',
       '-c:v', 'libwebp',

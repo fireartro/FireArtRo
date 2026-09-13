@@ -25,6 +25,14 @@ function seek(time) {
   video.currentTime = time;
   act(() => video.dispatchEvent(new Event('seeked')));
 }
+test('applies the blue gradient only to DRONE, keeping ARTIFICII and ȘI separate', () => {
+  mount();
+  const cue = container.querySelector('[data-cue="combined"]');
+  const gradients = cue.querySelectorAll('.hero-kinetic__drone-gradient');
+  expect(gradients).toHaveLength(1);
+  expect(gradients[0].textContent).toBe('DRONE.');
+  expect([...cue.querySelectorAll('.hero-kinetic__lead')].map(x => x.textContent)).toEqual(['ARTIFICII', 'ȘI DRONE.']);
+});
 test('shows only the synchronized cue and clears it between phrases and on loop', () => {
   mount();
   const overlay = container.querySelector('.hero-kinetic');

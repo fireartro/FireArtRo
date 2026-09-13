@@ -8,6 +8,7 @@ import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import useManagedContent from "@/hooks/useManagedContent";
 import { homeImageProps } from "@/lib/homeImage";
 import { createSettlingTicker } from "@/lib/settlingTicker";
+import { selectHomeGallery } from "@/lib/homeMediaSelection";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -15,14 +16,7 @@ export default function HomeGallery() {
   const homePage = useManagedContent("homePage", CMS_DEFAULTS.homePage);
   const mediaItems = useManagedContent("mediaItems", CMS_DEFAULTS.mediaItems);
   const copy = homePage.gallery;
-  const galleryItems = useMemo(() => {
-    const byId = new Map(mediaItems.map((item) => [item.id, item]));
-    return homePage.promoSlides.flatMap((slide) => {
-      const media = byId.get(slide.mediaId);
-      if (!media && slide.type !== "youtube") return [];
-      return [{ ...slide, media }];
-    });
-  }, [homePage.promoSlides, mediaItems]);
+  const galleryItems = useMemo(() => selectHomeGallery(homePage.promoSlides, mediaItems), [homePage.promoSlides, mediaItems]);
   const sectionRef = useRef(null);
   const reduceMotion = useReducedMotion();
 

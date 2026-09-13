@@ -1,5 +1,11 @@
 import { getHeroFilmCue, getHeroCuePose, getHeroEchoPose } from './heroFilmClock';
 
+test('uses the requested combined-show wording and site blue in the finale', () => {
+  const cue = getHeroFilmCue(26);
+  expect(cue.lines).toEqual(['ARTIFICII', 'ȘI DRONE.']);
+  expect(cue.accent).toBe('#78b8ff');
+});
+
 test('selects the cue at the video time and clears text between cues', () => {
   expect(getHeroFilmCue(0.1)).toBeNull();
   expect(getHeroFilmCue(1)?.id).toBe('lift');

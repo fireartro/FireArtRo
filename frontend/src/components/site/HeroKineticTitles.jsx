@@ -133,7 +133,9 @@ export default function HeroKineticTitles({ videoRef, enabled, source }) {
               {(cue.motion === 'stack' ? [-2, -1, 1, 2] : [-2, -1]).map(row => (
                 <span key={row} data-row={row} className={`hero-kinetic__echo${cue.motion === 'stack' && Math.abs(row) === 1 ? ' hero-kinetic__echo--solid' : ''}`}>{line}</span>
               ))}
-              <span className="hero-kinetic__lead">{line}</span>
+              <span className="hero-kinetic__lead">{cue.id === 'combined' && i === 1
+                ? <>ȘI <span className="hero-kinetic__drone-gradient">DRONE.</span></>
+                : line}</span>
             </div>
           ))}
         </div>

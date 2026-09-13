@@ -13,6 +13,7 @@ import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import useManagedContent from "@/hooks/useManagedContent";
 import { LOGO_SRC_SET, LOGO_URL } from "@/lib/constants";
 import { getHeaderOffset, navigateToHref, scrollToHash, syncScrollOffset } from "@/lib/scrollNavigation";
+import "@/styles/navigation-prominence.css";
 
 const publicHref = (href) => (href.startsWith("#") ? `/${href}` : href);
 

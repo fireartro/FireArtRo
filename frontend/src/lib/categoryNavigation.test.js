@@ -62,6 +62,22 @@ test("excludes only media explicitly tagged as hidden from the gallery", () => {
   expect(isGalleryVisible({})).toBe(true);
 });
 
+test('excludes reviewed branded photographs even when older published CMS data lacks hidden tags', () => {
+  expect(isGalleryVisible({ id: 'gallery-import-drone-025', tags: [] })).toBe(false);
+  expect(isGalleryVisible({ id: 'custom-copy', src: 'https://fireart.ro/media/gallery/fireartro-drone-show-damen-img-7327.webp?v=2', tags: [] })).toBe(false);
+});
+
+test('does not mistake a generic formation location for lettering in the photograph', () => {
+  expect(isGalleryVisible({ id: 'new-clean-photo', src: '/my-photo.webp', alt: 'Drone la Galați', tags: ['Craiova'] })).toBe(true);
+});
+
+test('restores fireworks and generic drone formations hidden by the previous broad selection', () => {
+  for (const id of ['gallery-import-001', 'gallery-import-045', 'gallery-import-drone-049', 'gallery-import-drone-059', 'gallery-import-drone-088']) {
+    expect(isGalleryVisible({ id, tags: ['ascuns-din-galerie'] })).toBe(true);
+  }
+  expect(isGalleryVisible({ id: 'new-editorial-hidden', tags: ['ascuns-din-galerie'] })).toBe(false);
+});
+
 test("uses real curated drone photography and skips a hidden preferred photo", () => {
   const preferred = { id: "gallery-import-drone-021", type: "image", category: "Drone show", src: "/real-drone.webp", tags: [] };
   const another = { id: "other", type: "image", category: "Drone show", src: "/another-drone.webp", tags: [] };

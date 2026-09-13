@@ -6,7 +6,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync, spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..');
-const output = path.join(repo, 'output/fireart-cinema/delivery-owner-v4');
+const output = path.join(repo, 'output/fireart-cinema/delivery-owner-v7');
 const profiles = { wide: [1920,1200], ultrawide: [1920,900], 'tablet-landscape': [1440,1080], 'tablet-portrait': [1080,1440], mobile: [720,1280], 'mobile-tall': [720,1560] };
 const report = [];
 fs.mkdirSync(output, { recursive: true });
@@ -25,10 +25,10 @@ const preserveCandidate = file => {
   fs.renameSync(resolved, `${resolved}.rejected-${Date.now()}`);
 };
 for (const [profile, [width, height]] of Object.entries(profiles)) {
-  const master = path.join(repo, 'output/fireart-cinema/kinetic-v4', profile, 'master.mp4');
+  const master = path.join(repo, 'output/fireart-cinema/kinetic-v7', profile, 'master.mp4');
   const filename = `fireart-hero-${profile}-av1.mp4`;
   const destination = path.join(output, filename);
-  const compatible = path.join(repo, 'output/fireart-cinema/kinetic-v4', profile, `fireart-hero-${profile}.mp4`);
+  const compatible = path.join(repo, 'output/fireart-cinema/kinetic-v7', profile, `fireart-hero-${profile}.mp4`);
   const phone = profile.startsWith('mobile');
   let crf = ['wide', 'ultrawide'].includes(profile) ? 30 : phone ? 28 : 29;
   const preset = phone ? 3 : 4;

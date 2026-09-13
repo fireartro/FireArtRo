@@ -1,0 +1,23 @@
+.nr-package-cinema { min-width: 0; }
+.nr-package-cinema .nr-package-stage__media { position: relative; aspect-ratio: 16 / 9; width: 100%; height: auto; margin: 0; overflow: hidden; background: #05090f; }
+.nr-package-cinema .nr-package-stage__media > :is(img, iframe, video) { display: block; width: 100%; height: 100%; border: 0; object-fit: cover; }
+.nr-package-cinema .nr-package-stage__media > :is(iframe, video) { position: absolute; inset: 0; }
+.nr-video-placeholder { display: grid; place-items: center; width: 100%; height: 100%; background: #0b111b; color: #78b8ff; }
+.nr-video-placeholder > svg { width: 32px; height: 32px; opacity: .6; }
+.nr-video-playlist { margin-top: 18px; }
+.nr-video-playlist header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.nr-video-playlist header > span { color: #edf3fc; font-size: 14px; font-weight: 600; }
+.nr-video-playlist header small { color: #b1bdce; font-size: 12px; }
+.nr-video-playlist__items { display: grid; grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); gap: 12px; }
+.nr-video-playlist__items > button { min-width: 0; border: 1px solid transparent; background: transparent; padding: 3px; color: #b9c6d7; text-align: left; cursor: pointer; transition: color .18s, border-color .18s; }
+.nr-video-playlist__items > button[aria-pressed="true"] { border-color: #78b8ff; color: white; }
+.nr-video-playlist__items > button:hover { color: white; border-color: #60758d; }
+.nr-video-playlist__items > button:focus-visible { outline: 2px solid #78b8ff; outline-offset: 3px; }
+.nr-video-playlist__picture { position: relative; display: block; aspect-ratio: 16 / 9; overflow: hidden; }
+.nr-video-playlist__picture > img { width: 100%; height: 100%; object-fit: cover; }
+.nr-video-playlist__picture > svg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 26px; height: 26px; padding: 6px; border-radius: 50%; color: white; background: #02060ac4; }
+.nr-video-playlist__label { display: block; padding: 8px 4px; font-size: 12px; font-weight: 600; }
+.nr-video-consent { color: #a7b5c7; margin-top: 12px; font-size: 12px; line-height: 1.6; }
+.nr-video-unavailable { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; background: #03070bc9; color: #d5dfed; }
+@media (max-width: 450px) { .nr-video-playlist__items { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; } }
+@media (prefers-reduced-motion: reduce) { .nr-video-playlist__items > button { transition: none; } }

@@ -49,6 +49,16 @@
 
 .hero-kinetic__line--accent .hero-kinetic__lead { color: var(--cue-accent); }
 
+.hero-kinetic__cue[data-cue="combined"] .hero-kinetic__lead { color: #f6f1e8; }
+.hero-kinetic__drone-gradient {
+  color: #78b8ff;
+  background: linear-gradient(110deg, #b7e6ff 0%, #78b8ff 45%, #427aff 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+}
+
 .hero-kinetic__echo {
   position: absolute;
   inset: .09em 0 auto;

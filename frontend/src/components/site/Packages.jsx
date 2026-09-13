@@ -1,8 +1,8 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
-import { ArrowUpRight, ExternalLink, Play } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ArrowUpRight } from "lucide-react";
+import PackageVideoPlayer from "./PackageVideoPlayer";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PACKAGE_CATEGORIES } from "@/data/businessContent";
 import { MEDIA } from "@/data/content";
@@ -11,7 +11,6 @@ import { goToContact } from "@/lib/contactNavigation";
 import ManagedPageMedia from "@/components/site/ManagedPageMedia";
 import {
   buildCategoryRanges,
-  collectPackageVideos,
   DRONE_REQUEST_CATEGORY,
   getCategoryLabel,
   getCategoryPhoto,
@@ -39,36 +38,8 @@ const packageConfiguration = (item) => {
   return "După brief";
 };
 
-const getYouTubeId = (value = "") => {
-  try {
-    const url = new URL(value);
-    if (url.hostname === "youtu.be") return url.pathname.split("/").filter(Boolean)[0] || "";
-    if (url.hostname.endsWith("youtube.com")) {
-      if (url.pathname === "/watch") return url.searchParams.get("v") || "";
-      const segments = url.pathname.split("/").filter(Boolean);
-      if (["embed", "shorts", "live"].includes(segments[0])) return segments[1] || "";
-    }
-  } catch {
-    return "";
-  }
-  return "";
-};
-
-const getYouTubeEmbedUrl = (value) => {
-  const id = getYouTubeId(value);
-  return id
-    ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1`
-    : "";
-};
-
-const getYouTubeThumbnailUrl = (value) => {
-  const id = getYouTubeId(value);
-  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : "";
-};
-
 const getPackageVisual = (item, mediaById) => (
   mediaById?.get(item?.imageMediaId)?.src
-  || getYouTubeThumbnailUrl(item?.videoUrl?.trim())
   || visualByCategory[item?.category]
   || MEDIA.fireworksSky
 );
@@ -95,7 +66,6 @@ export const Packages = ({ items }) => {
   const [selectedId, setSelectedId] = useState(initialPackage?.id || "");
   const [displayedId, setDisplayedId] = useState(initialPackage?.id || "");
   const [transitionState, setTransitionState] = useState("idle");
-  const [videoPackageId, setVideoPackageId] = useState("");
   const variantRefs = useRef([]);
   const categoryRefs = useRef([]);
   const timersRef = useRef([]);
@@ -108,11 +78,7 @@ export const Packages = ({ items }) => {
   const isDroneShowCategory = category === DRONE_REQUEST_CATEGORY;
   const hasPackageVariants = variants.length > 0;
   const activePackage = packages.find((item) => item.id === displayedId) || variants[0] || packages[0];
-  const primaryVideoUrl = activePackage?.videoUrl?.trim() || "";
-  const videoEmbedUrl = getYouTubeEmbedUrl(primaryVideoUrl);
   const packageThumbnail = getPackageVisual(activePackage, mediaById);
-  const packageVideos = collectPackageVideos(activePackage);
-  const isVideoOpen = Boolean(primaryVideoUrl) && videoPackageId === activePackage?.id;
 
   useEffect(() => () => timersRef.current.forEach(window.clearTimeout), []);
 
@@ -125,7 +91,7 @@ export const Packages = ({ items }) => {
       setSelectedId(nextVariants[0]?.id || "");
       setDisplayedId(nextVariants[0]?.id || "");
       setTransitionState("idle");
-      setVideoPackageId("");
+
     }
   }, [categories, category, packages, selectedId]);
 
@@ -138,7 +104,7 @@ export const Packages = ({ items }) => {
     setSelectedId(first?.id || "");
     setDisplayedId(first?.id || "");
     setTransitionState("idle");
-    setVideoPackageId("");
+
   }, [categories, category, packages, requestedCategory]);
 
   const updateCategoryQuery = useCallback((nextCategory) => {
@@ -149,7 +115,7 @@ export const Packages = ({ items }) => {
 
   const swapPackage = (nextPackage) => {
     if (!nextPackage || nextPackage.id === selectedId) return;
-    setVideoPackageId("");
+
     setSelectedId(nextPackage.id);
     timersRef.current.forEach(window.clearTimeout);
     timersRef.current = [];
@@ -291,27 +257,7 @@ export const Packages = ({ items }) => {
               aria-live="polite"
             >
               <div className="nr-package-stage__main">
-                <figure className="nr-package-stage__media" data-testid="package-media">
-                  <img
-                    key={activePackage.id}
-                    src={packageThumbnail}
-                    alt={`Previzualizare pentru ${activePackage.title}`}
-                    loading="eager"
-                    decoding="async"
-                  />
-                  {primaryVideoUrl && (
-                    <button
-                      type="button"
-                      className="nr-package-video-trigger"
-                      onClick={() => setVideoPackageId(activePackage.id)}
-                      aria-label={`Vezi videoclipul pachetului ${activePackage.title}`}
-                    >
-                      <Play aria-hidden="true" fill="currentColor" />
-                      <span>Vezi clipul</span>
-                    </button>
-                  )}
-                  <figcaption>{getCategoryLabel(activePackage.category)}</figcaption>
-                </figure>
+                <PackageVideoPlayer key={activePackage.id} item={activePackage} fallback={packageThumbnail} label={getCategoryLabel(activePackage.category)} changing={selectedId !== displayedId} />
 
                 <div className="nr-package-stage__content">
                   <div className="nr-package-stage__copy">
@@ -335,18 +281,7 @@ export const Packages = ({ items }) => {
                     {activePackage.bonus && <p className="nr-package-bonus"><strong>Inclus:</strong> {activePackage.bonus}</p>}
                     {activePackage.videoNote && <p className="nr-package-video-note">{activePackage.videoNote}</p>}
 
-                    {packageVideos.length > 0 && (
-                      <details className="nr-package-more-videos" open>
-                        <summary>Videoclipuri pentru acest pachet ({packageVideos.length})</summary>
-                        <div>
-                          {packageVideos.map((url, index) => (
-                            <a key={`${url}-${index}`} href={url} target="_blank" rel="noopener noreferrer">
-                              {index === 0 ? "Video principal" : `Video ${index + 1}`} <ExternalLink aria-hidden="true" />
-                            </a>
-                          ))}
-                        </div>
-                      </details>
-                    )}
+
 
                     <button
                       type="button"
@@ -384,35 +319,7 @@ export const Packages = ({ items }) => {
           </section>
         )}
 
-        {activePackage && hasPackageVariants && (
-          <Dialog
-            open={isVideoOpen}
-            onOpenChange={(open) => setVideoPackageId(open ? activePackage.id : "")}
-          >
-            <DialogContent
-              className="nr-package-video-dialog"
-              overlayClassName="nr-package-video-dialog__overlay"
-              data-testid="package-video-dialog"
-              aria-describedby={undefined}
-            >
-              <DialogTitle className="sr-only">
-                Videoclip pentru {activePackage.title}
-              </DialogTitle>
-              {videoEmbedUrl ? (
-                <iframe
-                  key={activePackage.id}
-                  src={videoEmbedUrl}
-                  title={`Video demonstrativ pentru pachetul ${activePackage.title}`}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  referrerPolicy="strict-origin-when-cross-origin"
-                />
-              ) : (
-                <video key={activePackage.id} src={primaryVideoUrl} controls autoPlay playsInline preload="metadata" />
-              )}
-            </DialogContent>
-          </Dialog>
-        )}
+
       </div>
     </section>
   );

@@ -1,4 +1,21 @@
 import revision from "@/data/ownerRevision.json";
+import importedGalleryItems from "@/data/importedGalleryItems.json";
+
+// Keep the reviewed exclusions effective for older CMS publications as well.
+// Location metadata is not a filter: the photograph itself was reviewed.
+const hiddenMediaIds = new Set(revision.hiddenMediaIds);
+const restoredMediaIds = new Set(revision.restoredMediaIds);
+const mediaPath = (src) => {
+  if (typeof src !== 'string' || !src) return '';
+  try { return new URL(src, 'https://fireart.ro').pathname; } catch { return ''; }
+};
+const hiddenMediaPaths = new Set(importedGalleryItems
+  .filter(item => hiddenMediaIds.has(item.id))
+  .map(item => mediaPath(item.src))
+  .filter(Boolean));
+const restoredMediaPaths = new Set(importedGalleryItems
+  .filter(item => restoredMediaIds.has(item.id))
+  .map(item => mediaPath(item.src)).filter(Boolean));
 
 export const DRONE_REQUEST_CATEGORY = "Show drone";
 
@@ -78,5 +95,10 @@ export const collectPackageVideos = (item) => {
 export const getCategoryLabel = (category) => CATEGORY_LABELS[category] || category;
 
 export const isGalleryVisible = (item) => !(
-  Array.isArray(item?.tags) && item.tags.includes("ascuns-din-galerie")
+  hiddenMediaIds.has(item?.id)
+  || hiddenMediaPaths.has(mediaPath(item?.src))
+  // Correct only the explicit, superseded import exclusions. Other CMS hiding
+  // decisions keep working, and named drone formations remain excluded above.
+  || (!restoredMediaIds.has(item?.id) && !restoredMediaPaths.has(mediaPath(item?.src))
+    && Array.isArray(item?.tags) && item.tags.includes("ascuns-din-galerie"))
 );
