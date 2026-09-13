@@ -40,7 +40,7 @@ export const LEGAL_PAGE_PRESENTATION = {
         body: [
           "Datele sunt păstrate numai cât este necesar pentru scopul comunicat și pentru obligațiile legale aplicabile. Nu vindem date personale.",
           "Solicitările de ofertă, mesajele primite la adresa de contact și răspunsurile trimise din Admin pot fi stocate în baza de date a aplicației. Vercel găzduiește aplicația, MongoDB Atlas furnizează baza de date, iar Resend procesează trimiterea și primirea emailurilor pentru contact@fireart.ro.",
-          "Cloudflare poate furniza verificarea anti-abuz a formularului atunci când aceasta este activată. Google poate furniza măsurarea Google Analytics 4 numai după consimțământul explicit pentru categoria Analiză și numai pe domeniul public de producție.",
+          "Cloudflare poate furniza verificarea anti-abuz a formularului atunci când aceasta este activată. Google poate furniza măsurarea Google Analytics 4 numai după consimțământul explicit pentru categoria Analiză și numai pe domeniul public de producție. Dacă este configurată integrarea Google Places, serverul solicită de la Google Maps recenziile publice și datele de atribuire asociate, pe care le afișăm împreună cu linkul către sursa originală; nu le păstrăm în browser și nu folosim cheia API în interfața publică.",
           "Biblioteca Vercel Blob este destinată materialelor publice ale site-ului, precum imagini și clipuri. Documentele clienților și atașamentele mesajelor nu sunt publicate în această bibliotecă.",
           "Accesul este limitat la operatorii autorizați și la furnizorii tehnici strict necesari operării site-ului și comunicării, conform rolului lor.",
         ],

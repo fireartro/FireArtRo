@@ -1,5 +1,5 @@
 /* Targeted sizing: preserve the existing navbar geometry and hamburger. */
-.site-navbar .site-navbar-brand img { transform: scale(1.15); transform-origin: center; }
+.site-navbar .site-navbar-brand img { transform: scale(1.265); transform-origin: center; }
 @media (min-width: 1024px) {
   body:has(main[data-design="night-runway"]) .site-navbar .site-navbar-links > a {
     font-size: clamp(.8625rem, calc(.575rem + max(.5635vmin, .23vw)), 1.5525rem);
@@ -14,12 +14,16 @@
   gap: .825rem;
   padding: .385rem .7rem .715rem;
   color: #fff;
-  background: #03070cab;
-  text-shadow: 0 1px 5px #000;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  text-shadow: 0 1px 2px #000, 0 2px 8px #000;
 }
-#acasa .nr-hero__actions .nr-button__icon { width: 1.21rem; height: 1.21rem; }
+#acasa .nr-hero__actions .nr-button__icon { width: 1.21rem; height: 1.21rem; color: #fff; filter: drop-shadow(0 1px 2px #000); }
+#acasa .nr-hero__actions .nr-button__flare { display: none; }
 #acasa .nr-hero__actions .nr-button::before { background: #ffffff70; }
 #acasa .nr-hero__actions .nr-button::after { height: 2px; background: #9bcaff; box-shadow: none; }
-#acasa .nr-hero__actions .nr-button:is(:hover, :focus-visible) { background: #122033eb; }
+#acasa .nr-hero__actions .nr-button:is(:hover, :focus-visible) { color: #fff; background: transparent; }
 #acasa .nr-hero__actions .nr-button:focus-visible { outline: 2px solid #9bcaff; outline-offset: 5px; }
 @media (max-width: 600px) { #acasa .nr-hero__actions .nr-button { font-size: calc(.57rem * 1.1); } }

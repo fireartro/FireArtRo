@@ -29,8 +29,11 @@ GOOGLE_PAYLOAD = {
             "authorAttribution": {
                 "displayName": "Ana M.",
                 "uri": "https://maps.google.com/contrib/ana",
+                "photoUri": "https://lh3.googleusercontent.com/ana-photo",
             },
             "publishTime": "2026-08-20T18:30:00Z",
+            "relativePublishTimeDescription": "acum 3 săptămâni",
+            "originalText": {"text": "A wonderful show.", "languageCode": "en"},
             "googleMapsUri": "https://maps.google.com/review/google-1",
         },
         {
@@ -132,7 +135,12 @@ def test_google_reviews_are_normalized_and_empty_text_is_omitted():
                         "text": "Un spectacol impecabil.",
                         "rating": 5.0,
                         "published_at": "2026-08-20T18:30:00Z",
+                        "published_relative": "acum 3 săptămâni",
+                        "original_text": "A wonderful show.",
+                        "translated": True,
                         "url": "https://maps.google.com/review/google-1",
+                        "author_url": "https://maps.google.com/contrib/ana",
+                        "author_photo_url": "https://lh3.googleusercontent.com/ana-photo",
                     }
                 ],
             }
@@ -170,11 +178,11 @@ def test_one_provider_failure_does_not_hide_the_other_or_expose_secrets():
     assert "meta-secret" not in serialized
 
 
-def test_snapshot_is_reused_until_the_cache_expires():
+def test_facebook_snapshot_is_reused_until_the_cache_expires():
     clock = {"value": 100.0}
-    fake = FakeAsyncClient(google=FakeResponse(GOOGLE_PAYLOAD))
+    fake = FakeAsyncClient(facebook=FakeResponse(FACEBOOK_PAYLOAD))
     client, _ = public_client(
-        GOOGLE_ENV,
+        FACEBOOK_ENV,
         fake,
         ttl_seconds=60,
         now=lambda: clock["value"],
@@ -187,3 +195,51 @@ def test_snapshot_is_reused_until_the_cache_expires():
 
     assert first.json() == second.json() == third.json()
     assert len(fake.calls) == 2
+
+
+def test_google_content_is_fetched_per_request_while_facebook_can_use_short_cache():
+    fake = FakeAsyncClient(
+        google=FakeResponse(GOOGLE_PAYLOAD),
+        facebook=FakeResponse(FACEBOOK_PAYLOAD),
+    )
+    client, _ = public_client(
+        {**GOOGLE_ENV, **FACEBOOK_ENV}, fake, ttl_seconds=60,
+    )
+
+    first = client.get("/api/reviews")
+    second = client.get("/api/reviews")
+
+    assert first.status_code == second.status_code == 200
+    assert [url for url, _ in fake.calls if "places.googleapis.com" in url] == [
+        fake.calls[0][0], fake.calls[2][0],
+    ]
+    assert len([url for url, _ in fake.calls if "graph.facebook.com" in url]) == 1
+
+
+def test_reviews_route_disables_intermediary_caching():
+    fake = FakeAsyncClient(google=FakeResponse(GOOGLE_PAYLOAD))
+    client, _ = public_client(GOOGLE_ENV, fake)
+
+    response = client.get("/api/reviews")
+
+    assert response.headers["cache-control"] == "no-store, private"
+
+
+def test_google_failure_does_not_reuse_a_previous_google_snapshot():
+    class RevokedGoogleClient(FakeAsyncClient):
+        def __init__(self):
+            super().__init__(google=FakeResponse(GOOGLE_PAYLOAD))
+            self.google_requests = 0
+
+        async def get(self, url, **kwargs):
+            if "places.googleapis.com" in url:
+                self.google_requests += 1
+                if self.google_requests > 1:
+                    return FakeResponse({"error": "denied"}, status_code=403)
+            return await super().get(url, **kwargs)
+
+    fake = RevokedGoogleClient()
+    client, _ = public_client(GOOGLE_ENV, fake)
+
+    assert client.get("/api/reviews").json()["providers"][0]["id"] == "google"
+    assert client.get("/api/reviews").json() == {"providers": []}

@@ -77,6 +77,22 @@
   text-transform: uppercase;
 }
 
+.fa-page-reviews__google-logo {
+  display: block;
+  width: auto;
+  height: 19px;
+  max-width: min(9rem, 42vw);
+  object-fit: contain;
+  object-position: left center;
+}
+
+.fa-page-reviews__notice {
+  margin-block: -0.2rem 0;
+  color: rgba(244, 247, 251, 0.54);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
 .fa-page-reviews__lane-head > a {
   position: relative;
   display: inline-flex;
@@ -195,6 +211,64 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.fa-page-reviews__author {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.fa-page-reviews__author img {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(244, 247, 251, 0.1);
+}
+
+.fa-page-reviews__author cite {
+  min-width: 0;
+}
+
+.fa-page-reviews__author a,
+.fa-page-reviews__source {
+  color: inherit;
+  text-decoration: none;
+}
+
+.fa-page-reviews__author a:hover,
+.fa-page-reviews__author a:focus-visible,
+.fa-page-reviews__source:hover,
+.fa-page-reviews__source:focus-visible {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.fa-page-reviews__translation-note {
+  margin-top: -0.8rem;
+  color: rgba(244, 247, 251, 0.48);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.fa-page-reviews__source {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+  color: var(--fa-review-accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.fa-page-reviews__source svg {
+  width: 0.8rem;
+  height: 0.8rem;
 }
 
 .fa-page-reviews__card-top {
