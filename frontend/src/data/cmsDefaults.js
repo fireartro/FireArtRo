@@ -145,7 +145,7 @@ export const CMS_DEFAULTS = applyOwnerRevision({
     formTitle: "Planificare eveniment",
     eventTypes: options(CONTACT_EVENT_TYPES, "event"),
     showOptions: options(SERVICE_INTEREST_OPTIONS, "show"),
-    consentLabel: "Sunt de acord cu prelucrarea datelor conform",
+    consentLabel: "Am citit informarea privind utilizarea datelor pentru această solicitare, conform",
     submitLabel: "Trimite cererea",
   },
   blogPage: {

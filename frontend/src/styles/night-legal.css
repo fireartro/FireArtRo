@@ -157,6 +157,18 @@ main.legal-page[data-design="night-runway"] .legal-article {
   min-width: 0;
 }
 
+.legal-identity {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.legal-identity dl { margin: 1rem 0 0; }
+.legal-identity dl > div { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-top: 0.65rem; }
+.legal-identity dt { min-width: 11rem; color: #a7c8ee; }
+.legal-identity dd { flex: 1 1 16rem; margin: 0; overflow-wrap: anywhere; }
+.legal-identity a { text-decoration: underline; text-underline-offset: 0.2em; }
+
 main.legal-page[data-design="night-runway"] .legal-article > section {
   display: grid;
   grid-template-columns: 2.25rem minmax(0, 1fr);

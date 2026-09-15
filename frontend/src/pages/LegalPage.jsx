@@ -59,6 +59,16 @@ export default function LegalPage({ type = "confidentialitate" }) {
         </aside>
 
         <article className="legal-article">
+          <div className="legal-identity" aria-label="Datele de identificare ale furnizorului">
+            <h2>{siteDetails.legalName}</h2>
+            <p>Operatorul mărcii FireArtRo</p>
+            <dl>
+              <div><dt>CUI</dt><dd>{siteDetails.taxId}</dd></div>
+              <div><dt>Registrul Comerțului</dt><dd>{siteDetails.registrationNumber}</dd></div>
+              <div><dt>Sediu social</dt><dd>{siteDetails.registeredOffice}</dd></div>
+              <div><dt>Contact</dt><dd><a href={`mailto:${email}`}>{email}</a></dd></div>
+            </dl>
+          </div>
           {data.sections.map((section, index) => (
             <section key={section.id} aria-labelledby={`legal-section-${index}`}>
               <span>{String(index + 1).padStart(2, "0")}</span>

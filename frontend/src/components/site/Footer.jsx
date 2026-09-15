@@ -70,6 +70,13 @@ export const Footer = () => {
           </div>
         </div>
 
+        <div className="fa-footer__identity">
+          <p><strong>{siteDetails.legalName}</strong> · CUI {siteDetails.taxId} · Reg. Com. {siteDetails.registrationNumber}</p>
+          <p>Sediu social: {siteDetails.registeredOffice}</p>
+          <a className="fa-footer__sal" href="https://reclamatiisal.anpc.ro/" target="_blank" rel="noopener noreferrer">
+            <img src="/legal/anpc-sal.png" alt="ANPC — Soluționarea Alternativă a Litigiilor" width="250" height="50" loading="lazy" />
+          </a>
+        </div>
         <div className="fa-footer__bottom">
           <span>© {new Date().getFullYear()} {copy.copyright}</span>
           <nav className="fa-footer__legal" aria-label="Informații legale">

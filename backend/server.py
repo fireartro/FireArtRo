@@ -484,7 +484,7 @@ async def receive_resend_webhook(request: Request):
 @api_router.post("/quotes", response_model=QuoteAcknowledgement)
 async def create_quote(input: QuoteCreate, request: Request):
     if not input.consent:
-        raise HTTPException(status_code=422, detail="Consimțământul este obligatoriu.")
+        raise HTTPException(status_code=422, detail="Confirmă citirea informării privind datele personale.")
     if input.company_website:
         return QuoteAcknowledgement()
     client_ip = request_ip(request)

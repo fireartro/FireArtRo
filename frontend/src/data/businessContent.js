@@ -8,11 +8,11 @@ export const SITE_DETAILS = {
   email: "contact@fireart.ro",
   googleReviewsUrl: process.env.REACT_APP_GOOGLE_REVIEWS_URL || "",
   areaServed: "România",
-  legalName: "1A BEST EVENTS SRL",
-  registrationNumber: "J2017000108306",
-  taxId: "RO37037033",
-  registeredOffice: "Satu Mare, Piața Soarelui, Bl. UU6, et. 3, ap. 9, 440221",
-  mainOffice: "Seini, Piața Unirii nr. 2",
+  legalName: "1A SMART LAND SOLUTIONS SRL",
+  registrationNumber: "J2022000693301",
+  taxId: "46367383",
+  registeredOffice: "Piața Soarelui, Bl. UU6, et. 3, ap. 9, 440221, Satu Mare, județul Satu Mare, România",
+  mainOffice: "Piața Unirii nr. 2, Seini, județul Maramureș",
   secondaryOffice: "Cluj-Napoca, Strada Oltului nr. 1",
 };
 
@@ -605,11 +605,11 @@ export const CONTACT_EVENT_TYPES = [
 export const COOKIE_SETTINGS_DEFAULT = {
   title: "Preferințe de confidențialitate",
   summary:
-    "Folosim stocare strict necesară pentru funcționarea site-ului. Conținutul extern și măsurarea audienței rămân oprite până alegi explicit.",
+    "Folosim stocare strict necesară pentru funcționarea site-ului. Playerele YouTube și analiza audienței rămân oprite până alegi explicit. Miniaturile externe sunt descrise în politica de cookies.",
   necessaryLabel: "Strict necesare",
   necessaryDescription: "Păstrează preferința de consimțământ și funcțiile esențiale ale site-ului.",
   analyticsLabel: "Analiză",
-  analyticsDescription: "Permite măsurarea anonimă a utilizării numai dacă un instrument de analiză este configurat.",
+  analyticsDescription: "Permite analiza statistică a utilizării prin Google Analytics, dacă integrarea este configurată.",
   marketingLabel: "Conținut extern și marketing",
   marketingDescription: "Permite servicii externe opționale; videoclipurile YouTube rămân click-to-load.",
   retentionDays: 180,

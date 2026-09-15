@@ -15,7 +15,7 @@ test("privacy copy describes the production data and email flows without the old
   expect(text).toMatch(/Resend/i);
   expect(text).toMatch(/Cloudflare Turnstile/i);
   expect(text).toMatch(/mesajele primite/i);
-  expect(text).toMatch(/dreptul/i);
+  expect(text).toMatch(/dreptur/i);
   expect(text).not.toMatch(/în memoria serverului și nu în baza de date/i);
 });
 
@@ -38,6 +38,6 @@ test("cookie copy covers consent, temporary contact prefill, and consent-gated G
 test.each(["confidentialitate", "termeni", "cookies"])(
   "%s shows the current technical-copy review date",
   (key) => {
-    expect(LEGAL_PAGE_PRESENTATION[key].updated).toBe("7 septembrie 2026");
+    expect(LEGAL_PAGE_PRESENTATION[key].updated).toBe("14 septembrie 2026");
   },
 );

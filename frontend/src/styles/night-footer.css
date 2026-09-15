@@ -207,3 +207,9 @@
 @media (prefers-reduced-motion: reduce) {
   .fa-footer a { transition: none; }
 }
+
+.fa-footer__identity { padding-block: 1.1rem; color: #b9c3d0; font-size: 0.82rem; line-height: 1.6; }
+.fa-footer__identity p { margin: 0.2rem 0; overflow-wrap: anywhere; }
+.fa-footer__identity strong { color: #eef3fb; font-weight: 600; }
+.fa-footer__sal { display: inline-block; margin-top: 0.9rem; }
+.fa-footer__sal img { display: block; width: 250px; height: 50px; max-width: none; }

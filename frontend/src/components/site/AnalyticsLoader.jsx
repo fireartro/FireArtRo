@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 
 import {
   COOKIE_CONSENT_UPDATED_EVENT,
+  COOKIE_CONSENT_STORAGE_KEY,
   readCookieConsent,
 } from "./CookieConsent";
 
@@ -11,11 +12,22 @@ const SCRIPT_ID = "fireartro-ga4-script";
 const CANONICAL_HOSTNAME = "fireart.ro";
 const MEASUREMENT_ID_PATTERN = /^G-[A-Z0-9]+$/;
 
-function analyticsAllowedByConsent() {
-  const value = readCookieConsent();
+function analyticsAllowedByConsent(value = readCookieConsent()) {
   if (!value?.analytics) return false;
   if (!value.expiresAt) return true;
   return new Date(value.expiresAt).getTime() > Date.now();
+}
+
+function clearAnalyticsCookies() {
+  const host = window.location.hostname;
+  const domains = ['', host, ...(host === 'fireart.ro' || host.endsWith('.fireart.ro') ? ['fireart.ro', '.fireart.ro'] : [])];
+  for (const entry of document.cookie.split(';')) {
+    const name = entry.trim().split('=')[0];
+    if (!/^_ga(?:_[A-Za-z0-9_-]+)?$/.test(name)) continue;
+    for (const domain of new Set(domains)) {
+      document.cookie = `${name}=; Max-Age=0; path=/${domain ? `; domain=${domain}` : ''}`;
+    }
+  }
 }
 
 function ensureGtag(measurementId) {
@@ -55,17 +67,38 @@ export default function AnalyticsLoader({ production }) {
   const pagePath = useMemo(() => location.pathname || "/", [location.pathname]);
 
   useEffect(() => {
-    const onConsent = (event) => {
-      const nextAllowed = eligible && event.detail?.analytics === true;
+    let expiryTimer;
+    const sync = (choice = readCookieConsent()) => {
+      window.clearTimeout(expiryTimer);
+      const nextAllowed = eligible && analyticsAllowedByConsent(choice);
       window[`ga-disable-${measurementId}`] = !nextAllowed;
       if (!nextAllowed && initialized.current && window.gtag) {
         window.gtag("consent", "update", consentState(false));
       }
       setAllowed(nextAllowed);
-      if (!nextAllowed) lastPagePath.current = "";
+      if (!nextAllowed) {
+        lastPagePath.current = "";
+        clearAnalyticsCookies();
+      } else if (choice?.expiresAt) {
+        // Cap long waits to avoid the browser's signed 32-bit timer overflow.
+        expiryTimer = window.setTimeout(() => sync(choice), Math.min(Date.parse(choice.expiresAt) - Date.now(), 86_400_000));
+      }
     };
+    const onConsent = (event) => sync(event.detail);
+    const onStorage = (event) => {
+      if (event.key === COOKIE_CONSENT_STORAGE_KEY || event.key === null) sync();
+    };
+    const onFocus = () => sync();
+    sync();
     window.addEventListener(COOKIE_CONSENT_UPDATED_EVENT, onConsent);
-    return () => window.removeEventListener(COOKIE_CONSENT_UPDATED_EVENT, onConsent);
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearTimeout(expiryTimer);
+      window.removeEventListener(COOKIE_CONSENT_UPDATED_EVENT, onConsent);
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [eligible, measurementId]);
 
   useEffect(() => {

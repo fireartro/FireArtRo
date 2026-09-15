@@ -61,6 +61,9 @@ afterEach(async () => {
   delete window["ga-disable-G-ABC123XYZ"];
   if (previousMeasurementId === undefined) delete process.env.REACT_APP_GA_MEASUREMENT_ID;
   else process.env.REACT_APP_GA_MEASUREMENT_ID = previousMeasurementId;
+  jest.useRealTimers();
+  document.cookie = '_ga=; Max-Age=0; path=/';
+  document.cookie = 'unrelated=; Max-Age=0; path=/';
 });
 
 test("does not contact Google without consent, outside production, or in Admin", async () => {
@@ -124,4 +127,38 @@ test("stops future measurement when analytics consent is withdrawn", async () =>
   const before = window.dataLayer.length;
   act(() => container.querySelector("button").click());
   expect(window.dataLayer).toHaveLength(before);
+});
+
+test("withdrawal in another tab stops page views and clears only analytics cookies", async () => {
+  consent(true);
+  await render();
+  document.cookie = '_ga=example; path=/';
+  document.cookie = 'unrelated=keep; path=/';
+  consent(false);
+  await act(async () => window.dispatchEvent(new StorageEvent('storage', { key: COOKIE_CONSENT_STORAGE_KEY })));
+  expect(window['ga-disable-G-ABC123XYZ']).toBe(true);
+  expect(document.cookie).not.toMatch(/(?:^|;\s*)_ga=/);
+  expect(document.cookie).toContain('unrelated=keep');
+  const count = window.dataLayer.length;
+  act(() => container.querySelector('button').click());
+  expect(window.dataLayer).toHaveLength(count);
+});
+
+test("consent expires during an open page without further interaction", async () => {
+  jest.useFakeTimers();
+  window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({
+    savedAt: new Date().toISOString(), analytics: true, expiresAt: new Date(Date.now() + 2000).toISOString(),
+  }));
+  await render();
+  expect(window['ga-disable-G-ABC123XYZ']).toBe(false);
+  await act(async () => jest.advanceTimersByTime(2100));
+  expect(window['ga-disable-G-ABC123XYZ']).toBe(true);
+});
+
+test("an expired consent event cannot re-enable measurement", async () => {
+  await render();
+  await act(async () => window.dispatchEvent(new CustomEvent('fireartro-cookie-consent-updated', {
+    detail: { analytics: true, expiresAt: '2000-01-01T00:00:00Z' },
+  })));
+  expect(document.getElementById('fireartro-ga4-script')).toBeNull();
 });

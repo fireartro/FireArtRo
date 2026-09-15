@@ -158,7 +158,7 @@ export const QuoteForm = () => {
       nextErrors.turnstile = errors.turnstile
         || "Finalizează verificarea anti-abuz înainte de trimitere.";
     }
-    if (!form.consent) nextErrors.consent = "Acceptă prelucrarea datelor pentru a trimite cererea.";
+    if (!form.consent) nextErrors.consent = "Confirmă că ai citit informarea privind datele personale.";
 
     if (!Object.keys(nextErrors).length) return true;
 

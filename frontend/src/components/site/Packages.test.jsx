@@ -173,6 +173,17 @@ test("supports arrow, Home and End focus navigation without starting playback an
   expect(player().getAttribute("src")).toContain("autoplay=0");
 });
 
+test("unloads a running YouTube player when consent expires without navigation", async () => {
+  jest.useFakeTimers();
+  await setConsent(true, new Date(Date.now() + 2000).toISOString());
+  await renderPackages();
+  await click(playlistButtons()[0]);
+  expect(player()).not.toBeNull();
+  await act(async () => jest.advanceTimersByTime(2001));
+  expect(player()).toBeNull();
+  expect(container.textContent).toContain("Activează videoclipul");
+});
+
 test("includes additional clips when the primary is blank and updates selection after a CMS edit", async () => {
   await setConsent(true);
   const managed = [{ ...items[1], videoUrl: "", moreVideoUrls: [" https://youtu.be/AWrMkTUn9iQ ", "https://youtu.be/j2BGRd88qBc"] }];

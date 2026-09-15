@@ -50,10 +50,28 @@ export default function PackageVideoPlayer({ item, fallback, label, changing }) 
   useEffect(() => { setSelected(videos[0] || ''); setPlaying(false); setFailed(false); }, [signature]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (changing) setPlaying(false); }, [changing]);
   useEffect(() => {
-    const sync = () => { const allowed = hasVideoConsent(); setConsent(allowed); if (!allowed) setPlaying(false); };
+    let expiryTimer;
+    const sync = () => {
+      window.clearTimeout(expiryTimer);
+      const allowed = hasVideoConsent();
+      setConsent(allowed);
+      if (!allowed) setPlaying(false);
+      if (allowed) {
+        const remaining = Date.parse(readCookieConsent().expiresAt) - Date.now();
+        // Recheck long-lived choices daily without overflowing the browser timer.
+        expiryTimer = window.setTimeout(sync, Math.min(Math.max(remaining, 0), 86_400_000));
+      }
+    };
     window.addEventListener(COOKIE_CONSENT_UPDATED_EVENT, sync);
     window.addEventListener('storage', sync);
-    return () => { window.removeEventListener(COOKIE_CONSENT_UPDATED_EVENT, sync); window.removeEventListener('storage', sync); };
+    window.addEventListener('focus', sync);
+    sync();
+    return () => {
+      window.clearTimeout(expiryTimer);
+      window.removeEventListener(COOKIE_CONSENT_UPDATED_EVENT, sync);
+      window.removeEventListener('storage', sync);
+      window.removeEventListener('focus', sync);
+    };
   }, []);
 
   const choose = (url, openSettings = false) => {
