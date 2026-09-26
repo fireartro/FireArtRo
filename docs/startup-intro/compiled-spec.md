@@ -7,6 +7,15 @@
 - Un strat canvas decorativ, identitate HTML, copy și trei segmente de progres real.
 - CSS complet: frontend/public/startup-intro.css. Motor și lifecycle complet: frontend/public/startup-intro.js. Aceste fișiere reprezintă specificația executabilă.
 
+## Rafinare vizuală, versiunea 2
+
+- Aceeași direcție cinematică și aceeași logică de încărcare; identitatea devine mai clară din primul cadru, fără blur.
+- 216 lumini albastre se adună în trei formații înclinate, proiectate cu perspectivă. Intensitatea depinde de adâncime.
+- Scântei aurii cu traiectorii curbate și cădere lentă; halourile sunt reutilizate din două sprite-uri canvas create în memorie.
+- Coroana luminoasă este mai amplă, iar logo-ul crește moderat. Un reflex orizontal fin ancorează compoziția.
+- Copy: „Totul începe cu o scânteie.”; textul și sigla păstrează claritatea pe Retina, mobile și landscape.
+- Fără resurse externe noi și fără prelungirea duratei minime de așteptare.
+
 ## Comportament
 
 - Bootstrap înainte de React. În absența JavaScript și pe /admin overlay-ul este ascuns.

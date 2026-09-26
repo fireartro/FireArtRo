@@ -9,46 +9,46 @@ html[data-fireart-intro] .fireart-intro {
 }
 .fireart-intro::before {
     content: ''; position: absolute; inset: 0; pointer-events: none;
-    background: radial-gradient(ellipse at 50% 44%, #0a1e393d, transparent 48%),
-        radial-gradient(ellipse at 50% 105%, #16365755, transparent 48%);
+    background: radial-gradient(ellipse at 50% 42%, #092a4d70, transparent 47%),
+        radial-gradient(ellipse at 50% 95%, #0c346a42, transparent 46%);
 }
 .fireart-intro::after {
     content: ''; position: absolute; inset: 0; pointer-events: none;
-    background: radial-gradient(ellipse at 50% 44%, transparent 20%, #03050a55 64%, #03050acd 100%);
+    background: radial-gradient(ellipse at 50% 44%, transparent 32%, #03050a20 62%, #03050aa8 100%);
 }
 .fireart-intro__sky { position: absolute; inset: 0; width: 100%; height: 100%; transition: transform .85s cubic-bezier(.16,1,.3,1); }
 .fireart-intro__horizon {
-    position: absolute; left: 18%; right: 18%; bottom: 15%; height: 1px;
-    background: linear-gradient(90deg, transparent, #8dd3ff40, transparent);
-    box-shadow: 0 0 28px 4px #1677ff13; transform: perspective(450px) rotateX(65deg);
+    position: absolute; left: 23%; right: 23%; top: 73%; height: 1px;
+    background: linear-gradient(90deg, transparent, #8dd3ff78, transparent);
+    box-shadow: 0 0 22px 3px #1677ff26;
 }
 .fireart-intro__identity {
     position: absolute; z-index: 1; top: 44%; left: 50%; width: min(86%, 440px);
     transform: translate(-50%,-50%); text-align: center;
-    animation: fireart-intro-arrive 1.1s cubic-bezier(.16,1,.3,1) both;
+    animation: fireart-intro-arrive .85s cubic-bezier(.16,1,.3,1) both;
 }
 .fireart-intro__eyebrow {
-    margin: 0 0 23px; font-size: 9px; font-weight: 600;
-    letter-spacing: .32em; color: #9fc6e3; line-height: 1.6;
+    margin: 0 0 25px; font-size: 9px; font-weight: 600;
+    letter-spacing: .38em; color: #a5bed5; line-height: 1.6;
 }
 .fireart-intro__logo {
-    display: block; width: clamp(175px, 20vw, 270px); height: auto;
-    max-height: 150px; object-fit: contain; margin: 0 auto;
-    filter: drop-shadow(0 0 24px #8dd3ff38);
+    display: block; width: clamp(200px, 23vw, 300px); height: auto;
+    max-height: 160px; object-fit: contain; margin: 0 auto;
+    filter: drop-shadow(0 0 30px #8dd3ff40);
 }
 .fireart-intro__signature {
-    margin: 24px 0 0; color: #c1cede; font-size: 11px; letter-spacing: .12em;
+    margin: 26px 0 0; color: #c1cede; font-size: 11px; letter-spacing: .15em;
     font-weight: 400; line-height: 1.6;
 }
 .fireart-intro__foot {
     position: absolute; z-index: 2; left: 20px; right: 20px;
     bottom: max(6.5%, calc(env(safe-area-inset-bottom) + 22px)); text-align: center;
 }
-.fireart-intro__line { margin: 0 0 23px; font-size: clamp(19px, 2.1vw, 28px); line-height: 1.4; font-weight: 400; letter-spacing: -.035em; }
-.fireart-intro__line span { color: #9cc8fa; }
-.fireart-intro__progress { display: flex; width: 144px; margin: auto; gap: 7px; }
+.fireart-intro__line { margin: 0 0 24px; font-size: clamp(21px, 2.4vw, 32px); line-height: 1.4; font-weight: 300; letter-spacing: -.045em; }
+.fireart-intro__line span { color: #9cc8fa; background: linear-gradient(105deg, #c3eaff, #70b3ff 58%, #467cff); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.fireart-intro__progress { display: flex; width: 168px; margin: auto; gap: 9px; }
 .fireart-intro__progress i { display: block; position: relative; flex: 1; height: 2px; overflow: hidden; background: #62778d38; }
-.fireart-intro__progress i::after { content: ''; display: block; height: 100%; background: #91caff; transform: scaleX(0); transform-origin: left; transition: transform .4s ease; }
+.fireart-intro__progress i::after { content: ''; display: block; height: 100%; background: linear-gradient(90deg, #1677ff, #c0eaff); transform: scaleX(0); transform-origin: left; transition: transform .4s ease; }
 .fireart-intro[data-content-ready] .fireart-intro__progress i:nth-child(1)::after,
 .fireart-intro[data-route-ready] .fireart-intro__progress i:nth-child(2)::after,
 .fireart-intro[data-media-ready] .fireart-intro__progress i:nth-child(3)::after { transform: scaleX(1); }
@@ -62,14 +62,16 @@ html[data-fireart-intro] .fireart-intro {
 .fireart-intro__skip:hover { color: #fff; }
 .fireart-intro__skip:focus-visible { outline: 1px solid #8dd3ff; outline-offset: 2px; }
 html[data-fireart-intro='leaving'] .fireart-intro { opacity: 0; pointer-events: none; }
-html[data-fireart-intro='leaving'] .fireart-intro__sky { transform: scale(1.13); }
-@keyframes fireart-intro-arrive { from { opacity: 0; filter: blur(5px); } to { opacity: 1; filter: blur(0); } }
+html[data-fireart-intro='leaving'] .fireart-intro__sky { transform: scale(1.2); }
+@keyframes fireart-intro-arrive { from { opacity: .6; } to { opacity: 1; } }
 @media (max-width: 600px) {
     .fireart-intro__identity { top: 42%; }
     .fireart-intro__eyebrow { font-size: 8px; letter-spacing: .23em; margin-bottom: 19px; }
-    .fireart-intro__logo { width: 190px; }
+    .fireart-intro__logo { width: 210px; }
     .fireart-intro__signature { font-size: 10px; margin-top: 21px; }
     .fireart-intro__foot { bottom: max(10%, calc(env(safe-area-inset-bottom) + 22px)); }
+    .fireart-intro__line { max-width: 290px; margin-left: auto; margin-right: auto; }
+    .fireart-intro__horizon { top: 72%; left: 13%; right: 13%; }
 }
 @media (max-height: 500px) and (orientation: landscape) {
     .fireart-intro__identity { top: 39%; }
