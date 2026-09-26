@@ -27,7 +27,7 @@ jest.mock('@/content/ManagedContentProvider', () => ({
   useManagedContentSnapshot: () => ({ status: mockContentStatus }),
 }));
 
-test('loads only the requested route and warms Home while published content is pending', async () => {
+test('silently waits for published content while warming only the requested public route', async () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const container = document.createElement('div');
   const root = createRoot(container);
@@ -42,7 +42,9 @@ test('loads only the requested route and warms Home while published content is p
     window.history.replaceState({}, '', '/contact');
     mockContentStatus = 'loading';
     await act(async () => root.render(<App />));
-    expect(container.textContent).toContain('Se încarcă versiunea publicată');
+    expect(container.querySelector('.route-loading').textContent).toBe('');
+    expect(container.querySelector('.route-loading').getAttribute('aria-busy')).toBe('true');
+    expect(container.textContent).not.toContain('Contact loaded');
     expect(mockLoadedPages).toEqual(['contact']);
 
     mockContentStatus = 'ready';
@@ -52,7 +54,7 @@ test('loads only the requested route and warms Home while published content is p
     mockContentStatus = 'loading';
     await navigate('/');
     expect(mockLoadedPages).toEqual(['contact', 'home']);
-    expect(container.textContent).toContain('Se încarcă versiunea publicată');
+    expect(container.querySelector('.route-loading').textContent).toBe('');
     expect(container.textContent).not.toContain('Homepage loaded');
 
     mockContentStatus = 'ready';
@@ -60,6 +62,9 @@ test('loads only the requested route and warms Home while published content is p
     expect(container.textContent).toContain('Homepage loaded');
 
     mockContentStatus = 'unavailable';
+    await act(async () => root.render(<App />));
+    expect(container.querySelector('[role="status"]').textContent).toContain('Revino în câteva momente');
+    expect(container.textContent).not.toContain('Homepage loaded');
     await navigate('/admin');
     expect(container.textContent).toContain('Admin loaded');
     expect(mockLoadedPages).toEqual(['contact', 'home', 'admin']);

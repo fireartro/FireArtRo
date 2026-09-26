@@ -71,14 +71,18 @@ function AppRoutes() {
   }, [location.pathname]);
 
   if (location.pathname !== "/admin" && !["ready", "fallback"].includes(content.status)) {
-    return <main className="route-loading" role="status" aria-live="polite">
-      {content.status === "unavailable" ? "Site-ul este în curs de inițializare. Revino în câteva momente." : "Se încarcă versiunea publicată…"}
-    </main>;
+    return content.status === "unavailable"
+      ? <main className="route-loading" role="status" aria-live="polite">
+        Site-ul este în curs de inițializare. Revino în câteva momente.
+      </main>
+      : <main className="route-loading" aria-busy="true" />;
   }
 
   return (
     <div className="route-stage">
-      <Suspense fallback={<div className="route-loading" role="status" aria-label="Se încarcă pagina" />}>
+      <Suspense fallback={location.pathname === "/admin"
+        ? <div className="route-loading" role="status" aria-label="Se încarcă pagina" />
+        : <div className="route-loading" aria-busy="true" />}>
         <Routes location={location}>
           <Route path="/" element={<Home />} />
           <Route path="/galerie" element={<GalleryPage />} />
