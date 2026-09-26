@@ -10,16 +10,19 @@
                 if (/^\/admin\/?$/.test(location.pathname)) return;
                 document.documentElement.dataset.fireartIntro = 'loading';
                 window.__fireartIntroStarted = performance.now();
-                // A missing intro script must never trap visitors behind it.
-                window.__fireartIntroSafety = setTimeout(() => {
+                // Do not confuse a slow script download with a failed script.
+                // The controller clears this guard as soon as it initializes.
+                window.__fireartIntroSafety = setInterval(() => {
+                    if (document.readyState !== 'complete') return;
+                    clearInterval(window.__fireartIntroSafety);
                     delete document.documentElement.dataset.fireartIntro;
                     document.getElementById('fireart-intro')?.remove();
                     document.getElementById('root')?.removeAttribute('inert');
-                }, 12000);
+                }, 1000);
             })();
         </script>
-        <link rel="stylesheet" href="%PUBLIC_URL%/startup-intro.css?v=20260926-2" />
-        <script defer src="%PUBLIC_URL%/startup-intro.js?v=20260926-2"></script>
+        <link rel="stylesheet" href="%PUBLIC_URL%/startup-intro.css?v=20260926-4" />
+        <script defer src="%PUBLIC_URL%/startup-intro.js?v=20260926-4"></script>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="icon" type="image/png" href="%PUBLIC_URL%/favicon-96x96.png" sizes="96x96" />
@@ -175,10 +178,10 @@
                     {
                         "@type": ["Organization", "LocalBusiness", "ProfessionalService"],
                         "name": "FireArtRo",
-                        "legalName": "1A BEST EVENTS SRL",
+                        "legalName": "1A FIREARTRO EVENTS S.R.L.",
                         "url": "https://fireart.ro/",
                         "logo": "https://fireart.ro/icon-512.png",
-                        "taxID": "RO37037033",
+                        "taxID": "43337078",
                         "description": "Show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice pentru evenimente.",
                         "address": {
                             "@type": "PostalAddress",

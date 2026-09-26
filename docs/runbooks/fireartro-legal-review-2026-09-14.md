@@ -2,7 +2,13 @@
 
 Aceasta este o verificare tehnică și de conținut, nu o opinie juridică și nici o garanție împotriva sancțiunilor. Avocatul și operatorul trebuie să valideze situația reală, documentele firmei și modul de prestare înainte de a declara conformitatea completă.
 
-## Date folosite
+## Rectificarea identității — 26 septembrie 2026
+
+Proprietarul a transmis certificatul ONRC și a precizat că identitatea Smartland folosită anterior este greșită. Identitatea corectă pentru site este **1A FIREARTRO EVENTS S.R.L.**, **CUI 43337078**, cu sediul social în **Strada Oltului nr. 1, camera nr. 1, et. 1, ap. 4, Cluj-Napoca, județul Cluj, România**. Numărul din certificatul transmis este **J12/3784/16.11.2020**, EUID **ROONRC.J12/3784/2020**. Aceste valori provin din documentul confirmat de proprietar, nu din renumerotarea afișată de agregatoare. CUI-ul rămâne fără prefix TVA neconfirmat.
+
+Adresa de lucru Seini, telefonul și emailul nu sunt modificate. Rectificarea acoperă valorile implicite, JSON-LD inițial și o publicare CMS strict limitată la identitatea firmei și referințele la ea din documentele legale. Textele editate separat în Admin trebuie păstrate. Publicarea CMS se consemnează numai după verificare.
+
+## Date folosite la verificarea inițială din 14 septembrie (înlocuite de rectificarea de mai sus)
 
 - Operator: **1A SMART LAND SOLUTIONS SRL**; CUI **46367383**; Registrul Comerțului **J2022000693301**; EUID **ROONRC.J2022000693301**.
 - Sediu social: Piața Soarelui, Bl. UU6, et. 3, ap. 9, 440221, Satu Mare, județul Satu Mare, România.

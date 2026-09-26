@@ -1,7 +1,7 @@
 import { SITE_DETAILS, BUSINESS_HOURS } from "./businessContent";
 
 const EMAIL = SITE_DETAILS.email;
-const UPDATED = "14 septembrie 2026";
+const UPDATED = "26 septembrie 2026";
 const IDENTITY = `${SITE_DETAILS.legalName}, CUI ${SITE_DETAILS.taxId}, nr. Registrul Comerțului ${SITE_DETAILS.registrationNumber}, cu sediul social în ${SITE_DETAILS.registeredOffice}`;
 
 // Shared source for defaults and the targeted CMS publication. See the legal-review runbook.
@@ -71,7 +71,7 @@ export const LEGAL_PAGE_PRESENTATION = {
     updated: UPDATED,
     sections: [
       { title: "Furnizorul și contactul", body: [
-        `Serviciile sub marca FireArtRo sunt furnizate de ${IDENTITY}. EUID: ROONRC.${SITE_DETAILS.registrationNumber}.`,
+        `Serviciile sub marca FireArtRo sunt furnizate de ${IDENTITY}. EUID: ROONRC.J12/3784/2020.`,
         `Contact: ${EMAIL}, +40 787 602 144. ${BUSINESS_HOURS.label}. Adresa de lucru comunicată pentru Seini: ${SITE_DETAILS.mainOffice}, distinctă de sediul social. Disponibilitatea pentru evenimente se stabilește în funcție de dată și locație.`,
       ] },
       { title: "Rolul site-ului", body: [

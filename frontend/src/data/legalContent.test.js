@@ -38,6 +38,6 @@ test("cookie copy covers consent, temporary contact prefill, and consent-gated G
 test.each(["confidentialitate", "termeni", "cookies"])(
   "%s shows the current technical-copy review date",
   (key) => {
-    expect(LEGAL_PAGE_PRESENTATION[key].updated).toBe("14 septembrie 2026");
+    expect(LEGAL_PAGE_PRESENTATION[key].updated).toBe("26 septembrie 2026");
   },
 );

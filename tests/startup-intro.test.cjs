@@ -47,7 +47,7 @@ function start({ reduced = false, active = true } = {}) {
     addEventListener, removeEventListener
   };
   const motion = { matches: reduced, addEventListener, removeEventListener };
-  const window = { __fireartIntroStarted: 0, innerWidth: 1440, innerHeight: 900, matchMedia: () => motion, addEventListener, removeEventListener };
+  const window = { __fireartIntroStarted: 0, innerWidth: 1440, innerHeight: 900, location: { reload() { window.reloaded = true; } }, matchMedia: () => motion, addEventListener, removeEventListener };
   vm.runInNewContext(source, {
     window, document, navigator: {}, performance: { now: () => now },
     setTimeout: (fn, delay) => timer(fn, delay), clearTimeout: id => tasks.delete(id),
@@ -66,6 +66,10 @@ test('waits for the first playable frame, then releases input and all timers', (
   assert.equal(run.html.dataset.fireartIntro, 'loading');
   run.media.video = { readyState: 2, paused: false };
   run.advance(100);
+  assert.equal(run.html.dataset.fireartIntro, 'loading');
+  run.advance(1699);
+  assert.equal(run.root.inert, true);
+  run.advance(1);
   assert.equal(run.html.dataset.fireartIntro, 'leaving');
   assert.equal(run.root.inert, false);
   run.advance(700);
@@ -74,11 +78,14 @@ test('waits for the first playable frame, then releases input and all timers', (
   assert.equal(run.events.size, 0);
 });
 
-test('slow video falls back to the ready poster without waiting for all films', () => {
+test('a slow playable video keeps loading beyond twelve seconds, even with a ready poster', () => {
   const run = start();
+  run.media.video = { readyState: 0, paused: true };
   run.window.__fireartIntro.routeReady('/');
-  run.advance(3200);
+  run.advance(20000);
   assert.equal(run.html.dataset.fireartIntro, 'loading');
+  assert.equal(run.root.inert, true);
+  run.media.video = { readyState: 2, paused: false };
   run.advance(800);
   assert.equal(run.intro.isConnected, false);
   assert.equal(run.root.inert, false);
@@ -86,16 +93,19 @@ test('slow video falls back to the ready poster without waiting for all films', 
 
 test('failed poster and failed video cannot trap a visitor', () => {
   const run = start();
-  run.media.poster.complete = false;
+  run.media.poster.naturalWidth = 0;
   run.window.__fireartIntro.routeReady('/');
   run.advance(5800);
   assert.equal(run.intro.isConnected, false);
   assert.equal(run.root.inert, false);
 });
 
-test('reduced motion reveals a ready poster immediately', () => {
+test('reduced motion keeps the three-second minimum without animating the exit', () => {
   const run = start({ reduced: true });
   run.window.__fireartIntro.routeReady('/');
+  run.advance(2999);
+  assert.equal(run.root.inert, true);
+  run.advance(1);
   assert.equal(run.intro.isConnected, false);
   assert.equal(run.root.inert, false);
   assert.equal(run.tasks.size, 0);
@@ -114,20 +124,49 @@ test('Admin and failed publication dismiss the overlay immediately', () => {
   assert.equal(admin.tasks.size, 0);
 });
 
-test('a stalled app bootstrap releases the page at the global deadline', () => {
+test('a slow app stays covered after twelve seconds and offers a deliberate retry', () => {
   const run = start();
   run.advance(12000);
-  assert.equal(run.intro.isConnected, false);
-  assert.equal(run.root.inert, false);
-  assert.equal(run.window.__fireartIntro, undefined);
+  assert.equal(run.intro.isConnected, true);
+  assert.equal(run.root.inert, true);
+  assert.equal(run.button.hidden, false);
+  run.events.get('click')();
+  assert.equal(run.window.reloaded, true);
 });
 
 test('skip is available only after the route mounts and releases focus blocking', () => {
   const run = start();
   assert.equal(run.button.hidden, true);
   run.window.__fireartIntro.routeReady('/');
+  assert.equal(run.button.hidden, true);
+  run.advance(3000);
   assert.equal(run.button.hidden, false);
   run.events.get('click')();
   assert.equal(run.root.inert, false);
   assert.equal(run.intro.isConnected, false);
+});
+
+test('an already-ready interior page still remains covered for three seconds', () => {
+  const run = start();
+  run.window.__fireartIntro.routeReady('/galerie');
+  run.advance(2999);
+  assert.equal(run.html.dataset.fireartIntro, 'loading');
+  run.advance(1);
+  assert.equal(run.html.dataset.fireartIntro, 'leaving');
+  run.advance(680);
+  assert.equal(run.intro.isConnected, false);
+});
+
+test('a slow poster is not treated as a failed image and can finish after twenty seconds', () => {
+  const run = start({ reduced: true });
+  run.media.poster.complete = false;
+  run.media.poster.naturalWidth = 0;
+  run.window.__fireartIntro.routeReady('/');
+  run.advance(20000);
+  assert.equal(run.root.inert, true);
+  run.media.poster.complete = true;
+  run.media.poster.naturalWidth = 1920;
+  run.advance(100);
+  assert.equal(run.intro.isConnected, false);
+  assert.equal(run.tasks.size, 0);
 });

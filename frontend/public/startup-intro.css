@@ -4,23 +4,23 @@ html[data-fireart-intro] { overflow: hidden; }
 html[data-fireart-intro] .fireart-intro {
     position: fixed; inset: 0; z-index: 2147483000; display: block;
     overflow: hidden; isolation: isolate; color: #f5f7fb;
-    background: #03050a; font-family: Inter, Arial, sans-serif;
+    background: #050505; font-family: Inter, Arial, sans-serif;
     opacity: 1; transition: opacity .65s cubic-bezier(.16,1,.3,1);
 }
 .fireart-intro::before {
     content: ''; position: absolute; inset: 0; pointer-events: none;
-    background: radial-gradient(ellipse at 50% 42%, #092a4d70, transparent 47%),
-        radial-gradient(ellipse at 50% 95%, #0c346a42, transparent 46%);
+    background: radial-gradient(ellipse at 50% 42%, #5e442122, transparent 49%),
+        radial-gradient(ellipse at 50% 95%, #49361d18, transparent 46%);
 }
 .fireart-intro::after {
     content: ''; position: absolute; inset: 0; pointer-events: none;
-    background: radial-gradient(ellipse at 50% 44%, transparent 32%, #03050a20 62%, #03050aa8 100%);
+    background: radial-gradient(ellipse at 50% 44%, transparent 32%, #05050520 62%, #050505a8 100%);
 }
-.fireart-intro__sky { position: absolute; inset: 0; width: 100%; height: 100%; transition: transform .85s cubic-bezier(.16,1,.3,1); }
+.fireart-intro__sky { position: absolute; inset: 0; width: 100%; height: 100%; mask-image: linear-gradient(#000 72%, transparent 85%); -webkit-mask-image: linear-gradient(#000 72%, transparent 85%); transition: transform .85s cubic-bezier(.16,1,.3,1); }
 .fireart-intro__horizon {
     position: absolute; left: 23%; right: 23%; top: 73%; height: 1px;
-    background: linear-gradient(90deg, transparent, #8dd3ff78, transparent);
-    box-shadow: 0 0 22px 3px #1677ff26;
+    background: linear-gradient(90deg, transparent, #ead7b957, transparent);
+    box-shadow: 0 0 22px 3px #dfb87815;
 }
 .fireart-intro__identity {
     position: absolute; z-index: 1; top: 44%; left: 50%; width: min(86%, 440px);
@@ -29,15 +29,15 @@ html[data-fireart-intro] .fireart-intro {
 }
 .fireart-intro__eyebrow {
     margin: 0 0 25px; font-size: 9px; font-weight: 600;
-    letter-spacing: .38em; color: #a5bed5; line-height: 1.6;
+    letter-spacing: .38em; color: #c2b8a8; line-height: 1.6;
 }
 .fireart-intro__logo {
     display: block; width: clamp(200px, 23vw, 300px); height: auto;
     max-height: 160px; object-fit: contain; margin: 0 auto;
-    filter: drop-shadow(0 0 30px #8dd3ff40);
+    filter: drop-shadow(0 0 28px #ffebcc28);
 }
 .fireart-intro__signature {
-    margin: 26px 0 0; color: #c1cede; font-size: 11px; letter-spacing: .15em;
+    margin: 26px 0 0; color: #cfc8be; font-size: 11px; letter-spacing: .15em;
     font-weight: 400; line-height: 1.6;
 }
 .fireart-intro__foot {
@@ -45,22 +45,22 @@ html[data-fireart-intro] .fireart-intro {
     bottom: max(6.5%, calc(env(safe-area-inset-bottom) + 22px)); text-align: center;
 }
 .fireart-intro__line { margin: 0 0 24px; font-size: clamp(21px, 2.4vw, 32px); line-height: 1.4; font-weight: 300; letter-spacing: -.045em; }
-.fireart-intro__line span { color: #9cc8fa; background: linear-gradient(105deg, #c3eaff, #70b3ff 58%, #467cff); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.fireart-intro__line span { color: #e7c995; background: linear-gradient(105deg, #fff6e8, #edc98d 58%, #c39754); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .fireart-intro__progress { display: flex; width: 168px; margin: auto; gap: 9px; }
-.fireart-intro__progress i { display: block; position: relative; flex: 1; height: 2px; overflow: hidden; background: #62778d38; }
-.fireart-intro__progress i::after { content: ''; display: block; height: 100%; background: linear-gradient(90deg, #1677ff, #c0eaff); transform: scaleX(0); transform-origin: left; transition: transform .4s ease; }
+.fireart-intro__progress i { display: block; position: relative; flex: 1; height: 2px; overflow: hidden; background: #bcaa8c28; }
+.fireart-intro__progress i::after { content: ''; display: block; height: 100%; background: linear-gradient(90deg, #a87f44, #fff0d5); transform: scaleX(0); transform-origin: left; transition: transform .4s ease; }
 .fireart-intro[data-content-ready] .fireart-intro__progress i:nth-child(1)::after,
 .fireart-intro[data-route-ready] .fireart-intro__progress i:nth-child(2)::after,
 .fireart-intro[data-media-ready] .fireart-intro__progress i:nth-child(3)::after { transform: scaleX(1); }
 .fireart-intro__skip {
     display: block; min-height: 44px; margin: 14px auto -14px; padding: 10px 16px;
-    border: 0; border-radius: 0; background: none; color: #b6c7da; cursor: pointer;
+    border: 0; border-radius: 0; background: none; color: #c5beb3; cursor: pointer;
     font: 10px Inter, Arial, sans-serif; letter-spacing: .1em;
 }
 .fireart-intro__skip[hidden] { display: none; }
-.fireart-intro__skip span { display: inline-block; margin-left: 9px; color: #8dd3ff; }
+.fireart-intro__skip span { display: inline-block; margin-left: 9px; color: #edcf9b; }
 .fireart-intro__skip:hover { color: #fff; }
-.fireart-intro__skip:focus-visible { outline: 1px solid #8dd3ff; outline-offset: 2px; }
+.fireart-intro__skip:focus-visible { outline: 1px solid #edcf9b; outline-offset: 2px; }
 html[data-fireart-intro='leaving'] .fireart-intro { opacity: 0; pointer-events: none; }
 html[data-fireart-intro='leaving'] .fireart-intro__sky { transform: scale(1.2); }
 @keyframes fireart-intro-arrive { from { opacity: .6; } to { opacity: 1; } }
