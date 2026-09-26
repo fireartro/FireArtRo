@@ -58,9 +58,25 @@ function GlobalUi() {
   </> : null;
 }
 
+function StartupRouteReady() {
+  const location = useLocation();
+  useEffect(() => {
+    window.__fireartIntro?.routeReady(location.pathname);
+  }, [location.pathname]);
+  return null;
+}
+
 function AppRoutes() {
   const location = useLocation();
   const content = useManagedContentSnapshot();
+
+  useEffect(() => {
+    if (location.pathname === '/admin' || content.status === 'unavailable') {
+      window.__fireartIntro?.dismiss();
+    } else if (['ready', 'fallback'].includes(content.status)) {
+      window.__fireartIntro?.contentReady();
+    }
+  }, [content.status, location.pathname]);
 
   useEffect(() => {
     // Fetch only the requested public page in parallel with the CMS snapshot.
@@ -83,6 +99,7 @@ function AppRoutes() {
       <Suspense fallback={location.pathname === "/admin"
         ? <div className="route-loading" role="status" aria-label="Se încarcă pagina" />
         : <div className="route-loading" aria-busy="true" />}>
+        <StartupRouteReady />
         <Routes location={location}>
           <Route path="/" element={<Home />} />
           <Route path="/galerie" element={<GalleryPage />} />

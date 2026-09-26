@@ -1,0 +1,86 @@
+/* A small, independent first-paint scene; available before the app bundle. */
+.fireart-intro { display: none; }
+html[data-fireart-intro] { overflow: hidden; }
+html[data-fireart-intro] .fireart-intro {
+    position: fixed; inset: 0; z-index: 2147483000; display: block;
+    overflow: hidden; isolation: isolate; color: #f5f7fb;
+    background: #03050a; font-family: Inter, Arial, sans-serif;
+    opacity: 1; transition: opacity .65s cubic-bezier(.16,1,.3,1);
+}
+.fireart-intro::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 44%, #0a1e393d, transparent 48%),
+        radial-gradient(ellipse at 50% 105%, #16365755, transparent 48%);
+}
+.fireart-intro::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 44%, transparent 20%, #03050a55 64%, #03050acd 100%);
+}
+.fireart-intro__sky { position: absolute; inset: 0; width: 100%; height: 100%; transition: transform .85s cubic-bezier(.16,1,.3,1); }
+.fireart-intro__horizon {
+    position: absolute; left: 18%; right: 18%; bottom: 15%; height: 1px;
+    background: linear-gradient(90deg, transparent, #8dd3ff40, transparent);
+    box-shadow: 0 0 28px 4px #1677ff13; transform: perspective(450px) rotateX(65deg);
+}
+.fireart-intro__identity {
+    position: absolute; z-index: 1; top: 44%; left: 50%; width: min(86%, 440px);
+    transform: translate(-50%,-50%); text-align: center;
+    animation: fireart-intro-arrive 1.1s cubic-bezier(.16,1,.3,1) both;
+}
+.fireart-intro__eyebrow {
+    margin: 0 0 23px; font-size: 9px; font-weight: 600;
+    letter-spacing: .32em; color: #9fc6e3; line-height: 1.6;
+}
+.fireart-intro__logo {
+    display: block; width: clamp(175px, 20vw, 270px); height: auto;
+    max-height: 150px; object-fit: contain; margin: 0 auto;
+    filter: drop-shadow(0 0 24px #8dd3ff38);
+}
+.fireart-intro__signature {
+    margin: 24px 0 0; color: #c1cede; font-size: 11px; letter-spacing: .12em;
+    font-weight: 400; line-height: 1.6;
+}
+.fireart-intro__foot {
+    position: absolute; z-index: 2; left: 20px; right: 20px;
+    bottom: max(6.5%, calc(env(safe-area-inset-bottom) + 22px)); text-align: center;
+}
+.fireart-intro__line { margin: 0 0 23px; font-size: clamp(19px, 2.1vw, 28px); line-height: 1.4; font-weight: 400; letter-spacing: -.035em; }
+.fireart-intro__line span { color: #9cc8fa; }
+.fireart-intro__progress { display: flex; width: 144px; margin: auto; gap: 7px; }
+.fireart-intro__progress i { display: block; position: relative; flex: 1; height: 2px; overflow: hidden; background: #62778d38; }
+.fireart-intro__progress i::after { content: ''; display: block; height: 100%; background: #91caff; transform: scaleX(0); transform-origin: left; transition: transform .4s ease; }
+.fireart-intro[data-content-ready] .fireart-intro__progress i:nth-child(1)::after,
+.fireart-intro[data-route-ready] .fireart-intro__progress i:nth-child(2)::after,
+.fireart-intro[data-media-ready] .fireart-intro__progress i:nth-child(3)::after { transform: scaleX(1); }
+.fireart-intro__skip {
+    display: block; min-height: 44px; margin: 14px auto -14px; padding: 10px 16px;
+    border: 0; border-radius: 0; background: none; color: #b6c7da; cursor: pointer;
+    font: 10px Inter, Arial, sans-serif; letter-spacing: .1em;
+}
+.fireart-intro__skip[hidden] { display: none; }
+.fireart-intro__skip span { display: inline-block; margin-left: 9px; color: #8dd3ff; }
+.fireart-intro__skip:hover { color: #fff; }
+.fireart-intro__skip:focus-visible { outline: 1px solid #8dd3ff; outline-offset: 2px; }
+html[data-fireart-intro='leaving'] .fireart-intro { opacity: 0; pointer-events: none; }
+html[data-fireart-intro='leaving'] .fireart-intro__sky { transform: scale(1.13); }
+@keyframes fireart-intro-arrive { from { opacity: 0; filter: blur(5px); } to { opacity: 1; filter: blur(0); } }
+@media (max-width: 600px) {
+    .fireart-intro__identity { top: 42%; }
+    .fireart-intro__eyebrow { font-size: 8px; letter-spacing: .23em; margin-bottom: 19px; }
+    .fireart-intro__logo { width: 190px; }
+    .fireart-intro__signature { font-size: 10px; margin-top: 21px; }
+    .fireart-intro__foot { bottom: max(10%, calc(env(safe-area-inset-bottom) + 22px)); }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+    .fireart-intro__identity { top: 39%; }
+    .fireart-intro__logo { width: 150px; max-height: 80px; }
+    .fireart-intro__eyebrow { margin-bottom: 8px; font-size: 8px; }
+    .fireart-intro__signature { margin-top: 8px; font-size: 9px; }
+    .fireart-intro__line { font-size: 17px; margin-bottom: 10px; }
+    .fireart-intro__foot { bottom: max(4%, env(safe-area-inset-bottom)); }
+    .fireart-intro__skip { position: absolute; right: 0; bottom: 0; margin: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    html[data-fireart-intro] .fireart-intro, .fireart-intro__sky, .fireart-intro__progress i::after { transition: none; }
+    .fireart-intro__identity { animation: none; }
+}
