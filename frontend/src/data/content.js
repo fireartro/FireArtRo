@@ -76,9 +76,9 @@ export const HERO_MEDIA = {
 // Curated cinematic stills (drone light shows · fireworks · cold sparks)
 export const MEDIA = {
   fireworksSky: "/media/fireworks-sky.webp",
-  droneShow: "/media/drone-show.webp",
-  droneShow2: "/media/drone-show-2.webp",
-  droneShow3: "/media/drone-show-3.webp",
+  droneShow: "/media/gallery/fireartro-drone-show-baia-mare-img-5525-2.webp",
+  droneShow2: "/media/gallery/fireartro-drone-show-art-is-alive-artisalive7.webp",
+  droneShow3: "/media/gallery/fireartro-drone-show-baia-mare-img-5527-2.webp",
   coldSparks: "/media/cold-sparks.webp",
   coldSparks2: "/media/cold-sparks-2.webp",
   coldSparks3: "/media/cold-sparks-3.webp",

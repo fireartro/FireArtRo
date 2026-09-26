@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import HeroVideo from "@/components/site/HeroVideo";
+import HeroMontage from "@/components/site/HeroMontage";
 import HeroTypingTitle from "@/components/site/HeroTypingTitle";
 import NightButton from "@/components/night/NightButton";
 import useManagedContent from "@/hooks/useManagedContent";
@@ -35,7 +36,7 @@ export const Hero = () => {
         className="nr-hero__media"
         aria-hidden="true"
       >
-        <HeroVideo mediaOverride={background} />
+        {background ? <HeroVideo mediaOverride={background} /> : <HeroMontage />}
       </motion.div>
       <div className="nr-hero__veil" aria-hidden="true" />
 

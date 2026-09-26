@@ -6,7 +6,7 @@ import '../../styles/hero-kinetic-titles.css';
 
 // Typography stays outside the cropped video surface and follows the media clock.
 // No animation library, per-frame React renders, or second media download.
-export default function HeroKineticTitles({ videoRef, enabled, source }) {
+export default function HeroKineticTitles({ videoRef, enabled, source, filmConfig = film }) {
   const [host, setHost] = useState(null);
   const overlayRef = useRef(null);
 
@@ -35,7 +35,7 @@ export default function HeroKineticTitles({ videoRef, enabled, source }) {
       const time = video.currentTime;
       if (time === lastTime) return;
       lastTime = time;
-      const cue = getHeroFilmCue(time);
+      const cue = getHeroFilmCue(time, filmConfig);
       if (active !== cue?.id) {
         if (active) nodes.get(active).node.style.visibility = 'hidden';
         active = cue?.id || null;
@@ -43,12 +43,12 @@ export default function HeroKineticTitles({ videoRef, enabled, source }) {
       }
       if (!cue) return;
       nodes.get(cue.id).lines.forEach(({ lead, echoes }, i) => {
-        const pose = getHeroCuePose(cue, time % film.duration, i);
+        const pose = getHeroCuePose(cue, time % filmConfig.duration, i);
         lead.style.opacity = String(pose.opacity);
         lead.style.transform = `translate3d(${pose.x}%,${pose.y}%,0) scale(${pose.scale})`;
         echoes.forEach((echo, j) => {
           if (cue.motion === 'stack') {
-            const echoPose = getHeroEchoPose(cue, time % film.duration, Number(echo.dataset.row));
+            const echoPose = getHeroEchoPose(cue, time % filmConfig.duration, Number(echo.dataset.row));
             echo.style.opacity = String(echoPose.opacity);
             echo.style.transform = `translate3d(${echoPose.x}%,${echoPose.y}%,0)`;
           } else {
@@ -121,12 +121,12 @@ export default function HeroKineticTitles({ videoRef, enabled, source }) {
       document.removeEventListener('visibilitychange', visibility);
       nodes.forEach(({ node }) => { node.style.visibility = 'hidden'; });
     };
-  }, [videoRef, enabled, source, host]);
+  }, [videoRef, enabled, source, host, filmConfig]);
 
   if (!enabled || !host) return null;
   return createPortal(
     <div ref={overlayRef} className="hero-kinetic" aria-hidden="true">
-      {film.cues.map(cue => (
+      {filmConfig.cues.map(cue => (
         <div key={cue.id} data-cue={cue.id} data-motion={cue.motion} className="hero-kinetic__cue" style={{ visibility: 'hidden', '--cue-scale': cue.size || 1, '--cue-accent': cue.accent || '#f6f1e8' }}>
           {cue.lines.map((line, i) => (
             <div key={line} className={`hero-kinetic__line${i ? ' hero-kinetic__line--accent' : ''}`}>

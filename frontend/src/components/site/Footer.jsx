@@ -73,9 +73,15 @@ export const Footer = () => {
         <div className="fa-footer__identity">
           <p><strong>{siteDetails.legalName}</strong> · CUI {siteDetails.taxId} · Reg. Com. {siteDetails.registrationNumber}</p>
           <p>Sediu social: {siteDetails.registeredOffice}</p>
-          <a className="fa-footer__sal" href="https://reclamatiisal.anpc.ro/" target="_blank" rel="noopener noreferrer">
-            <img src="/legal/anpc-sal.png" alt="ANPC — Soluționarea Alternativă a Litigiilor" width="250" height="50" loading="lazy" />
-          </a>
+          <div className="fa-footer__badges">
+            <a className="fa-footer__sal" href="https://reclamatiisal.anpc.ro/" target="_blank" rel="noopener noreferrer">
+              <img src="/legal/anpc-sal.png" alt="ANPC — Soluționarea Alternativă a Litigiilor" width="250" height="50" loading="lazy" />
+            </a>
+            <a className="fa-footer__pnrr" href="https://mfe.gov.ro/pnrr/" target="_blank" rel="noopener noreferrer" aria-label="PNRR — află mai multe despre finanțarea prin Planul Național de Redresare și Reziliență">
+              <img src="/legal/pnrr-banner.png" alt="PNRR: Fonduri pentru România modernă și reformată — finanțat de Uniunea Europeană" width="1424" height="175" loading="lazy" />
+              <span>PNRR · Fonduri pentru România modernă și reformată <ArrowUpRight aria-hidden="true" /></span>
+            </a>
+          </div>
         </div>
         <div className="fa-footer__bottom">
           <span>© {new Date().getFullYear()} {copy.copyright}</span>

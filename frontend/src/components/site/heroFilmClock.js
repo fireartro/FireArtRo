@@ -1,9 +1,9 @@
 import film from '../../data/heroFilm.json';
 
-export function getHeroFilmCue(time) {
+export function getHeroFilmCue(time, filmConfig = film) {
   if (!Number.isFinite(time) || time < 0) return null;
-  const clock = time % film.duration;
-  return film.cues.find(cue => clock >= cue.start && clock < cue.end) || null;
+  const clock = time % filmConfig.duration;
+  return filmConfig.cues.find(cue => clock >= cue.start && clock < cue.end) || null;
 }
 
 export function getHeroCuePose(cue, time, index = 0) {

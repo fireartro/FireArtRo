@@ -213,3 +213,13 @@
 .fa-footer__identity strong { color: #eef3fb; font-weight: 600; }
 .fa-footer__sal { display: inline-block; margin-top: 0.9rem; }
 .fa-footer__sal img { display: block; width: 250px; height: 50px; max-width: none; }
+.fa-footer__badges { display: flex; align-items: center; flex-wrap: wrap; gap: clamp(1rem, 3vw, 2.5rem); margin-top: 1rem; }
+.fa-footer__badges a { display: inline-block; margin-top: 0; }
+.fa-footer__pnrr img { display: block; width: min(100%, 712px); height: auto; }
+.fa-footer__pnrr span { display: none; }
+@media (max-width: 640px) {
+  .fa-footer__badges { align-items: flex-start; flex-direction: column; }
+  .fa-footer__pnrr { width: 100%; }
+  .fa-footer__pnrr span { display: flex; align-items: center; gap: 0.4rem; max-width: 19rem; margin-top: 0.55rem; color: #d9e5f8; font-size: 0.88rem; line-height: 1.35; }
+  .fa-footer__pnrr span svg { width: 1rem; height: 1rem; flex: none; }
+}

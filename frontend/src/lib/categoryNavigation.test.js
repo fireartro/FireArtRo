@@ -67,6 +67,13 @@ test('excludes reviewed branded photographs even when older published CMS data l
   expect(isGalleryVisible({ id: 'custom-copy', src: 'https://fireart.ro/media/gallery/fireartro-drone-show-damen-img-7327.webp?v=2', tags: [] })).toBe(false);
 });
 
+test('hides visible city lettering but preserves other drone scenes from the same events', () => {
+  expect(isGalleryVisible({ id: 'gallery-import-drone-104', tags: [] })).toBe(false); // Ploiești in the sky
+  expect(isGalleryVisible({ id: 'gallery-import-drone-127', tags: [] })).toBe(false); // Suceava in the sky
+  expect(isGalleryVisible({ id: 'gallery-import-drone-105', tags: [] })).toBe(true);
+  expect(isGalleryVisible({ id: 'gallery-import-drone-128', tags: [] })).toBe(true);
+});
+
 test('does not mistake a generic formation location for lettering in the photograph', () => {
   expect(isGalleryVisible({ id: 'new-clean-photo', src: '/my-photo.webp', alt: 'Drone la Galați', tags: ['Craiova'] })).toBe(true);
 });

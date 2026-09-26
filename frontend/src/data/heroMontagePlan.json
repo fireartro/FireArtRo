@@ -1,0 +1,549 @@
+{
+  "sources": [
+    {
+      "name": "GX010064.MP4"
+    },
+    {
+      "name": "GX010065.MP4"
+    },
+    {
+      "name": "IMG_0478.mov"
+    },
+    {
+      "name": "IMG_5268.mov"
+    },
+    {
+      "name": "IMG_6186.mov"
+    },
+    {
+      "name": "IMG_7977.mov"
+    },
+    {
+      "name": "IMG_5923.mov",
+      "archive": "wetransfer_18-iul-si-23-aug-slow-mo-zi_2026-09-16_2013",
+      "duplicateOf": 0
+    },
+    {
+      "name": "IMG_8860.mov",
+      "archive": "wetransfer_18-iul-si-23-aug-slow-mo-zi_2026-09-16_2013"
+    },
+    {
+      "name": "IMG_8997.mov",
+      "archive": "wetransfer_18-iul-si-23-aug-slow-mo-zi_2026-09-16_2013",
+      "duplicateOf": 7
+    },
+    {
+      "name": "20240822_202909.mov",
+      "archive": "wetransfer_20240822_202909-mov_2026-09-16_1956"
+    },
+    {
+      "name": "IMG_1997.mov",
+      "archive": "wetransfer_20240822_202909-mov_2026-09-16_1956"
+    },
+    {
+      "name": "IMG_2293.mov",
+      "archive": "wetransfer_20240822_202909-mov_2026-09-16_1956"
+    },
+    {
+      "name": "IMG_6961.mov",
+      "archive": "wetransfer_20240822_202909-mov_2026-09-16_1956"
+    },
+    {
+      "name": "IMG_8051.mov",
+      "archive": "wetransfer_20240822_202909-mov_2026-09-16_1956"
+    },
+    {
+      "name": "IMG_8209.mov",
+      "archive": "wetransfer_20240822_202909-mov_2026-09-16_1956"
+    },
+    {
+      "name": "InShot_20260123_154835063.mp4",
+      "archive": "wetransfer_20240822_202909-mov_2026-09-16_1956",
+      "duplicateOf": 14
+    },
+    {
+      "name": "20260516_202549.mp4",
+      "archive": "wetransfer_4-iun-festivitate-si-16-mai-nunta_2026-09-16_2008"
+    },
+    {
+      "name": "IMG_4843.mov",
+      "archive": "wetransfer_4-iun-festivitate-si-16-mai-nunta_2026-09-16_2008"
+    },
+    {
+      "name": "IMG_9074.mov",
+      "inventoryIndex": "32"
+    },
+    {
+      "name": "GX011243.mp4",
+      "inventoryIndex": "01"
+    },
+    {
+      "name": "IMG_0211.mov",
+      "inventoryIndex": "27"
+    },
+    {
+      "name": "IMG_0281.mov",
+      "inventoryIndex": "28"
+    },
+    {
+      "name": "IMG_1812.mov",
+      "inventoryIndex": "29"
+    }
+  ],
+  "episodes": {
+    "wide": [
+      [
+        {
+          "type": "video",
+          "source": 19,
+          "start": 33,
+          "duration": 2.25,
+          "approvedLiveCue": "pink-gold-fan"
+        },
+        {
+          "type": "video",
+          "source": 1,
+          "start": 62,
+          "duration": 4
+        },
+        {
+          "type": "drone",
+          "image": "/media/gallery/fireartro-drone-show-baia-mare-img-5519-2.webp",
+          "duration": 3
+        },
+        {
+          "type": "video",
+          "source": 0,
+          "start": 8,
+          "duration": 5
+        },
+        {
+          "type": "video",
+          "source": 20,
+          "start": 5.1,
+          "duration": 2.25,
+          "approvedLiveCue": "color-building"
+        },
+        {
+          "type": "video",
+          "source": 1,
+          "start": 69,
+          "duration": 4
+        },
+        {
+          "type": "video",
+          "source": 21,
+          "start": 3,
+          "duration": 2,
+          "approvedLiveCue": "white-bursts"
+        },
+        {
+          "type": "drone",
+          "image": "/media/gallery/fireartro-drone-show-baia-mare-img-5524-2.webp",
+          "duration": 3
+        },
+        {
+          "type": "video",
+          "source": 1,
+          "start": 30,
+          "duration": 4.5
+        }
+      ],
+      [
+        {
+          "type": "video",
+          "source": 18,
+          "start": 139,
+          "duration": 2.75,
+          "approvedLiveCue": "multicolor-sky"
+        },
+        {
+          "type": "video",
+          "source": 1,
+          "start": 6,
+          "duration": 5
+        },
+        {
+          "type": "video",
+          "source": 19,
+          "start": 58.3,
+          "duration": 2.5,
+          "approvedLiveCue": "red-canopy"
+        },
+        {
+          "type": "drone",
+          "image": "/media/gallery/fireartro-drone-show-baia-mare-img-5527-2.webp",
+          "duration": 3.5
+        },
+        {
+          "type": "video",
+          "source": 1,
+          "start": 49,
+          "duration": 3.5
+        },
+        {
+          "type": "video",
+          "source": 1,
+          "start": 84,
+          "duration": 4.5
+        },
+        {
+          "type": "drone",
+          "image": "/media/gallery/fireartro-drone-show-baia-mare-img-5485-2.webp",
+          "duration": 4
+        },
+        {
+          "type": "video",
+          "source": 1,
+          "start": 13,
+          "duration": 4.25
+        }
+      ],
+      [
+        {
+          "type": "video",
+          "source": 22,
+          "start": 132.3,
+          "duration": 4,
+          "approvedLiveCue": "gold-sky"
+        },
+        {
+          "type": "video",
+          "source": 1,
+          "start": 91,
+          "duration": 3
+        },
+        {
+          "type": "video",
+          "source": 1,
+          "start": 1,
+          "duration": 4
+        },
+        {
+          "type": "drone",
+          "image": "/media/gallery/fireartro-drone-show-baia-mare-img-5525-2.webp",
+          "duration": 3
+        },
+        {
+          "type": "video",
+          "source": 1,
+          "start": 54,
+          "duration": 5
+        },
+        {
+          "type": "video",
+          "source": 1,
+          "start": 79,
+          "duration": 4
+        },
+        {
+          "type": "drone",
+          "image": "/media/gallery/fireartro-drone-show-baia-mare-img-5528-2.webp",
+          "duration": 2.75
+        },
+        {
+          "type": "video",
+          "source": 21,
+          "start": 190.5,
+          "duration": 2.25,
+          "approvedLiveCue": "pink-gold-synchrony"
+        },
+        {
+          "type": "drone",
+          "image": "/media/gallery/fireartro-drone-show-focsani-dji-0768-enhanced-nr.webp",
+          "duration": 2
+        }
+      ]
+    ],
+    "portrait": [
+      [
+        {
+          "type": "video",
+          "source": 1,
+          "start": 62,
+          "duration": 4,
+          "focus": {
+            "zoom": 1.55,
+            "y": 0.95
+          }
+        },
+        {
+          "type": "video",
+          "source": 2,
+          "start": 49,
+          "duration": 4,
+          "focus": {
+            "zoom": 1.25,
+            "y": 0.85
+          }
+        },
+        {
+          "type": "video",
+          "source": 4,
+          "start": 78,
+          "duration": 4,
+          "focus": {
+            "zoom": 1.5,
+            "y": 0.9
+          }
+        },
+        {
+          "type": "video",
+          "source": 21,
+          "start": 3,
+          "duration": 2,
+          "approvedLiveCue": "white-bursts",
+          "focus": {
+            "zoom": 1.1,
+            "y": 0.2
+          }
+        },
+        {
+          "type": "video",
+          "source": 5,
+          "start": 59,
+          "duration": 2,
+          "focus": {
+            "zoom": 1.4,
+            "y": 0.75
+          }
+        },
+        {
+          "type": "drone",
+          "image": "/media/gallery/fireartro-drone-show-focsani-dji-0768-enhanced-nr.webp",
+          "duration": 2
+        },
+        {
+          "type": "video",
+          "source": 0,
+          "start": 8,
+          "duration": 3
+        },
+        {
+          "type": "video",
+          "source": 20,
+          "start": 5.1,
+          "duration": 2.25,
+          "approvedLiveCue": "color-building",
+          "focus": {
+            "zoom": 1.1,
+            "y": 0.3
+          }
+        },
+        {
+          "type": "video",
+          "source": 3,
+          "start": 8,
+          "duration": 1.5
+        },
+        {
+          "type": "video",
+          "source": 7,
+          "start": 10,
+          "duration": 2
+        },
+        {
+          "type": "video",
+          "source": 13,
+          "start": 0,
+          "duration": 1.5
+        },
+        {
+          "type": "drone",
+          "image": "/media/gallery/fireartro-drone-show-art-is-alive-artisalive7.webp",
+          "duration": 1.75
+        }
+      ],
+      [
+        {
+          "type": "video",
+          "source": 18,
+          "start": 139,
+          "duration": 2.75,
+          "approvedLiveCue": "multicolor-sky",
+          "focus": {
+            "zoom": 1.1,
+            "y": 0.2
+          }
+        },
+        {
+          "type": "video",
+          "source": 16,
+          "start": 5,
+          "duration": 2
+        },
+        {
+          "type": "video",
+          "source": 9,
+          "start": 0.1,
+          "duration": 1.5
+        },
+        {
+          "type": "video",
+          "source": 10,
+          "start": 0.1,
+          "duration": 1.5
+        },
+        {
+          "type": "video",
+          "source": 11,
+          "start": 0.1,
+          "duration": 2
+        },
+        {
+          "type": "video",
+          "source": 12,
+          "start": 2,
+          "duration": 2
+        },
+        {
+          "type": "video",
+          "source": 14,
+          "start": 80,
+          "duration": 2
+        },
+        {
+          "type": "video",
+          "source": 17,
+          "start": 1,
+          "duration": 2,
+          "focus": {
+            "zoom": 1.3,
+            "y": 0.8
+          }
+        },
+        {
+          "type": "video",
+          "source": 19,
+          "start": 33,
+          "duration": 2.25,
+          "approvedLiveCue": "pink-gold-fan",
+          "focus": {
+            "zoom": 1.1,
+            "y": 0.2
+          }
+        },
+        {
+          "type": "drone",
+          "image": "/media/gallery/fireartro-drone-show-baia-mare-img-5527-2.webp",
+          "duration": 2.5
+        },
+        {
+          "type": "video",
+          "source": 2,
+          "start": 116,
+          "duration": 3,
+          "focus": {
+            "zoom": 1.25,
+            "y": 0.85
+          }
+        },
+        {
+          "type": "video",
+          "source": 22,
+          "start": 132.3,
+          "duration": 4,
+          "approvedLiveCue": "gold-sky",
+          "focus": {
+            "zoom": 1.1,
+            "y": 0.2
+          }
+        },
+        {
+          "type": "video",
+          "source": 19,
+          "start": 58.3,
+          "duration": 2.5,
+          "approvedLiveCue": "red-canopy",
+          "focus": {
+            "zoom": 1.1,
+            "y": 0.2
+          }
+        }
+      ],
+      [
+        {
+          "type": "video",
+          "source": 1,
+          "start": 91,
+          "duration": 3,
+          "focus": {
+            "zoom": 1.3,
+            "y": 0.55
+          }
+        },
+        {
+          "type": "video",
+          "source": 2,
+          "start": 149,
+          "duration": 4,
+          "focus": {
+            "zoom": 1.25,
+            "y": 0.75
+          }
+        },
+        {
+          "type": "video",
+          "source": 4,
+          "start": 3,
+          "duration": 6,
+          "focus": {
+            "zoom": 1.5,
+            "y": 0.9
+          }
+        },
+        {
+          "type": "video",
+          "source": 2,
+          "start": 55,
+          "duration": 2,
+          "focus": {
+            "zoom": 1.25,
+            "y": 0.85
+          }
+        },
+        {
+          "type": "drone",
+          "image": "/media/gallery/fireartro-drone-show-baia-mare-img-5525-2.webp",
+          "duration": 2
+        },
+        {
+          "type": "video",
+          "source": 1,
+          "start": 1,
+          "duration": 4,
+          "focus": {
+            "zoom": 1.5,
+            "y": 0.95
+          }
+        },
+        {
+          "type": "video",
+          "source": 4,
+          "start": 27,
+          "duration": 5,
+          "focus": {
+            "zoom": 1.5,
+            "y": 0.9
+          }
+        },
+        {
+          "type": "video",
+          "source": 21,
+          "start": 190.5,
+          "duration": 2.25,
+          "approvedLiveCue": "pink-gold-synchrony",
+          "focus": {
+            "zoom": 1.1,
+            "y": 0.2
+          }
+        },
+        {
+          "type": "drone",
+          "image": "/media/gallery/fireartro-drone-show-baia-mare-img-5524-2.webp",
+          "duration": 1.75
+        }
+      ]
+    ]
+  }
+}
