@@ -47,7 +47,7 @@ const server = http.createServer(async (request, response) => {
   }
   // Opt-in, public GET only: use the published CMS snapshot without exposing
   // local admin actions or forwarding credentials to the production API.
-  const publicApi = pathname === '/api/content' || pathname === '/api/reviews'
+  const publicApi = pathname === '/api/content' || pathname === '/api/content/revision' || pathname === '/api/reviews'
     || /^\/api\/blog\/posts(?:\/[^/]+)?$/.test(pathname);
   if (publicApi && contentOrigin) {
     try {
@@ -56,11 +56,21 @@ const server = http.createServer(async (request, response) => {
       upstreamUrl.search = new URL(request.url, `http://${host}:${port}`).search;
       const upstream = await fetch(upstreamUrl, {
         signal: AbortSignal.timeout(10000),
+        headers: request.headers['if-none-match'] ? {'If-None-Match': request.headers['if-none-match']} : {},
       });
+      const cacheHeaders = {
+        'Cache-Control': upstream.headers.get('cache-control') || 'no-cache',
+        ...(upstream.headers.get('etag') ? {ETag: upstream.headers.get('etag')} : {}),
+      };
+      if (upstream.status === 304) {
+        response.writeHead(304, cacheHeaders);
+        response.end();
+        return;
+      }
       const type = upstream.headers.get('content-type') || '';
       if (!type.includes('application/json')) throw new Error('Content API did not return JSON');
       const body = Buffer.from(await upstream.arrayBuffer());
-      response.writeHead(upstream.status, { 'Content-Type': type, 'Cache-Control': 'no-store', 'Content-Length': body.length });
+      response.writeHead(upstream.status, { 'Content-Type': type, ...cacheHeaders, 'Content-Length': body.length });
       response.end(request.method === 'HEAD' ? undefined : body);
     } catch {
       response.writeHead(502, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });

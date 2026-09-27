@@ -10,6 +10,12 @@
                 if (/^\/admin\/?$/.test(location.pathname)) return;
                 document.documentElement.dataset.fireartIntro = 'loading';
                 window.__fireartIntroStarted = performance.now();
+                window.__fireartIntroScrollGuard = event => {
+                    if (event.type === 'keydown' && event.key === ' ' && event.target?.closest?.('#fireart-intro button')) return;
+                    if (event.type === 'keydown' && !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) return;
+                    if (event.cancelable) event.preventDefault();
+                };
+                ['wheel', 'touchmove', 'keydown'].forEach(type => document.addEventListener(type, window.__fireartIntroScrollGuard, { capture: true, passive: false }));
                 // Do not confuse a slow script download with a failed script.
                 // The controller clears this guard as soon as it initializes.
                 window.__fireartIntroSafety = setInterval(() => {
@@ -18,11 +24,14 @@
                     delete document.documentElement.dataset.fireartIntro;
                     document.getElementById('fireart-intro')?.remove();
                     document.getElementById('root')?.removeAttribute('inert');
+                    ['wheel', 'touchmove', 'keydown'].forEach(type => document.removeEventListener(type, window.__fireartIntroScrollGuard, true));
+                    delete window.__fireartIntroScrollGuard;
+                    window.dispatchEvent(new Event('fireart:intro-dismissed'));
                 }, 1000);
             })();
         </script>
-        <link rel="stylesheet" href="%PUBLIC_URL%/startup-intro.css?v=20260926-5" />
-        <script defer src="%PUBLIC_URL%/startup-intro.js?v=20260926-5"></script>
+        <link rel="stylesheet" href="%PUBLIC_URL%/startup-intro.css?v=20260927-1" />
+        <script defer src="%PUBLIC_URL%/startup-intro.js?v=20260927-1"></script>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="icon" type="image/png" href="%PUBLIC_URL%/favicon-96x96.png" sizes="96x96" />

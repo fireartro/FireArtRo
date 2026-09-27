@@ -24,6 +24,15 @@
     let lastFrame = 0;
     root?.setAttribute('inert', '');
     clearInterval(window.__fireartIntroSafety);
+    // CSS overflow alone does not stop touch overscroll on WebKit. Keep the
+    // first-paint guard until the overlay has actually left, not just faded.
+    const preventScroll = window.__fireartIntroScrollGuard || (event => {
+        if (event.type === 'keydown' && event.key === ' ' && event.target?.closest?.('#fireart-intro button')) return;
+        if (event.type === 'keydown' && !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) return;
+        if (event.cancelable) event.preventDefault();
+    });
+    const scrollEvents = ['wheel', 'touchmove', 'keydown'];
+    scrollEvents.forEach(type => document.addEventListener(type, preventScroll, { capture: true, passive: false }));
 
     const restorePage = () => {
         root?.removeAttribute('inert');
@@ -45,10 +54,13 @@
         document.removeEventListener('visibilitychange', onVisibility);
         motion.removeEventListener?.('change', onMotion);
         skip.removeEventListener('click', onSkip);
+        scrollEvents.forEach(type => document.removeEventListener(type, preventScroll, true));
+        delete window.__fireartIntroScrollGuard;
         restorePage();
         delete html.dataset.fireartIntro;
         intro.remove();
         delete window.__fireartIntro;
+        window.dispatchEvent(new Event('fireart:intro-dismissed'));
     };
     const finish = (immediate = false) => {
         if (closed) return;
@@ -60,7 +72,6 @@
         exitTimer = setTimeout(() => {
             if (motion.matches) { cleanup(); return; }
             html.dataset.fireartIntro = 'leaving';
-            restorePage();
             removeTimer = setTimeout(cleanup, 680);
         }, delay);
     };

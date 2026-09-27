@@ -564,7 +564,7 @@ class RequestSecurityMiddleware:
                 headers["X-Frame-Options"] = "DENY"
                 headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
                 if (
-                    path not in {"/api/content", "/api/sitemap.xml"}
+                    path not in {"/api/content", "/api/content/revision", "/api/sitemap.xml"}
                     and not path.startswith("/api/blog/media/")
                 ) or message["status"] >= 400:
                     headers["Cache-Control"] = "no-store"
@@ -604,7 +604,7 @@ class RequestSecurityMiddleware:
                 break
 
         if db is None and (
-            path == "/api/content"
+            path in {"/api/content", "/api/content/revision"}
             or path.startswith(("/api/quotes", "/api/blog/", "/api/admin/"))
             or path == "/api/webhooks/resend"
         ):

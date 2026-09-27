@@ -33,6 +33,19 @@ test('applying the revision twice is idempotent and does not duplicate visibilit
   expect(applyOwnerRevision(once, revision)).toEqual(once);
 });
 
+test('restores unnamed drone formations and hides the named district even with stale CMS tags', () => {
+  const source = fixture();
+  source.mediaItems.push(
+    { id: 'gallery-import-drone-104', tags: ['Drone', 'ascuns-din-galerie'], src: '/cyclists.webp' },
+    { id: 'gallery-import-drone-127', tags: ['Drone', 'ascuns-din-galerie'], src: '/heart.webp' },
+    { id: 'gallery-import-drone-111', tags: ['Drone'], src: '/district.webp' },
+  );
+  const result = applyOwnerRevision(source, revision);
+  expect(result.mediaItems[3].tags).toEqual(['Drone']);
+  expect(result.mediaItems[4].tags).toEqual(['Drone']);
+  expect(result.mediaItems[5].tags).toEqual(['Drone', 'ascuns-din-galerie']);
+});
+
 test('landing selection names each range and uses clean photos with category deep links', () => {
   const source = fixture();
   source.mediaItems.push(

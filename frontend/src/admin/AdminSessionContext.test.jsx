@@ -70,7 +70,7 @@ test("restores a valid session and puts a later 401 back behind the Admin gate",
     await Promise.resolve();
   });
 
-  expect(view.container.textContent).toContain("Conținutul rămâne la tine în control.");
+  expect(view.container.querySelector('#admin-login-title').textContent).toBe("Autentificare");
   expect(view.container.textContent).not.toContain("Salvează ciorna");
   await view.unmount();
 });

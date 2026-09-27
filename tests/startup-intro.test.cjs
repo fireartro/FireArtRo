@@ -47,9 +47,9 @@ function start({ reduced = false, active = true } = {}) {
     addEventListener, removeEventListener
   };
   const motion = { matches: reduced, addEventListener, removeEventListener };
-  const window = { __fireartIntroStarted: 0, innerWidth: 1440, innerHeight: 900, location: { reload() { window.reloaded = true; } }, matchMedia: () => motion, addEventListener, removeEventListener };
+  const window = { __fireartIntroStarted: 0, innerWidth: 1440, innerHeight: 900, location: { reload() { window.reloaded = true; } }, matchMedia: () => motion, addEventListener, removeEventListener, dispatchEvent: event => events.get(event.type)?.(event) };
   vm.runInNewContext(source, {
-    window, document, navigator: {}, performance: { now: () => now },
+    window, document, navigator: {}, Event, performance: { now: () => now },
     setTimeout: (fn, delay) => timer(fn, delay), clearTimeout: id => tasks.delete(id),
     setInterval: (fn, delay) => timer(fn, delay, true), clearInterval: id => tasks.delete(id),
     requestAnimationFrame: () => 0, cancelAnimationFrame: () => {}
@@ -71,8 +71,9 @@ test('waits for the first playable frame, then releases input and all timers', (
   assert.equal(run.root.inert, true);
   run.advance(1);
   assert.equal(run.html.dataset.fireartIntro, 'leaving');
-  assert.equal(run.root.inert, false);
+  assert.equal(run.root.inert, true);
   run.advance(700);
+  assert.equal(run.root.inert, false);
   assert.equal(run.intro.isConnected, false);
   assert.equal(run.tasks.size, 0);
   assert.equal(run.events.size, 0);

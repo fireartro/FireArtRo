@@ -26,7 +26,8 @@
 
 html {
   background: var(--nr-obsidian);
-  overflow-x: clip;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 body,

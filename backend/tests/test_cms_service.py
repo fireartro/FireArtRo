@@ -6,6 +6,7 @@ import uuid
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
@@ -22,6 +23,15 @@ from cms_service import (
     RevisionNotFound,
 )
 from test_cms_models import default_content as default_content_fixture
+
+
+@pytest.mark.asyncio
+async def test_revision_query_projects_no_content_or_editor_identity():
+    collection = SimpleNamespace(find_one=AsyncMock(return_value={"revision_id": "r1", "published_at": datetime.now(timezone.utc)}))
+    repository = MongoCmsRepository(drafts=None, publications=collection, revisions=None)
+    result = await repository.get_publication_revision()
+    collection.find_one.assert_awaited_once_with({"id": "current"}, {"_id": 0, "revision_id": 1, "published_at": 1})
+    assert set(result) == {"revision_id", "published_at"}
 
 
 class Clock:
@@ -51,6 +61,11 @@ class InMemoryCmsRepository:
 
     async def get_publication(self):
         return self._copy(self.publication)
+
+    async def get_publication_revision(self):
+        if not self.publication:
+            return None
+        return {key: self.publication[key] for key in ("revision_id", "published_at")}
 
     async def get_revision(self, revision_id):
         return self._copy(next((item for item in self.revisions if item["id"] == revision_id), None))

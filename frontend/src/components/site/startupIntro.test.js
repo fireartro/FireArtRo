@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 const introScript = fs.readFileSync(path.join(process.cwd(), 'public/startup-intro.js'), 'utf8');
+const firstPaintScript = fs.readFileSync(path.join(process.cwd(), 'public/index.html'), 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
 let strokes;
 let clock;
 beforeEach(() => {
@@ -53,5 +54,72 @@ test('keeps the loading screen visible for at least three seconds when content i
   expect(document.getElementById('root').hasAttribute('inert')).toBe(true);
   jest.advanceTimersByTime(1);
   expect(document.documentElement.dataset.fireartIntro).toBe('leaving');
+  expect(document.getElementById('root').hasAttribute('inert')).toBe(true);
+  jest.advanceTimersByTime(680);
   expect(document.getElementById('root').hasAttribute('inert')).toBe(false);
+});
+
+test.each(['wheel', 'touchmove', 'keydown'])('blocks %s scrolling until the intro is removed, including its exit fade', type => {
+  clock.mockReturnValue(0);
+  start();
+  const gesture = () => type === 'keydown'
+    ? new KeyboardEvent(type, { key: 'PageDown', bubbles: true, cancelable: true })
+    : new Event(type, { bubbles: true, cancelable: true });
+  const before = gesture();
+  document.dispatchEvent(before);
+  expect(before.defaultPrevented).toBe(true);
+  window.__fireartIntro.routeReady('/contact');
+  jest.advanceTimersByTime(3000);
+  const leaving = gesture();
+  document.dispatchEvent(leaving);
+  expect(leaving.defaultPrevented).toBe(true);
+  jest.advanceTimersByTime(680);
+  const after = gesture();
+  document.dispatchEvent(after);
+  expect(after.defaultPrevented).toBe(false);
+});
+
+test('does not block Tab or Enter and releases scroll guards on explicit skip', () => {
+  start();
+  for (const key of ['Tab', 'Enter']) {
+    const event = new KeyboardEvent('keydown', { key, cancelable: true });
+    document.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  }
+  window.__fireartIntro.dismiss();
+  const wheel = new Event('wheel', { cancelable: true });
+  document.dispatchEvent(wheel);
+  expect(wheel.defaultPrevented).toBe(false);
+});
+
+test.each([false, true])('keeps native Space activation available with first-paint guard=%s', firstPaint => {
+  if (firstPaint) {
+    new Function(firstPaintScript)();
+    const before = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+    document.querySelector('#fireart-intro button').dispatchEvent(before);
+    expect(before.defaultPrevented).toBe(false);
+  }
+  start();
+  const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+  document.querySelector('#fireart-intro button').dispatchEvent(event);
+  expect(event.defaultPrevented).toBe(false);
+});
+
+test('announces dismissal once, only after the document is unlocked', () => {
+  const states = [];
+  const onDismiss = () => states.push({
+    intro: document.getElementById('fireart-intro'),
+    locked: document.getElementById('root').hasAttribute('inert'),
+    phase: document.documentElement.dataset.fireartIntro,
+  });
+  window.addEventListener('fireart:intro-dismissed', onDismiss);
+  try {
+    start();
+    window.__fireartIntro.dismiss();
+    expect(states).toEqual([{ intro: null, locked: false, phase: undefined }]);
+    jest.advanceTimersByTime(15000);
+    expect(states).toHaveLength(1);
+  } finally {
+    window.removeEventListener('fireart:intro-dismissed', onDismiss);
+  }
 });

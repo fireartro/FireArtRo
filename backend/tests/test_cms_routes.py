@@ -100,6 +100,44 @@ def test_public_content_revalidates_by_etag_without_admin_metadata(client):
     assert unchanged.headers["cache-control"] == "no-cache, must-revalidate"
 
 
+def test_public_revision_is_small_private_metadata_free_and_revalidates(client):
+    first = client.get("/api/content/revision")
+    assert first.status_code == 200
+    assert set(first.json()) == {"revision_id", "published_at"}
+    assert first.json()["revision_id"] == "revision-1"
+    assert first.headers["cache-control"] == "no-cache, must-revalidate"
+    assert first.headers["etag"] == '"revision-1"'
+    unchanged = client.get("/api/content/revision", headers={"If-None-Match": 'W/"revision-1"'})
+    assert unchanged.status_code == 304
+    assert unchanged.content == b""
+
+
+def test_public_revision_changes_only_after_publication(client):
+    headers = authorize(client)
+    changed = content_payload()
+    changed["siteDetails"]["name"] = "Actualizat"
+    client.put("/api/admin/content/draft", json={"version": 0, "content": changed}, headers=headers)
+    assert client.get("/api/content/revision").json()["revision_id"] == "revision-1"
+    client.post("/api/admin/content/publish", json={"version": 1}, headers=headers)
+    assert client.get("/api/content/revision").json()["revision_id"] == "revision-2"
+
+
+def test_revision_of_uninitialized_site_returns_404():
+    application = FastAPI()
+    application.include_router(create_cms_router(CmsService(InMemoryCmsRepository())))
+    with TestClient(application) as empty_client:
+        result = empty_client.get("/api/content/revision")
+        assert result.status_code == 404
+        assert result.headers["cache-control"] == "no-cache, must-revalidate"
+
+
+def test_revision_returns_503_when_database_is_unavailable(monkeypatch):
+    import server
+    monkeypatch.setattr(server, "db", None)
+    with TestClient(server.RequestSecurityMiddleware(FastAPI())) as unavailable_client:
+        assert unavailable_client.get("/api/content/revision").status_code == 503
+
+
 def test_admin_draft_mutations_require_session_csrf_and_current_version(client):
     payload = content_payload()
 

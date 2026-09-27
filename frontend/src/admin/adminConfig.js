@@ -60,7 +60,7 @@ export const ADMIN_MODULES = {
   ]), "Ore și disponibilitate"),
   socialLinks: moduleDefinition(collection("socialLinks", "Rețele sociale",
     { id: "social", label: "", href: "", placeholder: false },
-    [...LINK_FIELDS, checkbox("placeholder", "Este doar placeholder")],
+    [...LINK_FIELDS, checkbox("placeholder", "Link neconfirmat")],
     { titleKey: "label", subtitleKey: "href" },
   ), "Canale publice și linkuri"),
   navigation: moduleDefinition(object("navigation", "Navigare", [
@@ -134,16 +134,16 @@ export const ADMIN_MODULES = {
     id(), textarea("q", "Întrebare"), textarea("a", "Răspuns", { rows: 5 }),
   ], { titleKey: "q", subtitleKey: "a" }), "Întrebări frecvente și răspunsuri"),
   testimonials: moduleDefinition(collection("testimonials", "Recenzii", {
-    id: "testimonial", name: "", eventType: "", quote: "", source: "client", replaceable: true,
+    id: "testimonial", name: "", eventType: "", quote: "", source: "client", replaceable: false,
   }, [
     id(), text("name", "Nume"), text("eventType", "Tip eveniment"), textarea("quote", "Recenzie"),
     select("source", "Sursă", ["client", "google", "facebook", "other"]),
     checkbox("replaceable", "Conținut demonstrativ"),
   ], { titleKey: "name", subtitleKey: "eventType" }), "Feedback publicat responsabil"),
   partners: moduleDefinition(collection("partners", "Parteneri", {
-    id: "partner", name: "", logoPlaceholder: "LOGO", logoMediaId: "", replaceable: true,
+    id: "partner", name: "", logoPlaceholder: "", logoMediaId: "", replaceable: false,
   }, [
-    id(), text("name", "Nume"), text("logoPlaceholder", "Text placeholder"),
+    id(), text("name", "Nume"), text("logoPlaceholder", "Nume afișat fără siglă"),
     mediaId("logoMediaId", "Logo"), checkbox("replaceable", "Conținut demonstrativ"),
   ], { titleKey: "name" }), "Identități și logo-uri aprobate"),
   reviewSettings: moduleDefinition(object("reviewSettings", "Setări recenzii", [
@@ -174,12 +174,15 @@ export const MODULE_ORDER = [
 ];
 
 let itemSequence = 0;
+export const makeAdminId = prefix => {
+  const suffix = globalThis.crypto?.randomUUID?.()
+    || `${Date.now().toString(36)}-${(++itemSequence).toString(36)}`;
+  return `${prefix || 'item'}-${suffix}`;
+};
 export const makeAdminItem = (moduleKey, index = 0) => {
   const template = ADMIN_MODULES[moduleKey]?.template || {};
   const next = JSON.parse(JSON.stringify(template));
-  const suffix = globalThis.crypto?.randomUUID?.()
-    || `${Date.now().toString(36)}-${(++itemSequence).toString(36)}`;
-  if (Object.prototype.hasOwnProperty.call(next, "id")) next.id = `${next.id || moduleKey}-${suffix}`;
+  if (Object.prototype.hasOwnProperty.call(next, "id")) next.id = makeAdminId(next.id || moduleKey);
   if (Object.prototype.hasOwnProperty.call(next, "order")) next.order = index + 1;
   return next;
 };

@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { scrollToHash, scrollToTop } from '@/lib/scrollNavigation';
 
 const mockLoadedPages = [];
 let mockContentStatus = 'ready';
@@ -8,6 +9,7 @@ jest.mock('@/pages/Home', () => {
   mockLoadedPages.push('home');
   return () => <main>Homepage loaded</main>;
 });
+
 jest.mock('@/pages/ContactPage', () => {
   mockLoadedPages.push('contact');
   return () => <main>Contact loaded</main>;
@@ -81,5 +83,33 @@ test('silently waits for published content while warming only the requested publ
     window.history.replaceState({}, '', '/');
     delete global.IS_REACT_ACT_ENVIRONMENT;
     delete window.__fireartIntro;
+  }
+});
+
+test('aligns the current hash only after the startup overlay releases the document', async () => {
+  jest.useFakeTimers();
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const root = createRoot(document.createElement('div'));
+  jest.clearAllMocks();
+  mockContentStatus = 'ready';
+  window.history.replaceState({}, '', '/#parteneri');
+  document.documentElement.dataset.fireartIntro = 'loading';
+  try {
+    await act(async () => root.render(<App />));
+    act(() => jest.advanceTimersByTime(90));
+    expect(scrollToHash).not.toHaveBeenCalled();
+    delete document.documentElement.dataset.fireartIntro;
+    act(() => window.dispatchEvent(new Event('fireart:intro-dismissed')));
+    expect(scrollToHash).toHaveBeenCalledWith('#parteneri', 'auto');
+    expect(scrollToTop).not.toHaveBeenCalled();
+  } finally {
+    await act(async () => root.unmount());
+    scrollToHash.mockClear();
+    window.dispatchEvent(new Event('fireart:intro-dismissed'));
+    expect(scrollToHash).not.toHaveBeenCalled();
+    delete document.documentElement.dataset.fireartIntro;
+    window.history.replaceState({}, '', '/');
+    delete global.IS_REACT_ACT_ENVIRONMENT;
+    jest.useRealTimers();
   }
 });

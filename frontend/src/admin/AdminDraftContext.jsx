@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyn
 import { useAdminSession } from './AdminSessionContext';
 import { useManagedContentSnapshot } from '@/content/ManagedContentProvider';
 import { createDraftStore, changedModules } from './draftStore';
+import { announcePublication } from '@/lib/publicationSync';
 
 const Context = createContext(null);
 export function AdminDraftProvider({ children }) {
@@ -26,7 +27,10 @@ export function AdminDraftProvider({ children }) {
   const value = useMemo(() => ({ ...state, update: store.update, undo: store.undo, save: store.save,
     retry: () => state.dirty ? store.save() : store.load(), reloadAfterConflict: () => store.load({ discard: true }),
     restoreRevision: store.restoreRevision, bootstrap: store.bootstrap, setPendingUploads: store.setPendingUploads,
-    publish: async summary => { const success = await store.publish(summary); if (success) publicContent.refresh(); return success; },
+    publish: async summary => { const success = await store.publish(summary); if (success) {
+      announcePublication(store.getSnapshot().publishedRevisionId);
+      publicContent.refresh();
+    } return success; },
     changedModules: changedModules(state.publishedContent, state.draft), previewMode, setPreviewMode,
   }), [state, store, publicContent, previewMode]);
   return <Context.Provider value={value}>{children}</Context.Provider>;

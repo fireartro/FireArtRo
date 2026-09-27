@@ -11,6 +11,7 @@ from cms_models import (
     DraftResponse,
     DraftUpdate,
     PublicationResponse,
+    PublicationRevisionResponse,
     PublishRequest,
     PublishResponse,
     RestoreRequest,
@@ -109,6 +110,19 @@ def create_cms_router(service: CmsService) -> APIRouter:
                 status_code=304,
                 headers={"ETag": etag, "Cache-Control": PUBLIC_CACHE_CONTROL},
             )
+        response.headers["ETag"] = etag
+        response.headers["Cache-Control"] = PUBLIC_CACHE_CONTROL
+        return publication
+
+    @router.get("/api/content/revision", response_model=PublicationRevisionResponse)
+    async def get_public_revision(request: Request, response: Response):
+        try:
+            publication = await service.get_publication_revision()
+        except CmsNotInitialized:
+            _not_initialized()
+        etag = f'"{publication.revision_id}"'
+        if _etag_matches(request.headers.get("if-none-match"), etag):
+            return Response(status_code=304, headers={"ETag": etag, "Cache-Control": PUBLIC_CACHE_CONTROL})
         response.headers["ETag"] = etag
         response.headers["Cache-Control"] = PUBLIC_CACHE_CONTROL
         return publication

@@ -6,13 +6,17 @@
 2. Editează conținutul. `Nesalvat` devine `Se salvează`, apoi `Salvat` numai după confirmarea serverului.
 3. Deschide `Previzualizează` pentru a vedea exact draftul. Nu este public și nu poate fi indexat.
 4. Verifică secțiunile schimbate în fereastra `Publică modificările`; poți adăuga o notă de maximum 240 caractere.
-5. Apasă `Publică acum`. Aceasta promovează o singură versiune coerentă; vizitatorii primesc schimbarea la refresh/navigare, fără deploy.
+5. Apasă `Publică acum`. Aceasta promovează o singură versiune coerentă; paginile publice deschise verifică versiunea automat la aproximativ 5 secunde, fără deploy. Alte taburi din același browser primesc și o notificare de revizie. Nicio ciornă nu este transmisă.
+
+Verificarea este condițională: conținutul complet se cere numai când revizia se schimbă. Taburile ascunse și dispozitivele offline se opresc și verifică imediat când redevin disponibile. Erorile declanșează reîncercări până la un interval de 60 secunde; ultima publicare validă rămâne vizibilă. Acesta este un flux de revalidare, nu push instant: timpul real depinde și de rețea și server.
+
+Adminul are patru grupuri: `Pagini`, `Conținut`, `Solicitări`, `Setări`. Pe mobil, meniul este un dialog cu revenire a focusului, iar colecțiile au listă și editor separate. `Detalii tehnice` păstrează identificatorii și dimensiunile fără a încărca formularul principal.
 
 Nu publica dacă vezi `Conflict`, `Eroare`, `Câmpuri invalide` sau o încărcare media în curs. În conflict, reîncarcă versiunea serverului înainte de a continua.
 
 ## Starea integrărilor
 
-- Panoul principal arată numai stări: baza de date, media Blob, Google și Facebook. Nu afișează parole, tokenuri, URL-uri interne sau răspunsuri de la furnizori.
+- `Setări → Integrări` arată numai stări: baza de date, media Blob, Google și Facebook. Nu afișează parole, tokenuri, URL-uri interne sau răspunsuri de la furnizori.
 - `Necesită configurare` înseamnă că lipsesc variabilele necesare din Vercel. `Configurat` confirmă prezența lor, iar `Funcțional` confirmă și ultima verificare reușită.
 - `Eroare temporară` nu publică date private și nu oprește restul site-ului; verifică logurile Vercel/Atlas, apoi apasă `Verifică din nou` după ce corectezi infrastructura.
 

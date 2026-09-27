@@ -10,6 +10,7 @@ from uuid import uuid4
 from cms_models import (
     DraftResponse,
     PublicationResponse,
+    PublicationRevisionResponse,
     PublishRequest,
     RevisionResponse,
     RevisionSummary,
@@ -101,6 +102,12 @@ class CmsService:
 
     async def get_publication(self) -> PublicationResponse:
         return self._publication_response(await self.repository.get_publication())
+
+    async def get_publication_revision(self) -> PublicationRevisionResponse:
+        document = await self.repository.get_publication_revision()
+        if not document:
+            raise CmsNotInitialized()
+        return PublicationRevisionResponse.model_validate(document)
 
     async def get_or_create_draft(self, admin_id: str) -> DraftResponse:
         publication = await self.repository.get_publication()
