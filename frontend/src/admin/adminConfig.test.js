@@ -53,6 +53,13 @@ describe("Admin managed-content configuration", () => {
     expect(ADMIN_DEFAULTS.legalPages.privacy.sections[0].id).toBeTruthy();
   });
 
+  test("company editor exposes an optional share-capital field with no invented default", () => {
+    const shareCapital = ADMIN_MODULES.siteDetails.fields.find(field => field.key === "shareCapital");
+    expect(shareCapital).toMatchObject({ type: "text", label: "Capital social" });
+    expect(shareCapital.required).toBeFalsy();
+    expect(ADMIN_DEFAULTS.siteDetails.shareCapital).toBeUndefined();
+  });
+
   test.each(collectionModules)("%s creates items with a stable ID and fields represented by its template", (key) => {
     const module = ADMIN_MODULES[key];
     const next = makeAdminItem(key, 0);
@@ -75,7 +82,9 @@ describe("Admin managed-content configuration", () => {
         expect(new Set(value.map((item) => item.id)).size).toBe(value.length);
         return;
       }
-      expect(definition.fields.map((field) => field.key).sort()).toEqual(Object.keys(value).sort());
+      const optionalFields = definition.fields.filter(field => field.key === 'shareCapital');
+      const definedFields = definition.fields.filter(field => !optionalFields.includes(field));
+      expect(definedFields.map((field) => field.key).sort()).toEqual(Object.keys(value).filter(key => key !== 'shareCapital').sort());
       definition.fields.forEach((field) => {
         if (["object", "collection"].includes(field.type)) inspect(field, value[field.key]);
         if (field.key.endsWith("MediaId") || field.key === "mediaId") expect(field.type).toBe("mediaId");

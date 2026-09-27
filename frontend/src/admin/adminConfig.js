@@ -47,6 +47,7 @@ export const ADMIN_MODULES = {
     url("googleReviewsUrl", "Link Google Reviews"), text("areaServed", "Zonă deservită"),
     text("legalName", "Denumire juridică"), text("registrationNumber", "Nr. Registrul Comerțului"),
     text("taxId", "CUI"), textarea("registeredOffice", "Sediu social"),
+    text("shareCapital", "Capital social", { maxLength: 80, help: "Completează numai valoarea confirmată din documentele firmei." }),
     textarea("mainOffice", "Sediu principal"), textarea("secondaryOffice", "Sediu secundar"),
     text("seoTitle", "Titlu SEO", { maxLength: 160 }), textarea("seoDescription", "Descriere SEO", { maxLength: 320 }),
   ]), "Identitate, contact, sedii și SEO"),

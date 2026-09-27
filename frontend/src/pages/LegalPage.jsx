@@ -20,6 +20,7 @@ export default function LegalPage({ type = "confidentialitate" }) {
   const siteDetails = useManagedContent("siteDetails", CMS_DEFAULTS.siteDetails);
   const legalPages = useManagedContent("legalPages", CMS_DEFAULTS.legalPages);
   const email = siteDetails.email || EMAIL;
+  const shareCapital = siteDetails.shareCapital?.trim();
   const routeKey = Object.prototype.hasOwnProperty.call(LEGAL_PAGE_PRESENTATION, type) ? type : "confidentialitate";
   const documentKey = { confidentialitate: "privacy", termeni: "terms", cookies: "cookies" }[routeKey];
   const data = { ...LEGAL_PAGE_PRESENTATION[routeKey], ...legalPages[documentKey] };
@@ -66,6 +67,7 @@ export default function LegalPage({ type = "confidentialitate" }) {
               <div><dt>CUI</dt><dd>{siteDetails.taxId}</dd></div>
               <div><dt>Registrul Comerțului</dt><dd>{siteDetails.registrationNumber}</dd></div>
               <div><dt>Sediu social</dt><dd>{siteDetails.registeredOffice}</dd></div>
+              {shareCapital && <div><dt>Capital social</dt><dd>{shareCapital}</dd></div>}
               <div><dt>Contact</dt><dd><a href={`mailto:${email}`}>{email}</a></dd></div>
             </dl>
           </div>

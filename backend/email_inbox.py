@@ -358,6 +358,7 @@ INBOUND_INTERNAL_FIELDS = {
     "resend_email_id": 1,
     "webhook_id": 1,
     "ingest_state": 1,
+    "ignored": 1,
     "message_id": 1,
     "references": 1,
     "from": 1,
@@ -1134,7 +1135,10 @@ class MongoInboundMessageRepository:
                 and existing.get("resend_email_id") == normalized_resend_email_id
             ):
                 raise InboundIdentityConflict()
-            return existing.get("ingest_state", "received") != "received"
+            return (
+                existing.get("ingest_state") == "reserved"
+                and existing.get("ignored") is not True
+            )
 
         now = _aware_utc(self.clock())
         reservation = {
@@ -1157,7 +1161,32 @@ class MongoInboundMessageRepository:
                 and winner.get("resend_email_id") == normalized_resend_email_id
             ):
                 raise InboundIdentityConflict()
-            return winner.get("ingest_state", "received") != "received"
+            return (
+                winner.get("ingest_state") == "reserved"
+                and winner.get("ignored") is not True
+            )
+
+    async def ignore_webhook_event(
+        self, *, webhook_id: str, resend_email_id: str
+    ) -> bool:
+        """Acknowledge a fetched non-target email without retaining its content."""
+
+        saved = await self.collection.find_one_and_update(
+            {
+                "webhook_id": _bounded_string(
+                    webhook_id, MAX_IDENTIFIER_LENGTH, strip=True
+                ),
+                "resend_email_id": _bounded_string(
+                    resend_email_id, MAX_IDENTIFIER_LENGTH, strip=True
+                ),
+                "ingest_state": "reserved",
+            },
+            {"$set": {"ignored": True, "updated_at": _aware_utc(self.clock())}},
+            return_document=ReturnDocument.AFTER,
+            projection=INBOUND_INTERNAL_FIELDS,
+            maxTimeMS=QUERY_TIMEOUT_MS,
+        )
+        return saved is not None
 
     def _received_document(
         self,
@@ -1236,6 +1265,8 @@ class MongoInboundMessageRepository:
             and existing.get("resend_email_id") == normalized_resend_email_id
         ):
             raise InboundIdentityConflict()
+        if existing is not None and existing.get("ignored") is True:
+            raise InboundIdentityConflict()
         if (
             existing is not None
             and existing.get("ingest_state", "received") == "received"
@@ -1277,6 +1308,7 @@ class MongoInboundMessageRepository:
                     "webhook_id": normalized_webhook_id,
                     "resend_email_id": normalized_resend_email_id,
                     "ingest_state": {"$ne": "received"},
+                    "ignored": {"$ne": True},
                 },
                 {"$set": document},
                 return_document=ReturnDocument.AFTER,
@@ -1291,6 +1323,8 @@ class MongoInboundMessageRepository:
                 winner.get("webhook_id") == normalized_webhook_id
                 and winner.get("resend_email_id") == normalized_resend_email_id
             ):
+                raise InboundIdentityConflict()
+            if winner is not None and winner.get("ignored") is True:
                 raise InboundIdentityConflict()
             result = _inbound(winner)
             if result is not None:
@@ -1321,6 +1355,8 @@ class MongoInboundMessageRepository:
                 and winner.get("resend_email_id") == normalized_resend_email_id
             ):
                 raise InboundIdentityConflict()
+            if winner is not None and winner.get("ignored") is True:
+                raise InboundIdentityConflict()
             if winner is not None and winner.get("ingest_state") != "received":
                 saved = await self.collection.find_one_and_update(
                     {
@@ -1328,6 +1364,7 @@ class MongoInboundMessageRepository:
                         "webhook_id": normalized_webhook_id,
                         "resend_email_id": normalized_resend_email_id,
                         "ingest_state": {"$ne": "received"},
+                        "ignored": {"$ne": True},
                     },
                     {
                         "$set": document
@@ -1432,6 +1469,8 @@ class MongoInboundMessageRepository:
             and document.get("resend_email_id") == normalized_resend_email_id
         ):
             raise InboundIdentityConflict()
+        if document.get("ingest_state") == "reserved":
+            return None
         return _inbound(document)
 
     async def _transition_relay(

@@ -91,6 +91,35 @@ test("never replaces a custom placeholder list or guesses an ambiguous logo", as
   expect(container.querySelectorAll("img")).toHaveLength(0);
 });
 
+test("floats an Admin-managed list with a non-catalogue length and keeps names without logos", async () => {
+  useReducedMotion.mockReturnValue(false);
+  const partners = [
+    { id: "infinity", name: "Infinity Ballroom", logoMediaId: "" },
+    { id: "palatul", name: "Palat Ioan Festeleu", logoMediaId: "" },
+    ...Array.from({ length: 5 }, (_, index) => ({ id: `brand-${index}`, name: `Brand ${index}`, logoMediaId: "" })),
+  ];
+  await render({ partners });
+  const scene = container.querySelector('[data-testid="partner-cloud"]');
+  expect(scene.dataset.view).toBe("cloud");
+  expect(container.querySelector('[aria-controls="fireart-partner-marks"]')).not.toBeNull();
+  expect(names()).toEqual(partners.map(partner => partner.name));
+  expect(container.querySelectorAll('li[data-partner-id="infinity"] img, li[data-partner-id="palatul"] img')).toHaveLength(0);
+});
+
+test("keeps every Admin partner in the complete list when the scene has more than 26", async () => {
+  useReducedMotion.mockReturnValue(false);
+  const partners = Array.from({ length: 31 }, (_, index) => ({ id: `brand-${index}`, name: `Brand ${index}`, logoMediaId: "" }));
+  await render({ partners });
+  const scene = container.querySelector('[data-testid="partner-cloud"]');
+  expect(scene.dataset.view).toBe("cloud");
+  const toggle = container.querySelector('[aria-controls="fireart-partner-marks"]');
+  expect(toggle).not.toBeNull();
+  await act(async () => toggle.click());
+  expect(scene.dataset.view).toBe("list");
+  expect(names()).toEqual(partners.map(partner => partner.name));
+  expect(container.querySelectorAll(".fa-partner")).toHaveLength(31);
+});
+
 test("uses the original Colț de Rai logo only after the owner confirmed Negrești-Oaș", async () => {
   await render({ partners: [{ id: "colt", name: "Colț de Rai Negrești-Oaș", logoMediaId: "" }] });
   expect(names()).toEqual(["Colț de Rai Negrești-Oaș"]);

@@ -44,6 +44,7 @@ export default function TurnstileWidget({ onToken, onUnavailable, resetSignal = 
       widgetIdRef.current = api.render(containerRef.current, {
         sitekey: siteKey,
         theme: "dark",
+        action: "quote_submit",
         appearance: "interaction-only",
         callback: (token) => {
           callbacks.current.onUnavailable?.("");

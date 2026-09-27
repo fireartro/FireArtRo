@@ -11,7 +11,7 @@ from datetime import date, datetime
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_serializer, model_validator
 
 
 ID_PATTERN = r"^[a-z0-9][a-z0-9-]{0,79}$"
@@ -124,10 +124,18 @@ class SiteDetails(StrictModel):
     registrationNumber: str = Field(min_length=1, max_length=80)
     taxId: str = Field(min_length=1, max_length=80)
     registeredOffice: str = Field(min_length=1, max_length=500)
+    shareCapital: str = Field(default="", max_length=80, pattern=r"^[^<>\r\n]*$")
     mainOffice: str = Field(default="", max_length=500)
     secondaryOffice: str = Field(default="", max_length=500)
     seoTitle: str = Field(default="", max_length=160)
     seoDescription: str = Field(default="", max_length=320)
+
+    @model_serializer(mode="wrap")
+    def serialize_present_capital(self, handler):
+        details = handler(self)
+        if not self.shareCapital:
+            details.pop("shareCapital", None)
+        return details
 
     @field_validator("siteUrl")
     @classmethod

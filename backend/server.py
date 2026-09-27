@@ -384,6 +384,18 @@ def _webhook_response(status_code: int):
     return Response(status_code=status_code, headers={"Cache-Control": "no-store"})
 
 
+def _matches_inbound_address(recipients, configured_address: str) -> bool:
+    return (
+        isinstance(recipients, list)
+        and bool(recipients)
+        and all(
+            isinstance(item, str)
+            and item.strip().lower() == configured_address
+            for item in recipients
+        )
+    )
+
+
 @webhook_router.post("/resend")
 async def receive_resend_webhook(request: Request):
     if resend_webhook_verifier is None:
@@ -420,6 +432,11 @@ async def receive_resend_webhook(request: Request):
         return _webhook_response(400)
     webhook_id = svix_headers["svix-id"].strip()
     email_id = email_id.strip()
+    configured_address = resend_config.inbound_address.strip().lower()
+    if not configured_address:
+        return _webhook_response(503)
+    if not _matches_inbound_address(data.get("to"), configured_address):
+        return _webhook_response(204)
 
     try:
         should_process = await inbound_repository.reserve_webhook_event(
@@ -449,14 +466,12 @@ async def receive_resend_webhook(request: Request):
     try:
         received = await resend_client.get_received_email(email_id)
         recipients = received.recipients
-        normalized_recipients = {
-            item.strip().lower() for item in recipients if isinstance(item, str)
-        }
-        category = (
-            "contact"
-            if "contact@fireart.ro" in normalized_recipients
-            else "other_recipient"
-        )
+        if not _matches_inbound_address(recipients, configured_address):
+            ignored = await inbound_repository.ignore_webhook_event(
+                webhook_id=webhook_id,
+                resend_email_id=email_id,
+            )
+            return _webhook_response(204 if ignored else 503)
         message = await inbound_repository.upsert_received(
             webhook_id=webhook_id,
             resend_email_id=email_id,
@@ -468,7 +483,7 @@ async def receive_resend_webhook(request: Request):
             text=received.text,
             html=received.html,
             attachments=[item.model_dump() for item in received.attachments],
-            category=category,
+            category="contact",
             received_at=datetime.now(timezone.utc),
         )
         await inbound_relay_service.relay(message)

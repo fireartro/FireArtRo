@@ -16,6 +16,10 @@ Ambele integrări sunt pregătite să rămână inactive până când valorile l
 
 Tokenul Turnstile este verificat numai pe server și nu este salvat împreună cu solicitarea. Documentația oficială pentru verificarea pe server este la [Cloudflare Siteverify](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/).
 
+### Legarea tokenului de site și formular
+
+Widgetul trimite acțiunea `quote_submit`. După deploy și după expirarea tokenurilor generate de versiunea veche (cinci minute), configurează `TURNSTILE_EXPECTED_ACTION=quote_submit` și `TURNSTILE_EXPECTED_HOSTNAMES=fireart.ro` în Production. Lista acceptă numai hostnames exacte, separate prin virgulă, fără URL sau wildcard. Pentru Preview folosește domeniul exact al preview-ului/widgetului de test, separat de producție. Verifică o trimitere reușită și respingerea unui token pentru alt hostname/acțiune. Valorile sunt opționale pentru compatibilitatea lansării; codul nu pretinde că protecția suplimentară este activă înainte de configurare. Configurația invalidă refuză solicitările în loc să o ignore.
+
 ## Google Analytics 4
 
 1. Creează proprietatea GA4 și fluxul Web pentru `https://fireart.ro`.

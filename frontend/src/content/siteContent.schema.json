@@ -1245,6 +1245,13 @@
           "title": "Registeredoffice",
           "type": "string"
         },
+        "shareCapital": {
+          "default": "",
+          "maxLength": 80,
+          "pattern": "^[^<>\\r\\n]*$",
+          "title": "Sharecapital",
+          "type": "string"
+        },
         "mainOffice": {
           "default": "",
           "maxLength": 500,
