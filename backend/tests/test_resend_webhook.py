@@ -21,9 +21,13 @@ from resend_email import ReceivedEmail, ResendError
 WEBHOOK_SECRET = "whsec_" + base64.b64encode(b"task-five-webhook-secret").decode()
 
 
-def event_body(event_type="email.received", email_id="re_inbound_001"):
+def event_body(
+    event_type="email.received",
+    email_id="re_inbound_001",
+    recipients=("contact@fireart.ro",),
+):
     return json.dumps(
-        {"type": event_type, "data": {"email_id": email_id}},
+        {"type": event_type, "data": {"email_id": email_id, "to": recipients}},
         separators=(",", ":"),
     ).encode()
 
@@ -43,6 +47,7 @@ class FakeInboundRepository:
     def __init__(self, events):
         self.events = events
         self.completed = set()
+        self.ignored = set()
         self.reserved = set()
         self.messages = []
         self.reserve_failure = None
@@ -56,8 +61,8 @@ class FakeInboundRepository:
         if self.reserve_failure is not None:
             raise self.reserve_failure
         key = (webhook_id, resend_email_id)
-        known = self.completed | self.reserved
-        if key in self.completed:
+        known = self.completed | self.reserved | self.ignored
+        if key in self.completed or key in self.ignored:
             return False
         if any(
             (known_webhook == webhook_id and known_email != resend_email_id)
@@ -66,6 +71,11 @@ class FakeInboundRepository:
         ):
             raise InboundIdentityConflict()
         self.reserved.add(key)
+        return True
+
+    async def ignore_webhook_event(self, *, webhook_id, resend_email_id):
+        self.events.append("ignore")
+        self.ignored.add((webhook_id, resend_email_id))
         return True
 
     async def upsert_received(self, **payload):
@@ -148,6 +158,9 @@ def webhook_server(monkeypatch):
     events = []
     module.db = SimpleNamespace()
     module.resend_webhook_verifier = Webhook(WEBHOOK_SECRET)
+    module.resend_config = module.resend_config.model_copy(
+        update={"enabled": True, "inbound_address": "contact@fireart.ro"}
+    )
     module.inbound_repository = FakeInboundRepository(events)
     module.resend_client = FakeResendClient(events)
     module.inbound_relay_service = FakeRelayService(events)
@@ -200,6 +213,86 @@ async def test_signed_email_received_persists_before_relay_and_normalizes_catego
     assert events == ["reserve", "fetch", "persist", "relay"]
     assert server.inbound_repository.messages[0].category == "contact"
     assert server.inbound_relay_service.messages[0].recipients == ["contact@fireart.ro"]
+
+
+@pytest.mark.asyncio
+async def test_configured_preview_address_is_accepted_and_categorized_as_contact(
+    webhook_server,
+):
+    server, events = webhook_server
+    server.resend_config = server.resend_config.model_copy(
+        update={"inbound_address": "preview@preview.resend.app"}
+    )
+    server.resend_client.email = server.resend_client.email.model_copy(
+        update={"recipients": [" PREVIEW@PREVIEW.RESEND.APP "]}
+    )
+    body = event_body(recipients=["Preview@Preview.Resend.App"])
+
+    async with api_client(server) as client:
+        response = await client.post(
+            "/api/webhooks/resend", content=body, headers=signed_headers(body)
+        )
+
+    assert response.status_code == 204
+    assert events == ["reserve", "fetch", "persist", "relay"]
+    assert server.inbound_repository.messages[0].category == "contact"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "recipients",
+    [
+        ["private@fireart.ro"],
+        ["contact@fireart.ro", "private@fireart.ro"],
+        [],
+    ],
+)
+async def test_signed_event_for_unconfigured_or_mixed_mailbox_does_no_work(
+    webhook_server, recipients
+):
+    server, events = webhook_server
+    body = event_body(recipients=recipients)
+
+    async with api_client(server) as client:
+        first = await client.post(
+            "/api/webhooks/resend", content=body, headers=signed_headers(body)
+        )
+        replay = await client.post(
+            "/api/webhooks/resend", content=body, headers=signed_headers(body)
+        )
+
+    assert first.status_code == replay.status_code == 204
+    assert events == []
+    assert server.inbound_repository.messages == []
+    assert server.inbound_relay_service.messages == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "recipients",
+    [["private@fireart.ro"], ["contact@fireart.ro", "private@fireart.ro"]],
+)
+async def test_fetched_recipient_mismatch_is_ignored_without_relay_or_refetch(
+    webhook_server, recipients
+):
+    server, events = webhook_server
+    server.resend_client.email = server.resend_client.email.model_copy(
+        update={"recipients": recipients}
+    )
+    body = event_body()
+
+    async with api_client(server) as client:
+        first = await client.post(
+            "/api/webhooks/resend", content=body, headers=signed_headers(body)
+        )
+        replay = await client.post(
+            "/api/webhooks/resend", content=body, headers=signed_headers(body)
+        )
+
+    assert first.status_code == replay.status_code == 204
+    assert events == ["reserve", "fetch", "ignore", "reserve"]
+    assert server.inbound_repository.messages == []
+    assert server.inbound_relay_service.messages == []
 
 
 @pytest.mark.asyncio

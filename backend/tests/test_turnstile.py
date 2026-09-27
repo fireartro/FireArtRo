@@ -130,3 +130,41 @@ async def test_provider_failures_are_safe_and_fail_closed(kind):
     assert "server-secret" not in serialized
     assert "submitted-token" not in serialized
     assert "provider body" not in serialized
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("hostname,action,allowed", [
+    ("fireart.ro", "quote_submit", True),
+    ("preview.fireart.ro", "quote_submit", True),
+    ("attacker.example", "quote_submit", False),
+    ("fireart.ro.attacker.example", "quote_submit", False),
+    ("fireart.ro", "other_form", False),
+    (None, "quote_submit", False),
+    ("fireart.ro", None, False),
+])
+async def test_configured_binding_rejects_tokens_for_other_sites_or_actions(hostname, action, allowed):
+    verifier = TurnstileVerifier.from_env({
+        "TURNSTILE_ENABLED": "true",
+        "TURNSTILE_SECRET_KEY": "server-secret",
+        "TURNSTILE_EXPECTED_HOSTNAMES": "fireart.ro, preview.fireart.ro",
+        "TURNSTILE_EXPECTED_ACTION": "quote_submit",
+    }, transport=transport(lambda _request: response({"success": True, "hostname": hostname, "action": action})))
+    if allowed:
+        await verifier.verify("browser-token", "198.51.100.7")
+    else:
+        with pytest.raises(TurnstileError) as caught:
+            await verifier.verify("browser-token", "198.51.100.7")
+        assert caught.value.code == "verification_failed"
+        assert "server-secret" not in str(caught.value)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("hosts", ["*", "https://fireart.ro", "fireart.ro/path", "fireart.ro,", "fireart.ro,,preview.fireart.ro"])
+async def test_invalid_binding_configuration_fails_closed(hosts):
+    verifier = TurnstileVerifier.from_env({
+        "TURNSTILE_ENABLED": "true", "TURNSTILE_SECRET_KEY": "server-secret",
+        "TURNSTILE_EXPECTED_HOSTNAMES": hosts,
+    }, transport=transport(lambda _request: response({"success": True})))
+    with pytest.raises(TurnstileError) as caught:
+        await verifier.verify("browser-token", "198.51.100.7")
+    assert caught.value.code == "not_configured"

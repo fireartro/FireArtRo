@@ -75,6 +75,7 @@ test("passes tokens, expiry, errors, reset, and cleanup through safe callbacks",
   expect(window.turnstile.render).toHaveBeenCalledTimes(1);
   expect(options.sitekey).toBe("public-site-key");
   expect(options.theme).toBe("dark");
+  expect(options.action).toBe("quote_submit");
 
   act(() => options.callback("single-use-token"));
   expect(onToken).toHaveBeenLastCalledWith("single-use-token");

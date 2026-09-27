@@ -19,7 +19,7 @@ The anonymous published CMS still contains the old Smart Land identity. Correcti
 
 - Confirm actual external-service data flows, recipient countries and applicable adequacy decisions or safeguards before making international-transfer statements.
 - Audit actual YouTube/Turnstile storage and relevant third-party access/duration rather than assuming every thumbnail request is a consent violation.
-- Add confirmed share capital to the managed company model/editor and public legal identification, with backward-compatible migration of existing documents.
+- Optional share-capital support is now implemented in the shared company contract, Admin, legal identification and footer. Empty/unknown values are omitted without changing old snapshots; the owner must still supply the confirmed value before publication.
 - The inspected flow requests an offer; it is not an online checkout. Contracting disclosures must still be provided before subsequent contract conclusion.
 - Google/Facebook review integration remains deferred.
 

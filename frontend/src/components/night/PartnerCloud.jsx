@@ -21,7 +21,7 @@ export default function PartnerCloud({ partners, copy, title, reduceMotion }) {
   const [paused, setPaused] = useState(false);
   const [visible, setVisible] = useState(false);
   const [documentVisible, setDocumentVisible] = useState(!document.hidden);
-  const canFloat = !reduceMotion && partners.length === 26;
+  const canFloat = !reduceMotion && partners.length > 0;
   const list = !canFloat || expanded;
   const running = canFloat && !list && !paused && visible && documentVisible;
   useEffect(() => {

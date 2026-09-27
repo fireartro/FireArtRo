@@ -237,6 +237,29 @@ def test_site_content_requires_company_details_and_normalizes_phone_values(defau
         SiteContent.model_validate(default_content)
 
 
+def test_legacy_company_snapshot_defaults_share_capital_without_publishing_a_blank_field(default_content):
+    content = SiteContent.model_validate(default_content)
+
+    assert content.siteDetails.shareCapital == ""
+    assert "shareCapital" not in content.model_dump(mode="json")["siteDetails"]
+
+
+def test_confirmed_share_capital_round_trips_as_plain_text(default_content):
+    default_content["siteDetails"]["shareCapital"] = "  1.000 lei  "
+
+    content = SiteContent.model_validate(default_content)
+
+    assert content.model_dump(mode="json")["siteDetails"]["shareCapital"] == "1.000 lei"
+
+
+@pytest.mark.parametrize("value", ["<b>1.000 lei</b>", "1.000\nlei", "x" * 81, None])
+def test_share_capital_rejects_markup_multiline_and_invalid_values(default_content, value):
+    default_content["siteDetails"]["shareCapital"] = value
+
+    with pytest.raises(ValidationError):
+        SiteContent.model_validate(default_content)
+
+
 @pytest.mark.parametrize(("field", "value"), [
     ("type", "script"),
     ("category", "Orice categorie"),

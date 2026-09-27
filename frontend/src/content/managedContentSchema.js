@@ -73,6 +73,8 @@ const schema = fromContract(contract).superRefine((content, ctx) => {
 
 export function validateManagedContent(content) {
   const result = schema.safeParse(content);
+  // Match the backend serializer: an unknown capital must not alter old snapshots.
+  if (result.success && !result.data.siteDetails.shareCapital) delete result.data.siteDetails.shareCapital;
   return result.success ? { content: result.data, errors: [] } : { content: null,
     errors: result.error.issues.map(issue => ({ path: issue.path.join('.'), message: issue.code === 'custom' ? issue.message : 'Verifică valoarea și limitele acestui câmp.' })),
   };

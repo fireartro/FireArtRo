@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ipaddress
+import re
 from collections.abc import Mapping
 from typing import Literal
 
@@ -28,11 +29,13 @@ class TurnstileError(RuntimeError):
 
 
 class TurnstileVerifier:
-    def __init__(self, *, enabled, secret, configuration_error="", transport=None):
+    def __init__(self, *, enabled, secret, configuration_error="", transport=None, expected_hostnames=(), expected_action=""):
         self.enabled = enabled
         self._secret = secret
         self._configuration_error = configuration_error
         self._transport = transport
+        self._expected_hostnames = frozenset(expected_hostnames)
+        self._expected_action = expected_action
 
     @classmethod
     def from_env(cls, env: Mapping[str, str], *, transport=None):
@@ -54,7 +57,17 @@ class TurnstileVerifier:
                 configuration_error="TURNSTILE_SECRET_KEY",
                 transport=transport,
             )
-        return cls(enabled=True, secret=secret.strip(), transport=transport)
+        raw_hosts = env.get("TURNSTILE_EXPECTED_HOSTNAMES", "").strip()
+        hosts = tuple(host.strip().lower() for host in raw_hosts.split(",")) if raw_hosts else ()
+        hostname_pattern = r"(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*"
+        action = env.get("TURNSTILE_EXPECTED_ACTION", "").strip()
+        error = ""
+        if any(not re.fullmatch(hostname_pattern, host) for host in hosts):
+            error = "TURNSTILE_EXPECTED_HOSTNAMES"
+        elif action and not re.fullmatch(r"[a-zA-Z0-9_-]{1,32}", action):
+            error = "TURNSTILE_EXPECTED_ACTION"
+        return cls(enabled=True, secret=secret.strip(), transport=transport,
+                   configuration_error=error, expected_hostnames=hosts, expected_action=action)
 
     @property
     def configuration_errors(self):
@@ -101,4 +114,8 @@ class TurnstileVerifier:
             ) from None
 
         if not isinstance(result, dict) or result.get("success") is not True:
+            raise TurnstileError("verification_failed", 422, VERIFICATION_MESSAGE)
+        if self._expected_hostnames and result.get("hostname") not in self._expected_hostnames:
+            raise TurnstileError("verification_failed", 422, VERIFICATION_MESSAGE)
+        if self._expected_action and result.get("action") != self._expected_action:
             raise TurnstileError("verification_failed", 422, VERIFICATION_MESSAGE)

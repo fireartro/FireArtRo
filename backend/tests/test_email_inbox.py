@@ -883,6 +883,59 @@ async def test_inbound_repository_reserves_then_completes_a_webhook_once():
 
 
 @pytest.mark.asyncio
+async def test_ignored_reservation_stays_private_and_cannot_be_completed():
+    from email_inbox import InboundIdentityConflict, MongoInboundMessageRepository
+
+    instant = datetime(2026, 9, 4, 13, tzinfo=timezone.utc)
+    collection = AsyncCollection(require_bounded_queries=True)
+    repository = MongoInboundMessageRepository(
+        collection,
+        clock=lambda: instant,
+        id_factory=lambda: "inbound-ignored-001",
+    )
+    await repository.create_indexes()
+    assert await repository.reserve_webhook_event(
+        webhook_id="webhook-ignored-001", resend_email_id="provider-ignored-001"
+    )
+
+    await repository.ignore_webhook_event(
+        webhook_id="webhook-ignored-001", resend_email_id="provider-ignored-001"
+    )
+
+    assert await repository.reserve_webhook_event(
+        webhook_id="webhook-ignored-001", resend_email_id="provider-ignored-001"
+    ) is False
+    assert await repository.get_internal_by_identity(
+        webhook_id="webhook-ignored-001", resend_email_id="provider-ignored-001"
+    ) is None
+    assert (await repository.list()).items == []
+    assert await repository.get("inbound-ignored-001") is None
+    assert await repository.get_internal("inbound-ignored-001") is None
+    assert set(collection.documents[0]) == {
+        "id", "webhook_id", "resend_email_id", "ingest_state", "ignored",
+        "created_at", "updated_at",
+    }
+    assert collection.documents[0]["ignored"] is True
+    with pytest.raises(InboundIdentityConflict):
+        await repository.upsert_received(
+            webhook_id="webhook-ignored-001",
+            resend_email_id="provider-ignored-001",
+            message_id="<ignored@example.com>",
+            references=[],
+            sender="sender@example.com",
+            recipients=["contact@fireart.ro"],
+            subject="Must not store",
+            text="Must not store",
+            html="<p>Must not store</p>",
+            attachments=[],
+            category="contact",
+            received_at=instant,
+        )
+    assert collection.documents[0]["ingest_state"] == "reserved"
+    assert collection.documents[0]["ignored"] is True
+
+
+@pytest.mark.asyncio
 async def test_inbound_repository_caps_persisted_content_and_wins_insert_race():
     from email_inbox import MongoInboundMessageRepository
 

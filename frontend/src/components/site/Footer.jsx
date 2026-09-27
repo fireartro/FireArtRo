@@ -20,6 +20,7 @@ export const Footer = () => {
     managedContactSettings.whatsappNumber || CMS_DEFAULTS.contactSettings.whatsappNumber,
   );
   const email = siteDetails.email || "contact@fireart.ro";
+  const shareCapital = siteDetails.shareCapital?.trim();
   const phoneTarget = phoneDisplay && phoneHref ? `tel:${phoneHref}` : "/contact";
   const whatsappTarget = whatsAppHref || "/contact";
 
@@ -73,6 +74,7 @@ export const Footer = () => {
         <div className="fa-footer__identity">
           <p><strong>{siteDetails.legalName}</strong> · CUI {siteDetails.taxId} · Reg. Com. {siteDetails.registrationNumber}</p>
           <p>Sediu social: {siteDetails.registeredOffice}</p>
+          {shareCapital && <p>Capital social: {shareCapital}</p>}
           <div className="fa-footer__badges">
             <a className="fa-footer__sal" href="https://reclamatiisal.anpc.ro/" target="_blank" rel="noopener noreferrer">
               <img src="/legal/anpc-sal.png" alt="ANPC — Soluționarea Alternativă a Litigiilor" width="250" height="50" loading="lazy" />
