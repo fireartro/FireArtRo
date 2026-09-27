@@ -23,6 +23,13 @@ function HeroMontagePlayer({ format }) {
   const activeVideoRef = useRef(null);
   const pendingSwitch = useRef(false);
   const starting = useRef(false);
+  const switchWatchdog = useRef(null);
+  const switchAttempt = useRef(0);
+  const switchRef = useRef(null);
+  const activeSlotRef = useRef(0);
+  const retryTimers = useRef([null, null]);
+  const retryAttempts = useRef([0, 0]);
+  const resumeAt = useRef([null, null]);
   const mounted = useRef(true);
   const playbackAllowed = useRef(true);
   const [posterReady, setPosterReady] = useState(false);
@@ -34,16 +41,22 @@ function HeroMontagePlayer({ format }) {
   const [inView, setInView] = useState(true);
   const [autoplayEligible, setAutoplayEligible] = useState(() => typeof window === 'undefined' || getHeroAutoplayPolicy(window));
   const [videoSupported] = useState(() => typeof document === 'undefined' || canPlayHeroVideo(document.createElement('video')));
-  const [failed, setFailed] = useState(false);
   const visible = pageVisible && inView;
-  const enabled = autoplayEligible && videoSupported && !failed;
+  const enabled = autoplayEligible && videoSupported;
+  activeSlotRef.current = activeSlot;
   playbackAllowed.current = visible && enabled;
   const currentFilmIndex = slotIndices[activeSlot];
   const currentSource = films[format][currentFilmIndex];
 
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; };
+    const timers = retryTimers.current;
+    return () => {
+      mounted.current = false;
+      switchAttempt.current += 1;
+      window.clearTimeout(switchWatchdog.current);
+      timers.forEach(timer => window.clearTimeout(timer));
+    };
   }, []);
 
   useEffect(() => {
@@ -91,33 +104,86 @@ function HeroMontagePlayer({ format }) {
     return undefined;
   }, [activated, activeSlot, visible, enabled]);
 
+  const retryVideo = useCallback((slot, reload = true) => {
+    const video = videoRefs.current[slot];
+    if (!video || retryTimers.current[slot] !== null) return;
+    // Recover only the failed element; do not tear down the healthy current
+    // film or replay a scene from the beginning after an active media error.
+    if (reload && resumeAt.current[slot] === null) {
+      resumeAt.current[slot] = video === activeVideoRef.current ? video.currentTime : 0;
+    }
+    const delay = Math.min(1000 * 2 ** Math.min(retryAttempts.current[slot]++, 3), 8000);
+    retryTimers.current[slot] = window.setTimeout(() => {
+      retryTimers.current[slot] = null;
+      if (!mounted.current || !playbackAllowed.current || videoRefs.current[slot] !== video) return;
+      if (slot !== activeSlotRef.current) starting.current = false;
+      if (reload) video.load();
+      if (pendingSwitch.current) switchRef.current?.();
+    }, delay);
+  }, []);
+
+  const clearRetry = useCallback(slot => {
+    window.clearTimeout(retryTimers.current[slot]);
+    retryTimers.current[slot] = null;
+    retryAttempts.current[slot] = 0;
+  }, []);
+
   const trySwitch = useCallback(() => {
     if (!pendingSwitch.current || starting.current || !playbackAllowed.current) return;
     const nextSlot = 1 - activeSlot;
     const nextVideo = videoRefs.current[nextSlot];
-    if (!nextVideo || nextVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+    if (!nextVideo) return;
+    if (nextVideo.error) { retryVideo(nextSlot); return; }
     starting.current = true;
-    nextVideo.currentTime = 0;
-    nextVideo.play().then(() => {
+    const attempt = ++switchAttempt.current;
+    const finishAttempt = () => {
+      if (attempt !== switchAttempt.current) return false;
+      window.clearTimeout(switchWatchdog.current);
+      switchWatchdog.current = null;
+      starting.current = false;
+      return true;
+    };
+    // A pending play() promise is possible on a stalled connection. Without a
+    // deadline, the last frame of the previous film remains on screen forever.
+    switchWatchdog.current = window.setTimeout(() => {
+      if (!finishAttempt() || !mounted.current) return;
+      switchAttempt.current += 1;
+      nextVideo.pause();
+      if (!playbackAllowed.current) return;
+      nextVideo.load();
+      retryVideo(nextSlot, false);
+    }, 5000);
+    // preload="auto" is advisory. Some browsers keep only metadata until
+    // play() explicitly asks for data; waiting for loadeddata can deadlock.
+    if (nextVideo.readyState >= HTMLMediaElement.HAVE_METADATA) nextVideo.currentTime = 0;
+    Promise.resolve(nextVideo.play()).then(() => {
+      if (!finishAttempt()) return;
       if (!mounted.current || !playbackAllowed.current) {
         nextVideo.pause();
-        starting.current = false;
         return;
       }
       const oldVideo = videoRefs.current[activeSlot];
       oldVideo?.pause();
+      clearRetry(activeSlot);
+      clearRetry(nextSlot);
+      resumeAt.current[activeSlot] = null;
+      resumeAt.current[nextSlot] = null;
       pendingSwitch.current = false;
-      starting.current = false;
       setActiveSlot(nextSlot);
       setPlayingSlot(nextSlot);
       setSlotIndices(previous => previous.map((index, slot) => slot === activeSlot ? null : index));
     }).catch(() => {
-      starting.current = false;
-      if (mounted.current) setFailed(true);
+      if (!finishAttempt()) return;
+      if (mounted.current && playbackAllowed.current) retryVideo(nextSlot, false);
     });
-  }, [activeSlot]);
+  }, [activeSlot, clearRetry, retryVideo]);
+  switchRef.current = trySwitch;
 
-  useEffect(() => { if (visible && enabled) trySwitch(); }, [visible, enabled, trySwitch]);
+  useEffect(() => {
+    if (!visible || !enabled) return;
+    videoRefs.current.forEach((video, slot) => { if (video?.error) retryVideo(slot); });
+    trySwitch();
+  }, [visible, enabled, slotIndices, retryVideo, trySwitch]);
 
   const requestNext = useCallback(() => {
     setSlotIndices(previous => {
@@ -140,8 +206,19 @@ function HeroMontagePlayer({ format }) {
     trySwitch();
   }, [requestNext, trySwitch]);
 
-  const onNextReady = useCallback(() => {
+  const onNextReady = useCallback(slot => {
+    clearRetry(slot);
     if (pendingSwitch.current) trySwitch();
+  }, [clearRetry, trySwitch]);
+
+  const onMetadata = useCallback((slot, video) => {
+    const saved = resumeAt.current[slot];
+    if (saved !== null) {
+      if (saved > 0) video.currentTime = Number.isFinite(video.duration)
+        ? Math.min(saved, Math.max(0, video.duration - 0.05)) : saved;
+      resumeAt.current[slot] = null;
+    }
+    if (slot !== activeSlotRef.current && pendingSwitch.current) trySwitch();
   }, [trySwitch]);
 
   return (
@@ -170,14 +247,16 @@ function HeroMontagePlayer({ format }) {
             muted
             playsInline
             preload={slot === activeSlot ? 'metadata' : 'auto'}
+            onLoadedMetadata={event => onMetadata(slot, event.currentTarget)}
             onLoadedData={slot === activeSlot ? event => {
+              clearRetry(slot);
               if (playbackAllowed.current) event.currentTarget.play().catch(() => {});
-            } : onNextReady}
-            onCanPlay={slot === activeSlot ? undefined : onNextReady}
+            } : () => onNextReady(slot)}
+            onCanPlay={() => onNextReady(slot)}
             onPlaying={() => { if (slot === activeSlot) setPlayingSlot(slot); }}
             onTimeUpdate={slot === activeSlot ? onTimeUpdate : undefined}
             onEnded={slot === activeSlot ? onEnded : undefined}
-            onError={() => setFailed(true)}
+            onError={() => retryVideo(slot)}
             data-media-variant={format}
             data-film-index={index}
             className={`hero-media-surface hero-media-video hero-montage__video absolute inset-0 h-full w-full object-cover${slot === activeSlot && playingSlot === slot ? ' hero-montage__video--visible' : ''}`}
