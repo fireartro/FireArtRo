@@ -1,0 +1,119 @@
+/* A lightbox gallery on the existing FireArt stage, not a second homepage scene. */
+.fa-partners.fa-partners-gallery {
+  --partners-ink: #060b13;
+  --partners-surface: #101b2a;
+  --partners-light: #f3f6fb;
+  --partners-muted: #adb9cb;
+  --partners-blue: #9ac7ff;
+  position: relative;
+  isolation: isolate;
+  height: auto;
+  padding-block: clamp(3.5rem, 6vw, 5.5rem);
+  background: linear-gradient(180deg, transparent, rgba(6, 11, 19, 0.6) 35%, transparent);
+  scroll-margin-top: 5rem;
+}
+.fa-partners-gallery__inner { position: relative; max-width: 1280px; }
+.fa-partners-gallery__header {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2rem;
+  padding: clamp(1.5rem, 3vw, 2.5rem) 0;
+  margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+  border-top: 1px solid rgba(154, 199, 255, 0.2);
+}
+.fa-partners-gallery__header::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 83% 0, rgba(66, 122, 255, 0.15), transparent 65%),
+    linear-gradient(124deg, transparent 48%, rgba(154, 199, 255, 0.04) 49%, transparent 69%);
+}
+.fa-partners-gallery__header h2 {
+  max-width: 19ch;
+  margin: 0.9rem 0 0;
+  font-family: "Sora", sans-serif;
+  font-size: clamp(2rem, 3.8vw, 3.5rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 1.14;
+  text-wrap: balance;
+}
+.fa-partners-gallery__header .fa-line-link { margin-top: 1.3rem; }
+.fa-partners-gallery__signature { display: grid; justify-items: center; padding: 0 1.2rem; color: var(--partners-muted); font-size: 0.7rem; letter-spacing: 0.035em; }
+.fa-partners-gallery__firework { width: clamp(8rem, 14vw, 12rem); overflow: visible; }
+.fa-partners-gallery__firework path { stroke: var(--partners-blue); stroke-width: 0.8; stroke-opacity: 0.48; }
+.fa-partners-gallery__firework circle { fill: var(--partners-light); }
+.fa-partners-gallery__firework .fa-partners-gallery__spark { stroke: var(--partners-light); stroke-opacity: 0.9; stroke-linecap: round; }
+.fa-partners-gallery__firework .fa-partners-gallery__horizon { stroke-opacity: 0.18; }
+.fa-partners-gallery__signature span { margin-top: 0.5rem; }
+.fa-partners-gallery__groups { display: grid; gap: clamp(2rem, 4vw, 3rem); }
+.fa-partners-gallery__group { min-width: 0; }
+.fa-partners-gallery__category { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 1.1rem; }
+.fa-partners-gallery__category h3 { flex: 0 1 auto; margin: 0; font-family: "Sora", sans-serif; font-size: 0.8rem; font-weight: 500; line-height: 1.6; color: var(--partners-muted); }
+.fa-partners-gallery__category > span { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(154, 199, 255, 0.3), rgba(154, 199, 255, 0.04)); }
+.fa-partners-gallery__grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
+.fa-partner {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 10rem;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.5rem;
+  overflow: hidden;
+  text-align: center;
+  border: 1px solid rgba(154, 199, 255, 0.13);
+  border-radius: 0.85rem;
+  background:
+    radial-gradient(ellipse at 50% 0, rgba(154, 199, 255, 0.09), transparent 72%),
+    linear-gradient(145deg, var(--partners-surface), var(--partners-ink));
+  box-shadow: inset 0 1px 0 rgba(243, 246, 251, 0.05), 0 8px 24px rgba(0, 0, 0, 0.12);
+  transition: transform 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
+}
+.fa-partner::after {
+  content: "";
+  position: absolute;
+  inset: auto 20% 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(154, 199, 255, 0.4), transparent);
+}
+.fa-partner__body { display: grid; flex: 1; min-width: 0; min-height: 6.6rem; }
+.fa-partner__mark { display: grid; height: 6.6rem; place-items: center; padding: 1rem; overflow: hidden; border-radius: 0.4rem; background: var(--partners-light); }
+.fa-partner__mark[data-theme="dark"] { background: #0b2239; }
+.fa-partner__mark[data-theme="neutral"] { background: #7b8794; }
+.fa-partner__mark img { display: block; width: 100%; height: 100%; max-width: 100%; max-height: 4.6rem; object-fit: contain; }
+.fa-partner__wordmark { display: grid; align-items: center; padding: 1rem 0.7rem; font-family: "Sora", sans-serif; font-size: clamp(0.9rem, 1.1vw, 1.12rem); font-weight: 500; line-height: 1.45; letter-spacing: -0.02em; color: var(--partners-light); overflow-wrap: anywhere; text-wrap: balance; }
+.fa-partner__name { display: grid; min-height: 2.8rem; place-items: center; padding: 0.65rem 0.35rem 0.25rem; font-size: 0.75rem; line-height: 1.45; font-weight: 500; color: var(--partners-light); overflow-wrap: anywhere; }
+/* Content is never hidden while waiting for IntersectionObserver. */
+.fa-partners-gallery[data-motion="subtle"] .fa-partners-gallery__group[data-entered="true"] .fa-partner {
+  animation: fa-partner-enter 620ms cubic-bezier(0.2, 0.65, 0.3, 1) var(--partner-delay, 0ms) backwards;
+}
+@keyframes fa-partner-enter { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@media (hover: hover) and (pointer: fine) {
+  .fa-partner:hover { transform: translateY(-4px); border-color: rgba(154, 199, 255, 0.42); box-shadow: inset 0 1px 0 rgba(243, 246, 251, 0.1), 0 12px 30px rgba(0, 0, 0, 0.22); }
+}
+@media (max-width: 1199px) { .fa-partners-gallery__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 899px) { .fa-partners-gallery__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 599px) {
+  .fa-partners-gallery__header { grid-template-columns: minmax(0, 1fr); gap: 0; padding-top: 1.75rem; }
+  .fa-partners-gallery__signature { display: none; }
+  .fa-partners-gallery__header h2 { max-width: 18ch; font-size: clamp(1.85rem, 7.8vw, 2.6rem); }
+  .fa-partners-gallery__header .fa-kicker { font-size: 0.65rem; }
+  .fa-partners-gallery__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+  .fa-partners-gallery__category { gap: 0.8rem; }
+  .fa-partners-gallery__category h3 { font-size: 0.75rem; }
+  .fa-partner { min-height: 9.5rem; padding: 0.4rem; border-radius: 0.7rem; }
+  .fa-partner__body { min-height: 6rem; }
+  .fa-partner__mark { height: 6rem; padding: 0.8rem; }
+  .fa-partner__mark img { max-height: 4.4rem; }
+  .fa-partner__name { padding-inline: 0.1rem; font-size: 0.72rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fa-partners-gallery .fa-partner { animation: none !important; transition: none; transform: none !important; }
+}

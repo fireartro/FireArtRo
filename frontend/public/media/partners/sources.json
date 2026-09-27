@@ -1,0 +1,34 @@
+{
+  "verifiedAt": "2026-09-26",
+  "note": "Original business/municipality graphics, not screenshots or AI-generated logos. Collaborations supplied by the site owner. Source attribution is not a trademark licence. Unconfirmed identities are displayed as names only.",
+  "assets": [
+    { "file": "capricci.png", "source": "https://restaurantcapricci.ro/" },
+    { "file": "intooit.png", "source": "https://www.intooit.ro/" },
+    { "file": "esedra.webp", "source": "https://www.complexesedra.com/" },
+    { "file": "artistic.jpg", "source": "https://www.facebook.com/p/Artistic-sala-de-evenimente-100057527466231/" },
+    { "file": "shopping-city-satu-mare.png", "source": "https://www.shoppingcitysatumare.ro/" },
+    { "file": "seini-stema.jpg", "source": "https://seini.ro/", "original": "https://seini.ro/wp-content/uploads/2026/03/stema.jpg" },
+    { "file": "ardud.jpg", "source": "https://www.facebook.com/ArdudOrasTuristicMedieval/" },
+    { "file": "valea-vinului.png", "source": "https://www.primariavaleavinului.ro/" },
+    { "file": "baia-mare.png", "source": "https://www.facebook.com/baiamareoficial" },
+    { "file": "auchan.svg", "source": "https://www.auchan.ro/", "note": "Official vector emblem without temporary campaign branding." },
+    { "file": "kaufland.svg", "source": "https://despre.kaufland.md/ro/presa/galerie-foto.html" },
+    { "file": "dedeman.svg", "source": "https://www.dedeman.ro/" },
+    { "file": "vivo.svg", "source": "https://vivo-shopping.com/en/baia-mare", "note": "Network logo; not a claim about a specific branch." },
+    { "file": "metro.svg", "source": "https://www.metro.ro/" },
+    { "file": "remarkt.png", "source": "https://www.remarkt.ro/" },
+    { "file": "wildhills.svg", "source": "https://www.wildhills.ro/" },
+    { "file": "green-house.png", "source": "https://greenhouseevents.eatbu.com/?lang=en", "note": "Var/Jibou venue." },
+    { "file": "alpin-recycling.png", "source": "https://alpinrecycling.ro/en/" },
+    { "file": "aquastar.png", "source": "https://www.aquastarsatumare.ro/" },
+    { "file": "polipol.svg", "source": "https://www.polipol.de/" },
+    { "file": "remax.png", "source": "https://resources.remax.com/faq-items/new-remax-branding-assets/", "note": "Network logo; not a claim about a specific branch." }
+  ],
+  "pending": [
+    { "name": "Infinity Ballroom", "reason": "Clean logo not verified; venue photography excluded." },
+    { "name": "Motel Căpuș", "reason": "Only a 66x40 standalone logo found on the business website; too small for this presentation." },
+    { "name": "Colț de Rai", "reason": "Distinct venues in Negrești-Oaș and Sălaj; the owner has not identified which collaboration applies." },
+    { "name": "Palatul Ioan Festeleu", "reason": "No reliable official graphic identified." },
+    { "name": "Value Center", "reason": "Baia Mare candidate now uses AFI Value Park identity; exact collaboration not confirmed." }
+  ]
+}

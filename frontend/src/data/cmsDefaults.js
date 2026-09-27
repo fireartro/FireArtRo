@@ -103,7 +103,7 @@ export const CMS_DEFAULTS = applyOwnerRevision({
       title: "Suntem echipa din spatele spectacolului.",
       body: ["FireArtRo planifică și produce în România show-uri cu drone, artificii profesionale și efecte scenice. Coordonăm conceptul, partea tehnică, logistica și execuția pentru fiecare eveniment."],
     },
-    partners: section("Un show se construiește împreună", "O rețea care prinde formă.", "", "", "Locații, organizatori și echipe tehnice intră în aceeași orbită."),
+    partners: section("Un show se construiește împreună", "O rețea care prinde formă.", "", "", ""),
     brief: section("Următorul spectacol", "Spune-ne ce sărbătorești.\nNoi aprindem restul.", "Începe conversația", "/contact"),
     promoSlides: HOME_GALLERY.map((item) => ({
       ...PROMO_SLIDE_TEMPLATE,

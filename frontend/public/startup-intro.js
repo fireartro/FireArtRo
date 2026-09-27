@@ -111,9 +111,10 @@
     skip.addEventListener('click', onSkip);
     window.addEventListener('pageshow', onPageShow);
 
-    // Fine champagne firework trails inhabit one projected space. The logo
-    // stays clear of the particles; one glow sprite serves the entire scene.
-    let goldGlow;
+    // Multicolour firework trails inhabit the same projected space. The logo
+    // stays clear; six small glow sprites are reused for the entire scene.
+    const fireworkPalette = ['141,211,255', '67,130,255', '255,94,191', '174,126,255', '104,236,190', '255,117,118'];
+    let fireworkGlows = [];
     const rays = Array.from({ length: 144 }, (_, index) => {
         const y = 1 - (index / 143) * 2;
         const radius = Math.sqrt(1 - y * y);
@@ -136,7 +137,7 @@
         const pen = image.getContext('2d');
         if (!pen) return null;
         const glow = pen.createRadialGradient(24, 24, 0, 24, 24, 24);
-        glow.addColorStop(0, 'rgba(255,251,241,.95)');
+        glow.addColorStop(0, 'rgba(245,250,255,.95)');
         glow.addColorStop(.08, `rgba(${rgb},.8)`);
         glow.addColorStop(.24, `rgba(${rgb},.3)`);
         glow.addColorStop(.55, `rgba(${rgb},.06)`);
@@ -170,11 +171,13 @@
             const x = ((index * .618034) % 1) * width;
             const y = (((index * .381966 + .13) + seconds * .002) % 1) * height;
             const alpha = .10 + .18 * (Math.sin(index + seconds * .4) + 1) / 2;
-            context.fillStyle = `rgba(224,207,179,${alpha})`;
+            context.fillStyle = `rgba(178,208,241,${alpha})`;
             context.beginPath(); context.arc(x, y, index % 6 === 0 ? 1.1 : .6, 0, Math.PI * 2); context.fill();
         }
         context.globalCompositeOperation = 'lighter';
         rays.forEach((ray, index) => {
+            const colorIndex = Math.floor(index / 24) % fireworkPalette.length;
+            const color = fireworkPalette[colorIndex];
             const phase = ((seconds + (index % 3) * 1.45 + .85) % 6.4) / 6.4;
             const expansion = .76 + (.48 + ray.seed * .28) * Math.sin(phase * Math.PI * .65);
             const fade = Math.pow(Math.sin(phase * Math.PI), .7) * .82;
@@ -191,17 +194,17 @@
                 const from = project(ray.x * fromRadius, ray.y * fromRadius + drift * a * a, ray.z * fromRadius, rotation * .65, size);
                 const to = project(ray.x * toRadius, ray.y * toRadius + drift * b * b, ray.z * toRadius, rotation * .65, size);
                 context.lineWidth = (.25 + b * .8) * head.scale;
-                context.strokeStyle = `rgba(255,218,157,${alpha * b * .82 * clearCenter(from)})`;
+                context.strokeStyle = `rgba(${color},${alpha * b * .82 * clearCenter(from)})`;
                 context.beginPath(); context.moveTo(from.x, from.y); context.lineTo(to.x, to.y); context.stroke();
             }
             const shimmer = .83 + .17 * Math.sin(seconds * 2.1 + ray.seed * 16);
-            glowAt(goldGlow, head.x, head.y, (6 + ray.seed * 6) * head.scale, alpha * shimmer);
-            context.fillStyle = `rgba(255,247,226,${alpha})`;
+            glowAt(fireworkGlows[colorIndex], head.x, head.y, (6 + ray.seed * 6) * head.scale, alpha * shimmer);
+            context.fillStyle = `rgba(${color},${alpha})`;
             context.beginPath(); context.arc(head.x, head.y, (ray.seed > .85 ? 1.25 : .8) * head.scale, 0, Math.PI * 2); context.fill();
             // A few elongated glints catch the light, never a full-screen flash.
             if (index % 19 === 0) {
                 const glint = (3 + ray.seed * 4) * head.scale;
-                context.strokeStyle = `rgba(255,244,218,${alpha * .55})`;
+                context.strokeStyle = `rgba(${color},${alpha * .55})`;
                 context.lineWidth = .5;
                 context.beginPath(); context.moveTo(head.x - glint, head.y); context.lineTo(head.x + glint, head.y);
                 context.moveTo(head.x, head.y - glint * .6); context.lineTo(head.x, head.y + glint * .6); context.stroke();
@@ -210,9 +213,9 @@
         // A restrained optical flare anchors the sculpture to a distant stage.
         const flareY = height * .73;
         const flare = context.createRadialGradient(width / 2, flareY, 0, width / 2, flareY, size * .7);
-        flare.addColorStop(0, 'rgba(255,225,175,.14)');
-        flare.addColorStop(.2, 'rgba(212,168,105,.025)');
-        flare.addColorStop(1, 'rgba(212,168,105,0)');
+        flare.addColorStop(0, 'rgba(141,211,255,.14)');
+        flare.addColorStop(.2, 'rgba(67,130,255,.025)');
+        flare.addColorStop(1, 'rgba(67,130,255,0)');
         context.save(); context.translate(0, flareY); context.scale(1, .14); context.translate(0, -flareY);
         context.fillStyle = flare; context.fillRect(width / 2 - size, flareY - size, size * 2, size * 2); context.restore();
         context.globalCompositeOperation = 'source-over';
@@ -235,7 +238,7 @@
     }
     function onMotion() { cancelAnimationFrame(frame); draw(performance.now()); checkMedia(); }
     try { context = canvas.getContext('2d', { alpha: true }); } catch { /* Static brand remains fully usable. */ }
-    if (context) goldGlow = sprite('255,216,157');
+    if (context) fireworkGlows = fireworkPalette.map(sprite);
     window.addEventListener('resize', resize, { passive: true });
     document.addEventListener('visibilitychange', onVisibility);
     motion.addEventListener?.('change', onMotion);
