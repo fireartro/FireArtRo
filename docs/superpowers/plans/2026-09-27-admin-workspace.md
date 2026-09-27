@@ -77,7 +77,7 @@ Files: docs/runbooks/fireartro-cms-operations.md and this plan; actual authentic
 - [ ] Inspect authenticated draft/publication diff before company/partner/gallery changes; preserve unrelated owner edits. If Chrome is still logged out, record blocker and do not invent a bypass.
 - [x] Run full frontend tests, CMS tests, artifact/API tests, production build and git diff --check.
 - [x] Verify two public pages update after a publication using isolated local fixtures without changing production content. Verify unchanged hero element identity.
-- [ ] Review code and requirement coverage; commit only task-owned changes. Deploy only verified changes using the established deployment workflow. Report live content migration separately if authentication is still required.
+- [x] Review code and requirement coverage; commit only task-owned changes. Deploy only verified changes using the established deployment workflow. Report live content migration separately if authentication is still required.
 
 ## Progress
 
@@ -87,4 +87,4 @@ Fresh verification: 319 frontend tests; 353 backend tests (10 external-service t
 
 Production content migration remains blocked: Chrome Admin is logged out. The published snapshot still contains the previous company identity and twelve untouched partner seed entries. Existing compatibility overlays are deliberately not presented as a canonical Admin migration. Correct company/legal paragraphs and real partner/logo records must be published through the authenticated CMS while preserving unrelated owner edits. No credentials were guessed or reset. Google/Facebook review configuration remains deferred.
 
-Earlier partner/scroll/gallery work is preserved and tested separately. Release status will be recorded after integration/deployment confirmation.
+Earlier partner/scroll/gallery work is preserved and tested separately. Release confirmed: PR #7 merged as `6b09f415da53fea56d6e9f330db7633a63b46c32`; six PR checks passed. Vercel production deployment `CrDLUeGd3WpiwzwTYeVWGsxCJq3H` is Ready. The production health/sitemap/robots monitor passed. Live `/api/content/revision` returns exactly two metadata fields with HTTP 200 and an empty HTTP 304 response for the matching ETag. Chrome confirmed the new login presentation, all 24 real logo assets loaded, and a 26-item accessible list without horizontal overflow at 390px. Temporary device emulation was cleared. Live content identity/canonical-record migration remains blocked by Admin authentication as described above.
