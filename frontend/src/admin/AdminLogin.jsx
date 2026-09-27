@@ -22,7 +22,6 @@ export default function AdminLogin() {
 
   return (
     <main className="admin-auth-shell">
-      <div className="admin-auth-orbit" aria-hidden="true" />
       <section className="admin-auth-frame" aria-labelledby="admin-login-title">
         <header className="admin-auth-header">
           <a href="/" className="admin-auth-brand" aria-label="FireArtRo, pagina principală">FireArtRo</a>
@@ -30,8 +29,8 @@ export default function AdminLogin() {
         </header>
         <div className="admin-auth-content">
           <p className="admin-auth-kicker">ADMIN FIREARTRO</p>
-          <h1 id="admin-login-title">Conținutul rămâne la tine în control.</h1>
-          <p className="admin-auth-copy">Intră pentru a pregăti o ciornă, a verifica schimbările și a publica doar când ești gata.</p>
+          <h1 id="admin-login-title">Autentificare</h1>
+          <p className="admin-auth-copy">Acces la conținut, solicitări și publicare.</p>
 
           <form className="admin-auth-form" onSubmit={submit} noValidate>
             <label>

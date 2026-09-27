@@ -599,9 +599,12 @@ class RestoreRequest(StrictModel):
     version: int = Field(ge=0)
 
 
-class PublicationResponse(StrictModel):
+class PublicationRevisionResponse(StrictModel):
     revision_id: str = Field(min_length=1, max_length=80)
     published_at: datetime
+
+
+class PublicationResponse(PublicationRevisionResponse):
     content: SiteContent
 
 

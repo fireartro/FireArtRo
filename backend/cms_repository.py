@@ -23,6 +23,7 @@ class RepositoryBootstrapConflict(Exception):
 class CmsRepository(Protocol):
     async def get_draft(self) -> dict[str, Any] | None: ...
     async def get_publication(self) -> dict[str, Any] | None: ...
+    async def get_publication_revision(self) -> dict[str, Any] | None: ...
     async def get_revision(self, revision_id: str) -> dict[str, Any] | None: ...
     async def list_revisions(self, limit: int = 100) -> list[dict[str, Any]]: ...
     async def bootstrap_transaction(self, **kwargs) -> dict[str, Any]: ...
@@ -59,6 +60,12 @@ class MongoCmsRepository:
 
     async def get_publication(self) -> dict[str, Any] | None:
         return _clean(await self.publications.find_one({"id": CURRENT_PUBLICATION_ID}))
+
+    async def get_publication_revision(self) -> dict[str, Any] | None:
+        return await self.publications.find_one(
+            {"id": CURRENT_PUBLICATION_ID},
+            {"_id": 0, "revision_id": 1, "published_at": 1},
+        )
 
     async def get_revision(self, revision_id: str) -> dict[str, Any] | None:
         return _clean(await self.revisions.find_one({"id": revision_id}))

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAdminDraft } from './AdminDraftContext';
 import AdminDialog from './AdminDialog';
+import {makeAdminId} from './adminConfig';
 
-const newId = prefix => `${prefix || 'item'}-${crypto.randomUUID()}`;
+const newId = makeAdminId;
 export function getContentPath(value, path) { return path.split('.').reduce((current, key) => current?.[key], value); }
 
 function ArrayInput({ value, onChange, field, common }) {
@@ -57,7 +58,7 @@ export default function AdminField({ field, path }) {
     {field.type === 'checkbox' ? <input {...common} type="checkbox" checked={Boolean(value)} onChange={event => onChange(event.target.checked)} />
       : ['lines', 'tags'].includes(field.type) ? <ArrayInput common={common} field={field} value={value} onChange={onChange} />
       : field.type === 'textarea' ? <textarea {...common} rows={field.rows || 4} value={value ?? ''} onChange={event => onChange(event.target.value)} />
-      : field.type === 'mediaId' ? <select {...common} value={value || ''} onChange={event => onChange(event.target.value)}><option value="">Fără material asociat</option>{draft.mediaItems.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select>
+      : field.type === 'mediaId' ? <select {...common} value={value || ''} onChange={event => onChange(event.target.value)}><option value="">Fără material asociat</option>{draft.mediaItems.map(item => <option key={item.id} value={item.id}>{item.title || 'Fără titlu'} · {item.id}</option>)}</select>
       : field.type === 'select' ? <select {...common} value={value ?? ''} onChange={event => onChange(event.target.value)}>{(field.options || []).map(option => <option key={option.value ?? option} value={option.value ?? option}>{option.label ?? option}</option>)}</select>
       : <input {...common} type={field.type === 'number' ? 'number' : field.type === 'media' ? 'url' : field.inputType || 'text'} min={field.min} max={field.max} step={field.step} placeholder={field.placeholder}
         value={value ?? ''} onChange={event => onChange(field.type === 'number' ? event.target.value === '' ? null : Number(event.target.value) : event.target.value)} />}
