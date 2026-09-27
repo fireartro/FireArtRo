@@ -122,6 +122,8 @@ class CmsService:
                 admin_id=admin_id,
                 now=self.clock(),
             )
+            # Recovery may have observed a newer publication inside its transaction.
+            publication = await self.repository.get_publication()
         return self._draft_response(draft, publication)
 
     async def bootstrap(self, seed_content, admin_id: str, *, force: bool = False) -> BootstrapResult:

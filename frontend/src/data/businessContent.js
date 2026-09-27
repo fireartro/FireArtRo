@@ -13,7 +13,7 @@ export const SITE_DETAILS = {
   taxId: "43337078",
   registeredOffice: "Strada Oltului nr. 1, camera nr. 1, et. 1, ap. 4, Cluj-Napoca, județul Cluj, România",
   mainOffice: "Piața Unirii nr. 2, Seini, județul Maramureș",
-  secondaryOffice: "Cluj-Napoca, Strada Oltului nr. 1",
+  secondaryOffice: "",
 };
 
 export const BUSINESS_HOURS = {
