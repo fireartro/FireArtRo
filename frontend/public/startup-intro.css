@@ -1,6 +1,10 @@
 /* A small, independent first-paint scene; available before the app bundle. */
 .fireart-intro { display: none; }
-html[data-fireart-intro] { overflow: hidden; }
+html[data-fireart-intro], html[data-fireart-intro] body {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+    touch-action: none;
+}
 html[data-fireart-intro] .fireart-intro {
     position: fixed; inset: 0; z-index: 2147483000; display: block;
     overflow: hidden; isolation: isolate; color: #f5f7fb;
@@ -61,7 +65,7 @@ html[data-fireart-intro] .fireart-intro {
 .fireart-intro__skip span { display: inline-block; margin-left: 9px; color: #8dd3ff; }
 .fireart-intro__skip:hover { color: #fff; }
 .fireart-intro__skip:focus-visible { outline: 1px solid #8dd3ff; outline-offset: 2px; }
-html[data-fireart-intro='leaving'] .fireart-intro { opacity: 0; pointer-events: none; }
+html[data-fireart-intro='leaving'] .fireart-intro { opacity: 0; }
 html[data-fireart-intro='leaving'] .fireart-intro__sky { transform: scale(1.2); }
 @keyframes fireart-intro-arrive { from { opacity: .6; } to { opacity: 1; } }
 @media (max-width: 600px) {

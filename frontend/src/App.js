@@ -39,11 +39,19 @@ function RouteScrollManager() {
 
   useEffect(() => {
     syncScrollOffset();
-    const timer = window.setTimeout(() => {
+    const align = () => {
+      // Locked first-paint geometry cannot resolve anchors reliably. Retry
+      // once the controller has removed the overlay and restored scrolling.
+      if (document.documentElement.dataset.fireartIntro) return;
       if (location.hash) scrollToHash(location.hash, "auto");
       else scrollToTop("auto");
-    }, 90);
-    return () => window.clearTimeout(timer);
+    };
+    const timer = window.setTimeout(align, 90);
+    window.addEventListener('fireart:intro-dismissed', align);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('fireart:intro-dismissed', align);
+    };
   }, [location.pathname, location.hash]);
 
   return null;

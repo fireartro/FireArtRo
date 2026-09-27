@@ -67,9 +67,10 @@ test('excludes reviewed branded photographs even when older published CMS data l
   expect(isGalleryVisible({ id: 'custom-copy', src: 'https://fireart.ro/media/gallery/fireartro-drone-show-damen-img-7327.webp?v=2', tags: [] })).toBe(false);
 });
 
-test('hides visible city lettering but preserves other drone scenes from the same events', () => {
-  expect(isGalleryVisible({ id: 'gallery-import-drone-104', tags: [] })).toBe(false); // Ploiești in the sky
-  expect(isGalleryVisible({ id: 'gallery-import-drone-127', tags: [] })).toBe(false); // Suceava in the sky
+test('hides visible city lettering but preserves unnamed drone scenes from the same events', () => {
+  expect(isGalleryVisible({ id: 'gallery-import-drone-104', tags: [] })).toBe(true); // cyclists, not the word Ploiești
+  expect(isGalleryVisible({ id: 'gallery-import-drone-127', tags: [] })).toBe(true); // heart, not the word Suceava
+  expect(isGalleryVisible({ id: 'gallery-import-drone-111', tags: [] })).toBe(false); // I ♥ S3, a named sector
   expect(isGalleryVisible({ id: 'gallery-import-drone-105', tags: [] })).toBe(true);
   expect(isGalleryVisible({ id: 'gallery-import-drone-128', tags: [] })).toBe(true);
 });
