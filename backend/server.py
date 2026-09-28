@@ -31,7 +31,11 @@ from cms_routes import (
     is_cms_content_write,
 )
 from cms_service import CmsService
-from content_migrations import CompanyMigrationConflict, migrate_owner_company_identity
+from content_migrations import (
+    CompanyMigrationConflict,
+    migrate_owner_company_identity,
+    migrate_owner_euid,
+)
 from reviews import ReviewsService, create_reviews_router
 from auth import (
     AuthError,
@@ -235,7 +239,21 @@ async def lifespan(application):
                         ),
                         timeout=5,
                     )
-                except (PyMongoError, asyncio.TimeoutError, CompanyMigrationConflict, ValueError):
+                    await asyncio.wait_for(
+                        migrate_owner_euid(
+                            client,
+                            db.site_content_drafts,
+                            db.site_content_publications,
+                            db.site_content_revisions,
+                        ),
+                        timeout=5,
+                    )
+                except (
+                    PyMongoError,
+                    asyncio.TimeoutError,
+                    CompanyMigrationConflict,
+                    ValueError,
+                ):
                     # Transaction rollback preserves the previous publication;
                     # a later startup can retry without leaking DB/secret details.
                     logger.error("Company certificate migration unavailable")

@@ -124,6 +124,19 @@ def test_certificate_does_not_overwrite_an_unpublished_operational_address():
     )
 
 
+def test_certificate_replacement_keeps_the_distinct_euid_from_the_certificate():
+    from content_migrations import migrate_company_content
+
+    content = legacy_content()
+    content["legalPages"]["terms"]["sections"][0]["paragraphs"].append(
+        "EUID: ROONRC.J2022000693301."
+    )
+    corrected = migrate_company_content(content)
+    terms = repr(corrected["legalPages"]["terms"])
+    assert "EUID: ROONRC.J12/3784/2020." in terms
+    assert "ROONRC.J12/3784/16.11.2020" not in terms
+
+
 class Collection:
     """Deterministic storage double; query mismatches model Mongo CAS conflicts."""
 
@@ -425,6 +438,100 @@ async def test_missing_draft_is_not_replaced_by_a_new_provisional_draft():
     )
     assert drafts.documents == []
     assert publications.documents[0]["content"]["siteDetails"]["taxId"] == "43337078"
+
+
+@pytest.mark.asyncio
+async def test_euid_hotfix_corrects_live_publication_and_unpublished_draft_once():
+    from content_migrations import migrate_owner_company_identity, migrate_owner_euid
+
+    client, drafts, publications, revisions = database()
+    await migrate_owner_company_identity(
+        client, drafts, publications, revisions, now=NOW
+    )
+    malformed = "EUID: ROONRC.J12/3784/16.11.2020."
+    for document in (publications.documents[0], drafts.documents[0]):
+        document["content"]["legalPages"]["terms"]["sections"][0]["paragraphs"].append(
+            malformed
+        )
+    original_hero = deepcopy(drafts.documents[0]["content"]["homePage"]["hero"])
+    original_history = deepcopy(revisions.documents)
+    assert await migrate_owner_euid(client, drafts, publications, revisions, now=NOW)
+    for document in (publications.documents[0], drafts.documents[0]):
+        terms = repr(document["content"]["legalPages"]["terms"])
+        assert "EUID: ROONRC.J12/3784/2020." in terms
+        assert "ROONRC.J12/3784/16.11.2020" not in terms
+    assert drafts.documents[0]["content"]["homePage"]["hero"] == original_hero
+    assert revisions.documents[: len(original_history)] == original_history
+    assert revisions.documents[-1]["content"] == publications.documents[0]["content"]
+    assert (
+        drafts.documents[0]["base_revision_id"]
+        == publications.documents[0]["revision_id"]
+    )
+    assert not await migrate_owner_euid(
+        client, drafts, publications, revisions, now=NOW
+    )
+
+
+@pytest.mark.asyncio
+async def test_euid_hotfix_does_not_change_unrelated_company_content():
+    from content_migrations import migrate_owner_euid
+
+    client, drafts, publications, revisions = database()
+    publications.documents[0]["content"]["legalPages"]["terms"]["sections"][0][
+        "paragraphs"
+    ].append("EUID: ROONRC.J12/3784/16.11.2020.")
+    original = [deepcopy(collection.documents) for collection in client.collections]
+    assert not await migrate_owner_euid(
+        client, drafts, publications, revisions, now=NOW
+    )
+    assert [collection.documents for collection in client.collections] == original
+
+
+@pytest.mark.asyncio
+async def test_production_startup_repairs_the_already_published_euid(monkeypatch):
+    import server
+    from content_migrations import migrate_owner_company_identity
+    from unittest.mock import AsyncMock
+
+    client, drafts, publications, revisions = database()
+    await migrate_owner_company_identity(
+        client, drafts, publications, revisions, now=NOW
+    )
+    for document in (publications.documents[0], drafts.documents[0]):
+        document["content"]["legalPages"]["terms"]["sections"][0]["paragraphs"].append(
+            "EUID: ROONRC.J12/3784/16.11.2020."
+        )
+
+    class StartupClient(Client):
+        def __getitem__(self, name):
+            return object()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(server, "client", StartupClient(*client.collections))
+    monkeypatch.setattr(
+        server,
+        "db",
+        SimpleNamespace(
+            site_content_drafts=drafts,
+            site_content_publications=publications,
+            site_content_revisions=revisions,
+        ),
+    )
+    monkeypatch.setattr(
+        server, "AsyncIOMotorGridFSBucket", lambda *args, **kwargs: object()
+    )
+    monkeypatch.setattr(server, "ensure_indexes", AsyncMock())
+    monkeypatch.setattr(
+        server, "resend_http_client", SimpleNamespace(aclose=AsyncMock())
+    )
+    monkeypatch.setenv("VERCEL_ENV", "production")
+    async with server.lifespan(server.app):
+        assert "ROONRC.J12/3784/2020" in repr(publications.documents[0]["content"])
+        assert "ROONRC.J12/3784/16.11.2020" not in repr(
+            publications.documents[0]["content"]
+        )
 
 
 @pytest.mark.asyncio

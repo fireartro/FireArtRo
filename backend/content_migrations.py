@@ -12,6 +12,9 @@ from cms_models import SiteContent
 
 
 COMPANY_REVISION_ID = "owner-company-certificate-2026-09-28"
+COMPANY_EUID_REVISION_ID = "owner-company-euid-2026-09-28"
+INCORRECT_EUID = "ROONRC.J12/3784/16.11.2020"
+CERTIFICATE_EUID = "ROONRC.J12/3784/2020"
 COMPANY_DETAILS = {
     "legalName": "1A FIREARTRO EVENTS S.R.L.",
     "taxId": "43337078",
@@ -62,10 +65,35 @@ def migrate_company_content(content):
                 for old, new in replacements:
                     if old:
                         paragraph = paragraph.replace(old, new)
+                paragraph = paragraph.replace(INCORRECT_EUID, CERTIFICATE_EUID)
                 paragraphs.append(paragraph)
             section["paragraphs"] = paragraphs
         document["updatedLabel"] = "Actualizată la 28 septembrie 2026"
     # Validate without canonicalizing unrelated owner fields or adding defaults.
+    SiteContent.model_validate(corrected)
+    return corrected
+
+
+def correct_certificate_euid(content):
+    """Repair only the EUID typo introduced by the first live migration."""
+    details = content["siteDetails"]
+    if (
+        details["legalName"] != COMPANY_DETAILS["legalName"]
+        or details["taxId"] != COMPANY_DETAILS["taxId"]
+    ):
+        return content
+    corrected = deepcopy(content)
+    changed = False
+    for document in corrected["legalPages"].values():
+        for section in document["sections"]:
+            paragraphs = []
+            for paragraph in section["paragraphs"]:
+                repaired = paragraph.replace(INCORRECT_EUID, CERTIFICATE_EUID)
+                changed |= repaired != paragraph
+                paragraphs.append(repaired)
+            section["paragraphs"] = paragraphs
+    if not changed:
+        return content
     SiteContent.model_validate(corrected)
     return corrected
 
@@ -125,6 +153,71 @@ async def migrate_owner_company_identity(
                     raise CompanyMigrationConflict()
 
         await revisions.insert_one(revision, session=session)
+        saved = await publications.replace_one(
+            {"id": "current", "revision_id": previous_revision},
+            publication,
+            session=session,
+        )
+        if saved.matched_count != 1:
+            raise CompanyMigrationConflict()
+        return True
+
+    async with await client.start_session() as session:
+        return await session.with_transaction(transaction)
+
+
+async def migrate_owner_euid(client, drafts, publications, revisions, *, now=None):
+    """Publish the certificate's exact EUID, retaining CMS history and draft edits."""
+    now = now or datetime.now(timezone.utc)
+
+    async def transaction(session):
+        if await revisions.find_one({"id": COMPANY_EUID_REVISION_ID}, session=session):
+            return False
+        current = await publications.find_one({"id": "current"}, session=session)
+        if current is None:
+            return False
+        corrected = correct_certificate_euid(current["content"])
+        if corrected == current["content"]:
+            return False
+
+        previous_revision = current["revision_id"]
+        draft = await drafts.find_one({"id": "primary"}, session=session)
+        if draft is not None:
+            corrected_draft = correct_certificate_euid(draft["content"])
+            if corrected_draft != draft["content"]:
+                updated_draft = {
+                    **draft,
+                    "content": corrected_draft,
+                    "version": draft["version"] + 1,
+                    "updated_at": now,
+                    "updated_by": "owner-request",
+                }
+                if draft.get("base_revision_id") == previous_revision:
+                    updated_draft["base_revision_id"] = COMPANY_EUID_REVISION_ID
+                saved = await drafts.replace_one(
+                    {"id": "primary", "version": draft["version"]},
+                    updated_draft,
+                    session=session,
+                )
+                if saved.matched_count != 1:
+                    raise CompanyMigrationConflict()
+
+        revision = {
+            "id": COMPANY_EUID_REVISION_ID,
+            "schema_version": current["schema_version"],
+            "content": corrected,
+            "summary": "EUID corectat conform certificatului furnizat de proprietar",
+            "published_at": now,
+            "published_by": "owner-request",
+        }
+        await revisions.insert_one(revision, session=session)
+        publication = {
+            **current,
+            "content": corrected,
+            "revision_id": COMPANY_EUID_REVISION_ID,
+            "published_at": now,
+            "published_by": "owner-request",
+        }
         saved = await publications.replace_one(
             {"id": "current", "revision_id": previous_revision},
             publication,
