@@ -91,7 +91,7 @@ test("never replaces a custom placeholder list or guesses an ambiguous logo", as
   expect(container.querySelectorAll("img")).toHaveLength(0);
 });
 
-test("floats an Admin-managed list with a non-catalogue length and keeps names without logos", async () => {
+test("splits an Admin-managed list across two opposite bands without inventing logos", async () => {
   useReducedMotion.mockReturnValue(false);
   const partners = [
     { id: "infinity", name: "Infinity Ballroom", logoMediaId: "" },
@@ -99,25 +99,21 @@ test("floats an Admin-managed list with a non-catalogue length and keeps names w
     ...Array.from({ length: 5 }, (_, index) => ({ id: `brand-${index}`, name: `Brand ${index}`, logoMediaId: "" })),
   ];
   await render({ partners });
-  const scene = container.querySelector('[data-testid="partner-cloud"]');
-  expect(scene.dataset.view).toBe("cloud");
-  expect(container.querySelector('[aria-controls="fireart-partner-marks"]')).not.toBeNull();
+  const scene = container.querySelector('[data-testid="partner-marquee"]');
+  expect([...scene.querySelectorAll('[data-partner-lane]')].map(lane => lane.dataset.direction)).toEqual(["right", "left"]);
   expect(names()).toEqual(partners.map(partner => partner.name));
+  expect(container.querySelector('[aria-controls="fireart-partner-marks"]')).toBeNull();
   expect(container.querySelectorAll('li[data-partner-id="infinity"] img, li[data-partner-id="palatul"] img')).toHaveLength(0);
 });
 
-test("keeps every Admin partner in the complete list when the scene has more than 26", async () => {
+test("keeps every Admin partner in the two bands when there are more than 26", async () => {
   useReducedMotion.mockReturnValue(false);
   const partners = Array.from({ length: 31 }, (_, index) => ({ id: `brand-${index}`, name: `Brand ${index}`, logoMediaId: "" }));
   await render({ partners });
-  const scene = container.querySelector('[data-testid="partner-cloud"]');
-  expect(scene.dataset.view).toBe("cloud");
-  const toggle = container.querySelector('[aria-controls="fireart-partner-marks"]');
-  expect(toggle).not.toBeNull();
-  await act(async () => toggle.click());
-  expect(scene.dataset.view).toBe("list");
+  const scene = container.querySelector('[data-testid="partner-marquee"]');
+  expect(scene.querySelectorAll('[data-partner-lane]')).toHaveLength(2);
   expect(names()).toEqual(partners.map(partner => partner.name));
-  expect(container.querySelectorAll(".fa-partner")).toHaveLength(31);
+  expect(scene.querySelectorAll('[data-marquee-copy="false"] [data-partner-id]')).toHaveLength(31);
 });
 
 test("uses the original Colț de Rai logo only after the owner confirmed Negrești-Oaș", async () => {
@@ -137,7 +133,7 @@ test("keeps a readable partner name and removes broken image UI when a logo fail
   expect(container.querySelector("img")).toBeNull();
 });
 
-test("pauses the floating logos offscreen without removing partners from the document", async () => {
+test("pauses the bands offscreen without removing partners from the document", async () => {
   useReducedMotion.mockReturnValue(false);
   const originalObserver = window.IntersectionObserver;
   const intersections = [];
@@ -148,7 +144,7 @@ test("pauses the floating logos offscreen without removing partners from the doc
   };
   try {
     await render();
-    const scene = container.querySelector('[data-testid="partner-cloud"]');
+    const scene = container.querySelector('[data-testid="partner-marquee"]');
     expect(names()).toHaveLength(26);
     expect(scene.dataset.running).toBe("false");
     await act(async () => intersections[0]([{ isIntersecting: true }]));
@@ -161,11 +157,12 @@ test("pauses the floating logos offscreen without removing partners from the doc
   }
 });
 
-test("shows the entire partner gallery immediately with reduced motion", async () => {
+test("shows both full bands without animation or duplicated marks with reduced motion", async () => {
   await render();
-  const scene = container.querySelector('[data-testid="partner-cloud"]');
-  expect(scene.dataset.view).toBe("list");
+  const scene = container.querySelector('[data-testid="partner-marquee"]');
   expect(scene.dataset.running).toBe("false");
+  expect(scene.querySelectorAll('[data-partner-lane]')).toHaveLength(2);
+  expect(scene.querySelectorAll('[aria-hidden="true"][data-marquee-copy]')).toHaveLength(0);
   expect(names()).toHaveLength(26);
 });
 
@@ -174,7 +171,7 @@ test("pauses the scene while the document is hidden and resumes on return", asyn
   const hidden = jest.spyOn(document, "hidden", "get").mockReturnValue(false);
   try {
     await render();
-    const scene = container.querySelector('[data-testid="partner-cloud"]');
+    const scene = container.querySelector('[data-testid="partner-marquee"]');
     expect(scene.dataset.running).toBe("true");
     hidden.mockReturnValue(true);
     await act(async () => document.dispatchEvent(new Event("visibilitychange")));
@@ -187,29 +184,24 @@ test("pauses the scene while the document is hidden and resumes on return", asyn
   }
 });
 
-test("shows all partners in a readable list without duplicating them, and returns to the scene", async () => {
+test("renders one accessible copy of each partner and no all-partners button", async () => {
   useReducedMotion.mockReturnValue(false);
   await render();
-  const scene = container.querySelector('[data-testid="partner-cloud"]');
-  const toggle = container.querySelector('[aria-controls="fireart-partner-marks"]');
-  expect(scene.dataset.view).toBe("cloud");
-  await act(async () => toggle.click());
-  expect(scene.dataset.view).toBe("list");
-  expect(toggle.getAttribute('aria-expanded')).toBe("true");
+  const scene = container.querySelector('[data-testid="partner-marquee"]');
   expect(names()).toHaveLength(26);
-  await act(async () => toggle.click());
-  expect(scene.dataset.view).toBe("cloud");
-  expect(names()).toHaveLength(26);
+  expect(new Set(names()).size).toBe(26);
+  expect(scene.querySelectorAll('[aria-hidden="true"][data-marquee-copy]')).toHaveLength(2);
+  expect(container.textContent).not.toContain("Vezi toți");
 });
 
-test("lets the visitor pause movement independently from the list mode", async () => {
+test("lets the visitor pause the two bands", async () => {
   useReducedMotion.mockReturnValue(false);
   await render();
-  const button = container.querySelector('[aria-label="Oprește animația siglelor"]');
+  const button = container.querySelector('[aria-label="Oprește mișcarea partenerilor"]');
   expect(button).not.toBeNull();
   await act(async () => button.click());
-  const scene = container.querySelector('[data-testid="partner-cloud"]');
+  const scene = container.querySelector('[data-testid="partner-marquee"]');
   expect(scene.dataset.running).toBe("false");
-  expect(container.querySelector('[aria-label="Pornește animația siglelor"]').getAttribute('aria-pressed')).toBe("true");
+  expect(container.querySelector('[aria-label="Pornește mișcarea partenerilor"]').getAttribute('aria-pressed')).toBe("true");
   expect(names()).toHaveLength(26);
 });
