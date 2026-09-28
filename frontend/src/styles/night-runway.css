@@ -11,15 +11,15 @@
   --nr-section-space: clamp(4rem, 7vmin, 12rem);
   --nr-gutter: clamp(1rem, 2.5vw, 8rem);
   --nr-readable-max: 72ch;
-  --nr-layout-max: 90rem;
-  --nr-cinematic-content-max: clamp(90rem, 84vw, 120rem);
+  --nr-layout-max: clamp(90rem, 75vw, 138rem);
+  --nr-cinematic-content-max: clamp(90rem, 84vw, 150rem);
   --nr-cinematic-width: 100vw;
   --nr-max: var(--nr-layout-max);
   --nr-control-size: clamp(3rem, calc(2rem + max(0.6vmin, 0.16vw)), 4.5rem);
-  --nr-type-label: clamp(0.68rem, calc(0.5rem + max(0.32vmin, 0.16vw)), 1rem);
-  --nr-type-small: clamp(0.78rem, calc(0.6rem + max(0.36vmin, 0.14vw)), 1.08rem);
-  --nr-type-body: clamp(0.95rem, calc(0.74rem + max(0.42vmin, 0.13vw)), 1.25rem);
-  --nr-type-lead: clamp(1rem, calc(0.72rem + max(0.55vmin, 0.14vw)), 1.45rem);
+  --nr-type-label: clamp(0.8rem, calc(0.55rem + 0.22vw), 1.05rem);
+  --nr-type-small: clamp(0.875rem, calc(0.65rem + 0.24vw), 1.2rem);
+  --nr-type-body: clamp(1rem, calc(0.75rem + 0.28vw), 1.35rem);
+  --nr-type-lead: clamp(1rem, calc(0.8rem + 0.33vw), 1.6rem);
   --nr-type-card-title: clamp(1.75rem, max(2.3vw, 2.8vmin), 4.25rem);
   --nr-type-page-title: clamp(2.75rem, max(3.4vw, 4vmin), 6.5rem);
 }
@@ -220,7 +220,7 @@ body:has(main[data-design="night-runway"]) .site-navbar-layout {
   max-width: 12ch;
   color: var(--nr-paper);
   font-family: "Sora", sans-serif;
-  font-size: clamp(2.6rem, max(5vw, 4.2vmin), 8rem);
+  font-size: clamp(2.6rem, min(5vw, 17vh), 8rem);
   font-weight: 520;
   line-height: 0.98;
   letter-spacing: 0;
@@ -454,7 +454,7 @@ body:has(main[data-design="night-runway"]) .site-navbar-layout {
   }
 
   .nr-display {
-    font-size: clamp(2.4rem, 11vw, 3.4rem);
+    font-size: clamp(2.4rem, min(11vw, 17vh), 3.4rem);
   }
 
   .nr-button {
