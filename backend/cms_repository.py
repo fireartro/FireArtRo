@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from typing import Any, Protocol
+from uuid import uuid4
 
 from pymongo import ReturnDocument
 
@@ -123,23 +124,41 @@ class MongoCmsRepository:
             return await session.with_transaction(transaction)
 
     async def create_draft_from_publication(self, *, publication, admin_id, now) -> dict[str, Any]:
-        document = {
-            "id": PRIMARY_DRAFT_ID,
-            "schema_version": publication["schema_version"],
-            "content": deepcopy(publication["content"]),
-            "base_revision_id": publication["revision_id"],
-            "version": 0,
-            "updated_at": now,
-            "updated_by": admin_id,
-        }
-        saved = await self.drafts.find_one_and_update(
-            {"id": PRIMARY_DRAFT_ID},
-            {"$setOnInsert": document},
-            upsert=True,
-            return_document=ReturnDocument.AFTER,
-            projection={"_id": 0},
-        )
-        return _clean(saved)
+        """Recover from the current snapshot, never a caller's stale copy."""
+        guard = str(uuid4())
+
+        async def transaction(session):
+            draft = await self.drafts.find_one({"id": PRIMARY_DRAFT_ID}, session=session)
+            if draft is not None:
+                return _clean(draft)
+            current = await self.publications.find_one(
+                {"id": CURRENT_PUBLICATION_ID}, session=session,
+            )
+            if current is None:
+                return None
+            # A real write (not a no-op) to this shared document prevents write
+            # skew with a concurrent publication/migration of a missing draft.
+            locked = await self.publications.update_one(
+                {"id": CURRENT_PUBLICATION_ID, "revision_id": current["revision_id"]},
+                {"$set": {"draft_recovery_guard": guard}},
+                session=session,
+            )
+            if locked.matched_count != 1:
+                raise RepositoryDraftConflict()
+            document = {
+                "id": PRIMARY_DRAFT_ID,
+                "schema_version": current["schema_version"],
+                "content": deepcopy(current["content"]),
+                "base_revision_id": current["revision_id"],
+                "version": 0,
+                "updated_at": now,
+                "updated_by": admin_id,
+            }
+            await self.drafts.insert_one(document, session=session)
+            return _clean(document)
+
+        async with await self.client.start_session() as session:
+            return await session.with_transaction(transaction)
 
     async def update_draft(
         self,

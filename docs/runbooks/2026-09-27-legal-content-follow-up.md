@@ -6,7 +6,11 @@ This is an operational checklist, not a legal opinion or a guarantee against fin
 
 The owner supplied the registration certificate for **1A FIREARTRO EVENTS S.R.L.**, CUI **43337078**, J12/3784/16.11.2020, EUID ROONRC.J12/3784/2020. Registered office: Cluj-Napoca, Str. Oltului nr. 1, camera 1, etaj 1, ap. 4, județul Cluj. The operational address is distinct: Piața Unirii nr. 2, 435400 Seini, județul Maramureș.
 
-The anonymous published CMS still contains the old Smart Land identity. Correcting bundled defaults does not migrate the CMS. Before publishing, inspect the authenticated draft diff and preserve unrelated owner edits. Update `siteDetails` and the first identity paragraph in each of `privacy`, `terms`, and `cookies` together. Live Admin authentication is required; do not guess or reset credentials.
+The anonymous published CMS contained the old Smart Land identity. Correcting bundled defaults alone does not migrate the CMS. At the owner's explicit request on 28 September, the release includes a narrowly guarded Production-startup data migration in `backend/content_migrations.py`. It corrects `siteDetails` and the previous identification in each of `privacy`, `terms`, and `cookies`, preserving all unrelated public content. It corrects an eligible draft independently without publishing unrelated draft edits; an already owner-edited identity remains unchanged.
+
+The Mongo transaction preserves old immutable history and records `owner-company-certificate-2026-09-28` as the correction revision and one-time completion marker. Once recorded, it does not override later Admin publications or explicit historical restores. It changes no authentication credential and adds no public maintenance endpoint. Deployment success must still be followed by visual verification of all three legal pages and the footer.
+
+Unknown capital is omitted, no `RO` VAT prefix is inferred, and Cluj-Napoca is labeled as the registered office rather than an unconfirmed second customer-facing office. Admin access recovery remains separate: no existing plaintext credential was found in the checked project locations, and a bcrypt hash is not a recoverable password.
 
 ## Facts needed from the owner
 
