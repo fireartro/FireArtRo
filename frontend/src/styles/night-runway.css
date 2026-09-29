@@ -220,7 +220,7 @@ body:has(main[data-design="night-runway"]) .site-navbar-layout {
   max-width: 12ch;
   color: var(--nr-paper);
   font-family: "Sora", sans-serif;
-  font-size: clamp(2.6rem, min(5vw, 17vh), 8rem);
+  font-size: clamp(2.6rem, max(5vw, 4.2vmin), 8rem);
   font-weight: 520;
   line-height: 0.98;
   letter-spacing: 0;
@@ -454,7 +454,7 @@ body:has(main[data-design="night-runway"]) .site-navbar-layout {
   }
 
   .nr-display {
-    font-size: clamp(2.4rem, min(11vw, 17vh), 3.4rem);
+    font-size: clamp(2.4rem, 11vw, 3.4rem);
   }
 
   .nr-button {

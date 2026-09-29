@@ -77,8 +77,26 @@ test("phone body copy keeps a 16px floor", async ({ page }) => {
   await page.goto("/#acasa", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".fa-footer__frame")).toBeAttached();
 
-  const bodySize = await page.evaluate(() => Number.parseFloat(getComputedStyle(document.body).fontSize));
-  expect(bodySize).toBeGreaterThanOrEqual(16);
+  const metrics = await page.evaluate(() => {
+    const viewportWidth = document.documentElement.clientWidth;
+    const bounds = [".site-navbar-logo", ".nr-hero__title", ".nr-hero__actions", ".fa-footer__frame"]
+      .map((selector) => {
+        const element = document.querySelector(selector);
+        if (!element) throw new Error(`Missing phone bounds probe: ${selector}`);
+        const rect = element.getBoundingClientRect();
+        return { selector, left: rect.left, right: rect.right };
+      });
+    return {
+      bodySize: Number.parseFloat(getComputedStyle(document.body).fontSize),
+      viewportWidth,
+      bounds,
+    };
+  });
+  expect(metrics.bodySize).toBeGreaterThanOrEqual(16);
+  for (const bound of metrics.bounds) {
+    expect(bound.left, `${bound.selector} left edge`).toBeGreaterThanOrEqual(-1);
+    expect(bound.right, `${bound.selector} right edge`).toBeLessThanOrEqual(metrics.viewportWidth + 1);
+  }
 });
 
 test("short landscape keeps body copy readable and the display title within the viewport", async ({ page }) => {
@@ -92,14 +110,23 @@ test("short landscape keeps body copy readable and the display title within the 
     if (!title || !navbar) throw new Error("Missing short-landscape scale probe");
     return {
       body: Number.parseFloat(getComputedStyle(document.body).fontSize),
-      titleHeight: title.getBoundingClientRect().height,
+      title: title.getBoundingClientRect().toJSON(),
+      navbarBottom: navbar.getBoundingClientRect().bottom,
+      actions: [...document.querySelectorAll(".nr-hero__actions .nr-button")]
+        .map((button) => button.getBoundingClientRect().toJSON()),
       availableHeight: window.innerHeight - navbar.getBoundingClientRect().height,
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     };
   });
 
   expect(metrics.body, "2560x720 body copy").toBeGreaterThanOrEqual(18);
-  expect(metrics.titleHeight, "2560x720 display title height").toBeLessThanOrEqual(metrics.availableHeight);
+  expect(metrics.title.height, "2560x720 display title height").toBeLessThanOrEqual(metrics.availableHeight);
+  expect(metrics.title.top, "2560x720 title clears navigation").toBeGreaterThanOrEqual(metrics.navbarBottom - 1);
+  expect(metrics.title.bottom, "2560x720 title visible below fold").toBeLessThanOrEqual(721);
+  expect(metrics.actions).toHaveLength(2);
+  for (const action of metrics.actions) {
+    expect(action.bottom, "2560x720 hero action visible below fold").toBeLessThanOrEqual(721);
+  }
   expect(metrics.overflow, "2560x720 horizontal overflow").toBeLessThanOrEqual(1);
 });
 
