@@ -465,6 +465,17 @@
   font-size: var(--nr-type-body);
 }
 
+@media (min-width: 1600px) {
+  .nr-contact-layout {
+    grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+    width: min(calc(100% - (2 * var(--nr-gutter))), 110rem);
+  }
+
+  .nr-contact-field :is(input, select, textarea) {
+    font-size: var(--nr-type-body);
+  }
+}
+
 @media (max-width: 960px) {
   .nr-contact-main::before {
     opacity: 0.24;
@@ -561,7 +572,7 @@
   }
 }
 
-@media (max-width: 370px) {
+@media (max-width: 600px) {
   .nr-contact-fields,
   .nr-contact-optional__fields {
     grid-template-columns: minmax(0, 1fr);

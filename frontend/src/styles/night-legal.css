@@ -278,6 +278,21 @@ main.legal-page[data-design="night-runway"] :where(.legal-nav a, .legal-source, 
   outline-offset: 3px;
 }
 
+@media (min-width: 1600px) {
+  main.legal-page[data-design="night-runway"] .legal-hero-inner {
+    width: min(calc(100% - (2 * var(--nr-gutter))), clamp(76rem, 64vw, 100rem));
+  }
+
+  main.legal-page[data-design="night-runway"] .legal-layout {
+    grid-template-columns: minmax(14rem, 1fr) minmax(0, 62rem);
+    width: min(calc(100% - (2 * var(--nr-gutter))), clamp(76rem, 57vw, 94rem));
+  }
+
+  main.legal-page[data-design="night-runway"] .legal-nav a {
+    font-size: var(--nr-type-small);
+  }
+}
+
 @media (max-width: 899px) {
   main.legal-page[data-design="night-runway"]::before {
     opacity: 0.24;
@@ -323,7 +338,7 @@ main.legal-page[data-design="night-runway"] :where(.legal-nav a, .legal-source, 
   main.legal-page[data-design="night-runway"] .legal-hero p {
     max-width: 30rem;
     margin-bottom: 0;
-    font-size: 0.95rem;
+    font-size: var(--nr-type-body);
   }
 
   main.legal-page[data-design="night-runway"] .legal-layout {
@@ -370,7 +385,7 @@ main.legal-page[data-design="night-runway"] :where(.legal-nav a, .legal-source, 
   }
 
   main.legal-page[data-design="night-runway"] .legal-article p {
-    font-size: 0.94rem;
+    font-size: var(--nr-type-body);
     line-height: 1.72;
   }
 

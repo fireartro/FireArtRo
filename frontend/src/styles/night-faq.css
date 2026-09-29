@@ -310,6 +310,17 @@ main.nr-faq-page[data-design="night-runway"] {
   }
 }
 
+@media (min-width: 1600px) {
+  .nr-faq-hero__inner {
+    --nr-max: clamp(76rem, 64vw, 100rem);
+  }
+
+  .nr-faq__layout {
+    --nr-max: clamp(76rem, 57vw, 94rem);
+    grid-template-columns: minmax(14rem, 1fr) minmax(0, 62rem);
+  }
+}
+
 @media (max-width: 899px) {
   .nr-faq-route::before {
     opacity: 0.24;
@@ -352,7 +363,7 @@ main.nr-faq-page[data-design="night-runway"] {
 
   .nr-faq-hero__description {
     max-width: 30rem;
-    font-size: 0.95rem;
+    font-size: var(--nr-type-body);
   }
 
   .nr-faq {
