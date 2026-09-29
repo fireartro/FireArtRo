@@ -93,6 +93,21 @@ test('CMS navigation switches from compact at 900px to docked at 1051px', async 
   expect(docked.menuDisplay).toBe('none');
 });
 
+test('closed Admin drawer is skipped by keyboard at 901–1050px', async ({ page }) => {
+  for (const width of [901, 1050]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.locator('.admin-appbar-actions .admin-button').focus();
+    await page.keyboard.press('Tab');
+    await expect(page.locator('.admin-sidebar summary')).not.toBeFocused();
+    expect(await page.evaluate(() => document.activeElement.closest('.admin-sidebar') === null)).toBe(true);
+
+    await page.locator('.admin-sidebar').evaluate((node) => node.classList.add('is-open'));
+    await page.locator('.admin-sidebar summary').focus();
+    await expect(page.locator('.admin-sidebar summary')).toBeFocused();
+    await page.locator('.admin-sidebar').evaluate((node) => node.classList.remove('is-open'));
+  }
+});
+
 test('wide CMS Blog editor expands beyond its former narrow cap', async ({ page }) => {
   await page.setViewportSize({ width: 2560, height: 1440 });
   const blogWidth = await page.locator('.admin-blog-view').evaluate(el => el.getBoundingClientRect().width);

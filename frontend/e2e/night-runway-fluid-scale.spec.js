@@ -103,6 +103,8 @@ test("short landscape keeps body copy readable and the display title within the 
   await page.setViewportSize({ width: 2560, height: 720 });
   await page.goto("/#acasa", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".nr-hero__title")).toBeAttached();
+  await expect(page.getByTestId("hero-primary-cta")).toBeVisible();
+  await expect(page.getByTestId("hero-secondary-cta")).toBeVisible();
 
   const metrics = await page.evaluate(() => {
     const title = document.querySelector(".nr-hero__title");
@@ -125,6 +127,7 @@ test("short landscape keeps body copy readable and the display title within the 
   expect(metrics.title.bottom, "2560x720 title visible below fold").toBeLessThanOrEqual(721);
   expect(metrics.actions).toHaveLength(2);
   for (const action of metrics.actions) {
+    expect(action.height, "2560x720 hero action has visible height").toBeGreaterThanOrEqual(44);
     expect(action.bottom, "2560x720 hero action visible below fold").toBeLessThanOrEqual(721);
   }
   expect(metrics.overflow, "2560x720 horizontal overflow").toBeLessThanOrEqual(1);
