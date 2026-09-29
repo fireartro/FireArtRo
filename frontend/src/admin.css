@@ -1095,3 +1095,24 @@
   .cms-shell .admin-inbox-detail__header > div > p:last-child,
   .cms-shell .admin-inbox-reply__actions > span { font-size: 13px; }
 }
+
+@media (min-width: 3000px) {
+  .cms-shell .admin-workspace { grid-template-columns: 280px minmax(0, 1fr); }
+  .cms-shell .cms-panel,
+  .cms-shell .cms-dashboard { width: min(100%, 2208px); }
+  .cms-shell .admin-blog-view { width: min(100%, 2050px); }
+  .cms-shell .cms-collection,
+  .cms-shell .admin-blog-layout { grid-template-columns: minmax(380px, 430px) minmax(0, 1fr); }
+  .cms-shell .cms-panel h1,
+  .cms-shell .cms-dashboard h1 { font-size: 2.75rem; }
+  .cms-shell .admin-sidebar summary,
+  .cms-shell .admin-field label,
+  .cms-shell .cms-field-group > legend,
+  .cms-shell .admin-blog-fields > label > span:first-child { font-size: 16px; }
+  .cms-shell .admin-button,
+  .cms-shell .admin-session-logout,
+  .cms-shell .admin-sidebar nav button { font-size: 16px; }
+  .cms-shell input,
+  .cms-shell textarea,
+  .cms-shell select { font-size: 17px; }
+}

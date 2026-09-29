@@ -139,3 +139,30 @@ test('wide CMS editor uses the canvas and legible controls at 2560px', async ({ 
   expect(wide.navHeight).toBeGreaterThanOrEqual(44);
   expect(wide.pageWidth).toBeLessThanOrEqual(2561);
 });
+
+test('4K CSS viewport keeps the Admin workspace proportional and readable', async ({ page }) => {
+  await page.setViewportSize({ width: 3840, height: 2160 });
+  const metrics = await page.evaluate(() => {
+    const width = selector => document.querySelector(selector).getBoundingClientRect().width;
+    const size = selector => Number.parseFloat(getComputedStyle(document.querySelector(selector)).fontSize);
+    return {
+      panel: width('.cms-panel'),
+      blog: width('.admin-blog-view'),
+      sidebar: width('.admin-sidebar'),
+      title: size('.cms-panel h1'),
+      nav: size('.admin-sidebar summary'),
+      field: size('.admin-field label'),
+      input: size('.cms-shell input'),
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+  expect(metrics.panel).toBeGreaterThanOrEqual(2100);
+  expect(metrics.panel).toBeLessThanOrEqual(2224);
+  expect(metrics.blog).toBeGreaterThanOrEqual(1950);
+  expect(metrics.sidebar).toBeGreaterThanOrEqual(270);
+  expect(metrics.title).toBeGreaterThanOrEqual(40);
+  expect(metrics.nav).toBeGreaterThanOrEqual(16);
+  expect(metrics.field).toBeGreaterThanOrEqual(16);
+  expect(metrics.input).toBeGreaterThanOrEqual(17);
+  expect(metrics.overflow).toBeLessThanOrEqual(1);
+});
