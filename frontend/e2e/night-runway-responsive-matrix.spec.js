@@ -69,6 +69,7 @@ test.describe("FireArt public responsive matrix", () => {
 
     for (const route of publicRoutes) {
       await page.goto(route, { waitUntil: "domcontentloaded" });
+      await expect(page.locator("#fireart-intro"), `${route} loading screen exits`).toHaveCount(0, { timeout: 20_000 });
       await expect(page.locator("main").first(), `${route} main content`).toBeVisible();
 
       for (const viewport of viewportMatrix) {
@@ -117,6 +118,7 @@ test.describe("FireArt public responsive matrix", () => {
     ];
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(page.locator("#fireart-intro")).toHaveCount(0, { timeout: 20_000 });
     for (const viewport of homeViewports) {
       await page.setViewportSize(viewport);
       await page.evaluate(() => window.scrollTo(0, 0));
@@ -146,6 +148,7 @@ test.describe("FireArt public responsive matrix", () => {
   });
 
   test("DPR 2 keeps the same CSS geometry at desktop and phone widths", async ({ browser }) => {
+    test.setTimeout(60_000);
     for (const viewport of [{ width: 2560, height: 1440 }, { width: 390, height: 844 }]) {
       const results = [];
       for (const deviceScaleFactor of [1, 2]) {
@@ -154,6 +157,7 @@ test.describe("FireArt public responsive matrix", () => {
           const page = await context.newPage();
           await servePublishedContent(page);
           await page.goto(process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:4173/", { waitUntil: "domcontentloaded" });
+          await expect(page.locator("#fireart-intro")).toHaveCount(0, { timeout: 20_000 });
           await expect(page.getByTestId("hero-section")).toBeVisible();
           results.push(await page.evaluate(() => ({
             bodySize: Number.parseFloat(getComputedStyle(document.body).fontSize),
