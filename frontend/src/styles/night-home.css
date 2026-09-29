@@ -962,7 +962,7 @@
 
   .nr-hero__eyebrow {
     gap: 0.6rem;
-    font-size: 0.59rem;
+    font-size: 0.7rem;
   }
 
   .nr-hero__title {
@@ -975,13 +975,13 @@
   .nr-hero__description {
     max-width: 22rem;
     margin-top: 0.8rem;
-    font-size: 0.78rem;
+    font-size: clamp(0.875rem, 3.6vw, 1rem);
     line-height: 1.45;
   }
 
   .nr-hero__actions {
     width: auto;
-    gap: 1.5rem;
+    gap: clamp(1rem, 4vw, 1.5rem);
     margin-top: 1rem;
   }
 
@@ -989,7 +989,11 @@
     width: auto;
     min-width: 0;
     flex: 0 1 auto;
-    font-size: 0.57rem;
+    font-size: 0.75rem;
+  }
+
+  .nr-home #acasa .nr-hero__actions .nr-button {
+    font-size: clamp(0.75rem, 3vw, 0.875rem);
   }
 
   .fa-service-stage {

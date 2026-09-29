@@ -1,4 +1,34 @@
 const { test, expect } = require("@playwright/test");
+const publishedSeed = require("../src/content/__fixtures__/siteContent.json");
+const publishedContent = JSON.parse(JSON.stringify(publishedSeed));
+publishedContent.partners = Array.from({ length: 12 }, (_, index) => {
+  const name = `PARTENER ${String(index + 1).padStart(2, "0")}`;
+  return { id: `partner-${index + 1}`, name, logoPlaceholder: name, logoMediaId: "", replaceable: true };
+});
+const galleryPhotos = [
+  { id: "qa-drone", category: "Drone show", src: "/media/gallery/fireartro-drone-show-focsani-dji-0768-enhanced-nr.webp" },
+  { id: "qa-night", category: "Artificii de noapte", src: "/media/gallery/fireartro-artificii-noapte-spectacol-091.webp" },
+  { id: "qa-day", category: "Artificii de zi", src: "/media/gallery/fireartro-artificii-zi-festival-biserica.webp" },
+];
+publishedContent.mediaItems = [
+  publishedSeed.mediaItems[0],
+  ...galleryPhotos.map((photo) => ({
+    ...publishedSeed.mediaItems[0], id: photo.id, category: photo.category,
+    tags: [photo.category], src: photo.src, thumbnail: photo.src, poster: photo.src,
+  })),
+];
+publishedContent.homePage.promoSlides = galleryPhotos.map((photo) => ({
+  ...publishedSeed.homePage.promoSlides[0], id: `slide-${photo.id}`, mediaId: photo.id,
+}));
+
+const servePublishedContent = async (page) => {
+  await page.route("**/api/content", (route) => route.fulfill({
+    json: { content: publishedContent, revision_id: "home-responsive-qa", published_at: "2026-09-28T00:00:00Z" },
+  }));
+  await page.route("**/api/content/revision", (route) => route.fulfill({
+    json: { revision_id: "home-responsive-qa", published_at: "2026-09-28T00:00:00Z" },
+  }));
+};
 
 const responsiveViewports = [
   { width: 1440, height: 900 },
@@ -363,4 +393,88 @@ test.describe("FireArt scroll canvas landing", () => {
       await expect(page.getByTestId("hero-primary-cta")).toBeVisible();
     });
   }
+
+  for (const viewport of [{ width: 2560, height: 1440, selectorMin: 1600, panelMin: 1700, figureMin: 1500, aboutMin: 900, footerMin: 1800 }, { width: 3840, height: 2160, selectorMin: 1700, panelMin: 1900, figureMin: 1700, aboutMin: 1000, footerMin: 2100 }]) {
+    test(`wide home scenes fill their composition at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+      await servePublishedContent(page);
+      await page.setViewportSize(viewport);
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+      await expect(page.getByTestId("home-gallery").locator("[data-gallery-item]")).toHaveCount(3);
+
+      const metrics = await page.evaluate(() => {
+        const width = (selector) => {
+          const node = document.querySelector(selector);
+          if (!node) throw new Error(`Missing home geometry probe: ${selector}`);
+          return node.getBoundingClientRect().width;
+        };
+        const paragraph = document.querySelector(".fa-about__copy p");
+        return {
+          selector: width(".fa-packages--selector .fa-packages__inner"),
+          panel: width(".fa-work [data-gallery-item]"),
+          figure: width(".fa-work [data-gallery-item] figure"),
+          about: width(".fa-about__copy"),
+          aboutParagraph: paragraph?.getBoundingClientRect().width,
+          partner: width(".fa-partner-marquee"),
+          footer: width(".fa-footer__frame"),
+          contentWidth: document.body.getBoundingClientRect().width,
+          overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        };
+      });
+
+      expect(metrics.selector, "package selector width").toBeGreaterThanOrEqual(viewport.selectorMin);
+      expect(metrics.panel, "featured gallery panel width").toBeGreaterThanOrEqual(viewport.panelMin);
+      expect(metrics.figure, "gallery figure width").toBeGreaterThanOrEqual(viewport.figureMin);
+      expect(metrics.about, "about composition width").toBeGreaterThanOrEqual(viewport.aboutMin);
+      expect(metrics.aboutParagraph, "about reading column").toBeLessThanOrEqual(720);
+      expect(metrics.partner, "full-width partner composition").toBeGreaterThanOrEqual(metrics.contentWidth - 1);
+      expect(metrics.footer, "footer visual shell width").toBeGreaterThanOrEqual(viewport.footerMin);
+      expect(metrics.overflow, "document horizontal overflow").toBeLessThanOrEqual(1);
+    });
+  }
+
+  test("phone hero keeps both actions legible inside the scene", async ({ page }) => {
+    await servePublishedContent(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const hero = page.getByTestId("hero-section");
+    const primary = page.getByTestId("hero-primary-cta");
+    const secondary = page.getByTestId("hero-secondary-cta");
+    await expect(primary).toBeVisible();
+    await expect(secondary).toBeVisible();
+    const metrics = await hero.evaluate((node) => {
+      const description = node.querySelector(".nr-hero__description");
+      const actions = [...node.querySelectorAll(".nr-hero__actions .nr-button")];
+      const heroBox = node.getBoundingClientRect();
+      return {
+        descriptionSize: parseFloat(getComputedStyle(description).fontSize),
+        actionSizes: actions.map((action) => parseFloat(getComputedStyle(action).fontSize)),
+        actionsInside: actions.every((action) => {
+          const box = action.getBoundingClientRect();
+          return box.left >= heroBox.left && box.right <= heroBox.right && box.bottom <= heroBox.bottom;
+        }),
+      };
+    });
+    expect(metrics.descriptionSize).toBeGreaterThanOrEqual(14);
+    expect(metrics.actionSizes).toHaveLength(2);
+    expect(Math.min(...metrics.actionSizes)).toBeGreaterThanOrEqual(12);
+    expect(metrics.actionsInside).toBe(true);
+  });
+
+  test("1024px short landscape gallery keeps the figure and caption within its stage", async ({ page }) => {
+    await servePublishedContent(page);
+    await page.setViewportSize({ width: 1024, height: 390 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const metrics = await page.getByTestId("home-gallery").evaluate((section) => {
+      const card = section.querySelector("[data-gallery-item]");
+      const figure = card.querySelector("figure");
+      const caption = card.querySelector(".fa-work__meta");
+      const style = getComputedStyle(card);
+      return {
+        contentHeight: figure.getBoundingClientRect().height + caption.getBoundingClientRect().height
+          + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom),
+        stageHeight: section.querySelector(".fa-work__sticky").getBoundingClientRect().height,
+      };
+    });
+    expect(metrics.contentHeight).toBeLessThanOrEqual(metrics.stageHeight + 1);
+  });
 });

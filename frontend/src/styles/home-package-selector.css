@@ -28,6 +28,17 @@
 .fa-packages--selector a:focus-visible { outline: 2px solid #9bcaff; outline-offset: 5px; }
 .fa-packages__mobile-scenes { display: none; }
 @keyframes fa-scene-arrive { from { opacity: .5; transform: scale(1.025); } to { opacity: 1; transform: scale(1); } }
+@media (min-width: 1600px) {
+  .fa-packages--selector .fa-packages__inner { max-width: clamp(1120px, 68vw, 1760px); gap: clamp(28px, 2vw, 42px); }
+  .fa-packages--selector .fa-packages__header h2 { font-size: clamp(44px, 2.5vw, 68px); }
+  .fa-packages--selector .fa-packages__header > p:last-child { font-size: clamp(17px, .8vw, 20px); }
+  .fa-packages__category { min-height: 104px; padding-block: 20px; }
+  .fa-packages__category h3 { font-size: clamp(30px, 1.55vw, 40px); }
+  .fa-packages__category > span { font-size: clamp(14px, .65vw, 17px); }
+  .fa-packages__scene { height: clamp(448px, 30vw, 592px); }
+  .fa-packages__scene-caption > span:first-child { font-size: clamp(16px, .75vw, 19px); }
+  .fa-packages__discover { font-size: clamp(15px, .68vw, 18px); }
+}
 @media (max-width: 899px), (max-width: 1199px) and (orientation: portrait), (hover: none) and (pointer: coarse) {
   .fa-packages--selector .fa-packages__header { grid-template-columns: 1fr; gap: 10px; }
   .fa-packages--selector .fa-packages__header > p:last-child { grid-column: 1; justify-self: start; max-width: 48ch; }

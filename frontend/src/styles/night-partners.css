@@ -197,6 +197,16 @@
   padding-inline: 1rem;
   will-change: auto;
 }
+@media (min-width: 1600px) {
+  .fa-partner-marquee__head { width: min(100% - 4rem, 1400px); }
+  .fa-partner-marquee__copy { max-width: 1000px; }
+  .fa-partner-marquee__copy .fa-kicker { font-size: var(--nr-type-label); }
+  .fa-partner-marquee__caption { font-size: var(--nr-type-small); }
+  .fa-partner { width: clamp(240px, 11vw, 288px); }
+  .fa-partner__body { height: clamp(156px, 8vw, 176px); }
+  .fa-partner__mark { width: min(100%, 190px); height: 88px; }
+  .fa-partner__name { font-size: clamp(13px, .58vw, 16px); }
+}
 @media (hover: hover) and (pointer: fine) {
   .fa-partner:hover .fa-partner__body { border-color: #a0cffc69; background: #17283d; }
 }

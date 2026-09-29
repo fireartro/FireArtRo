@@ -205,3 +205,40 @@ test("lets the visitor pause the two bands", async () => {
   expect(container.querySelector('[aria-label="Pornește mișcarea partenerilor"]').getAttribute('aria-pressed')).toBe("true");
   expect(names()).toHaveLength(26);
 });
+
+test("adds hidden real partners to fill a wide lane and remeasures on resize", async () => {
+  useReducedMotion.mockReturnValue(false);
+  const partners = ["A", "B", "C", "D"].map(name => ({ id: name, name: `Brand ${name}`, logoMediaId: "", replaceable: false }));
+  let laneWidth = 3840;
+  const originalObserver = window.ResizeObserver;
+  const originalRect = Element.prototype.getBoundingClientRect;
+  let notifyResize;
+  window.ResizeObserver = class {
+    constructor(callback) { notifyResize = callback; }
+    observe() {}
+    disconnect() {}
+  };
+  const rect = jest.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function getRect() {
+    if (this.matches?.(".fa-partner-lane")) return { width: laneWidth };
+    if (this.matches?.(".fa-partner")) return { width: 200 };
+    return originalRect.call(this);
+  });
+  try {
+    await render({ partners });
+    const scene = container.querySelector('[data-testid="partner-marquee"]');
+    const originalGroups = [...scene.querySelectorAll('[data-marquee-copy="false"]')];
+    expect(originalGroups).toHaveLength(2);
+    expect(originalGroups.every(group => group.querySelectorAll("li").length >= 20)).toBe(true);
+    expect(originalGroups.every(group => [...group.querySelectorAll("li")].slice(2).every(item => item.getAttribute("aria-hidden") === "true"))).toBe(true);
+    expect(names()).toEqual(partners.map(partner => partner.name));
+
+    laneWidth = 4200;
+    await act(async () => notifyResize());
+    expect(originalGroups.every(group => group.querySelectorAll("li").length >= 21)).toBe(true);
+    expect(scene.querySelectorAll('[data-marquee-copy="true"][aria-hidden="true"]')).toHaveLength(2);
+    expect(names()).toEqual(partners.map(partner => partner.name));
+  } finally {
+    rect.mockRestore();
+    window.ResizeObserver = originalObserver;
+  }
+});
