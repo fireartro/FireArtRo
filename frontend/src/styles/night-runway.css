@@ -24,6 +24,24 @@
   --nr-type-page-title: clamp(2.75rem, max(3.4vw, 4vmin), 6.5rem);
 }
 
+/* At large desktop sizes, one rem follows the 1440 × 900 composition. This
+   scales widths, spacing, imagery and controls together, while the smaller
+   viewport axis prevents a short landscape window from becoming oversized. */
+@media (min-width: 1600px) and (min-height: 850px) {
+  html:has(main[data-design="night-runway"]) {
+    font-size: clamp(16px, min(1.111111vw, 1.777778vh), 42.6667px);
+    --nav-scroll-offset: clamp(5.5rem, 5.5vw, 8rem);
+  }
+
+  :root {
+    --nr-type-label: clamp(0.8rem, calc(0.18rem + 0.6vw), 1.5rem);
+    --nr-type-small: clamp(0.875rem, calc(0.1rem + 0.8vw), 1.7rem);
+    --nr-type-body: clamp(1rem, calc(0.15rem + 0.9vw), 1.875rem);
+    --nr-type-lead: clamp(1rem, 1.125vw, 2.25rem);
+    --nr-type-page-title: clamp(2.75rem, calc(4.7vw - 1.3rem), 8.5rem);
+  }
+}
+
 html {
   background: var(--nr-obsidian);
   overflow-x: hidden;
@@ -138,6 +156,55 @@ body:has(main[data-design="night-runway"]) .mobile-nav-sheet {
   body:has(main[data-design="night-runway"]) .desktop-social-dock .social-dock-icon {
     width: clamp(1.18rem, calc(0.75rem + 0.45vmin), 1.9rem);
     height: clamp(1.18rem, calc(0.75rem + 0.45vmin), 1.9rem);
+  }
+}
+
+@media (min-width: 1600px) and (min-height: 850px) {
+  body:has(main[data-design="night-runway"]) .site-navbar {
+    padding-block: clamp(0.8rem, 0.65vw, 1.2rem);
+  }
+
+  body:has(main[data-design="night-runway"]) .site-navbar-brand img {
+    height: clamp(4.2rem, calc(1.2rem + 3.45vw), 9rem);
+    transform: none;
+  }
+
+  body:has(main[data-design="night-runway"]) .desktop-social-dock .social-dock-icon {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+
+  body:has(main[data-design="night-runway"]) .nr-button {
+    min-height: clamp(3.5rem, 2.5vw, 4.25rem);
+  }
+
+  body:has(main[data-design="night-runway"]) .cookie-consent-panel {
+    width: min(calc(22rem + 30.8vw), 74rem, calc(100vw - 3rem));
+    max-width: none;
+    padding: clamp(1.4rem, 1.2vw, 2rem);
+  }
+
+  body:has(main[data-design="night-runway"]) .cookie-consent-panel h2 {
+    font-size: max(1rem, var(--nr-type-small));
+  }
+
+  body:has(main[data-design="night-runway"]) .cookie-consent-panel header p,
+  body:has(main[data-design="night-runway"]) .cookie-consent-links {
+    font-size: clamp(1rem, 0.55rem + 0.32vw, 1.35rem);
+  }
+
+  body:has(main[data-design="night-runway"]) .cookie-consent-actions button {
+    min-height: 3.3rem;
+    padding-inline: 1.2rem;
+    font-size: clamp(1rem, 0.55rem + 0.32vw, 1.35rem);
+  }
+
+  body:has(main[data-design="night-runway"]) .cookie-preferences strong {
+    font-size: var(--nr-type-label);
+  }
+
+  body:has(main[data-design="night-runway"]) .cookie-preferences small {
+    font-size: clamp(0.95rem, 0.5rem + 0.26vw, 1.2rem);
   }
 }
 

@@ -259,7 +259,10 @@ export const QuoteForm = () => {
                 aria-label={`Sună la ${phoneDisplay}`}
               >
                 <Phone aria-hidden="true" />
-                <span>Telefon</span>
+                <span className="nr-contact-direct__copy">
+                  <span className="nr-contact-direct__label">Telefon</span>
+                  <span className="nr-contact-direct__value">{phoneDisplay}</span>
+                </span>
               </NightButton>
             )}
             <NightButton
@@ -270,7 +273,10 @@ export const QuoteForm = () => {
               aria-label={`Trimite email la ${email}`}
             >
               <Mail aria-hidden="true" />
-              <span>Email</span>
+              <span className="nr-contact-direct__copy">
+                <span className="nr-contact-direct__label">Email</span>
+                <span className="nr-contact-direct__value">{email}</span>
+              </span>
             </NightButton>
             {whatsAppHref && (
               <NightButton
@@ -283,7 +289,14 @@ export const QuoteForm = () => {
                 aria-label="Scrie pe WhatsApp"
               >
                 <MessageCircle aria-hidden="true" />
-                <span>WhatsApp</span>
+                <span className="nr-contact-direct__copy">
+                  <span className="nr-contact-direct__label">WhatsApp</span>
+                  <span className="nr-contact-direct__value">
+                    {phoneDisplay && String(contactSettings.whatsappNumber).replace(/\D/g, "") === String(phoneHref).replace(/\D/g, "")
+                      ? phoneDisplay
+                      : `+${String(contactSettings.whatsappNumber).replace(/\D/g, "")}`}
+                  </span>
+                </span>
               </NightButton>
             )}
           </div>
@@ -302,7 +315,7 @@ export const QuoteForm = () => {
           ) : (
             <form onSubmit={submit} data-testid="quote-form" aria-busy={loading} noValidate>
               <div className="nr-contact-form-heading">
-                <p>{contactPage.formTitle}</p>
+                <h2>{contactPage.formTitle}</h2>
                 <span>Câmpurile marcate sunt obligatorii.</span>
               </div>
               <p className="nr-contact-announcement" role="alert" aria-live="polite">{announcement}</p>
@@ -337,6 +350,7 @@ export const QuoteForm = () => {
                     <option value="">Alege o opțiune</option>
                     {showOptions.map((item) => <option key={item.id} value={item.label}>{item.label}</option>)}
                   </select>
+                  {form.services[0] && <small className="nr-contact-selection" aria-hidden="true">{form.services[0]}</small>}
                   {errors.services && <small className="nr-contact-error" id="quote-services-error">{errors.services}</small>}
                 </div>
                 </div>

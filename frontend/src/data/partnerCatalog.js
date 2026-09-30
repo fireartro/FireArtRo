@@ -1,5 +1,43 @@
 // Owner-supplied collaborations. Verified graphics only; see assets provenance.
 const asset = (file) => `/media/partners/${file}`;
+const mapsSearch = (name) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
+const destinations = {
+  capricci: "https://restaurantcapricci.ro/",
+  intooit: "https://www.intooit.ro/",
+  esedra: "https://www.complexesedra.com/",
+  artistic: mapsSearch("Artistic sala de evenimente Satu Mare"),
+  "shopping-city-satu-mare": "https://www.shoppingcitysatumare.ro/",
+  infinity: mapsSearch("Infinity Ballroom Satu Mare Mărtinești"),
+  seini: "https://seini.ro/",
+  ardud: "https://www.orasardud.ro/",
+  "valea-vinului": "https://www.primariavaleavinului.ro/",
+  "baia-mare": "https://www.baiamare.ro/",
+  auchan: "https://www.auchan.ro/",
+  kaufland: "https://www.kaufland.ro/",
+  dedeman: "https://www.dedeman.ro/",
+  "value-centre": mapsSearch("Baia Mare Value Centre"),
+  vivo: "https://vivo-shopping.com/ro/",
+  metro: "https://www.metro.ro/",
+  remarkt: "https://www.remarkt.ro/",
+  capus: "https://complexturisticcapus.ro/",
+  wildhills: "https://www.wildhills.ro/",
+  "colt-de-rai": mapsSearch("Colț de Rai sala de evenimente Victoriei 261 Negrești-Oaș"),
+  palatul: mapsSearch("Palat Ioan Festeleu Negrești-Oaș"),
+  "green-house": "https://greenhouseevents.eatbu.com/?lang=ro",
+  "alpin-recycling": "https://alpinrecycling.ro/",
+  aquastar: "https://www.aquastarsatumare.ro/",
+  polipol: "https://www.polipol.de/",
+  remax: "https://www.remax.ro/",
+};
+
+// Only public HTTP(S) destinations are accepted from managed content.
+export function partnerDestination(partner) {
+  try {
+    const url = new URL(partner.href || "");
+    if (["https:", "http:"].includes(url.protocol) && !url.username && !url.password) return url.href;
+  } catch { /* A known destination or a name-based Maps search stays available. */ }
+  return catalogueByName.get(normalize(String(partner.name || "")))?.href || mapsSearch(partner.name);
+}
 export const PARTNER_GROUPS = [
   { id: "venues", title: "Locații & evenimente" },
   { id: "brands", title: "Branduri & companii" },
@@ -33,7 +71,7 @@ export const PARTNER_CATALOG = [
   { id: "aquastar", name: "AquaStar", group: "brands", logo: asset("aquastar.png"), theme: "dark", aliases: ["AquaStar Satu Mare"] },
   { id: "polipol", name: "POLIPOL", group: "brands", logo: asset("polipol.svg"), theme: "light", aliases: ["Polipol mobilă"] },
   { id: "remax", name: "RE/MAX", group: "brands", logo: asset("remax.png"), theme: "light", aliases: ["Remax"] },
-];
+].map(partner => ({ ...partner, href: destinations[partner.id] }));
 const normalize = name => name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 const catalogueByName = new Map(PARTNER_CATALOG.flatMap(partner => [partner.name, ...(partner.aliases || [])].map(name => [normalize(name), partner])));
 
@@ -55,6 +93,7 @@ export function resolveDisplayPartners(partners, mediaItems) {
     // Original logo variants keep their verified backing. Unknown transparent
     // uploads use a middle-tone surface, readable for both white and dark marks.
     const theme = partner.logoMediaId ? (known?.logo && uploaded?.src === known.logo ? known.theme : "neutral") : known?.theme;
-    return { ...known, ...partner, logo, theme, group: known?.group || "other" };
+    const resolved = { ...known, ...partner, logo, theme, group: known?.group || "other" };
+    return { ...resolved, href: partnerDestination(resolved) };
   });
 }

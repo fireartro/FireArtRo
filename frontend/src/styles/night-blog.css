@@ -218,7 +218,7 @@
 
 .fa-blog-card__link {
   display: inline-flex;
-  min-height: 44px;
+  min-height: 2.75rem;
   align-items: center;
   gap: 0.65rem;
   margin-top: auto;
@@ -239,6 +239,9 @@ main.fa-blog-page[data-design="night-runway"] {
 }
 
 .fa-blog-hero { padding: clamp(7rem, 8vmin, 10rem) 0 clamp(3rem, 4.5vmin, 5rem); border-bottom: 1px solid var(--fa-blog-line); }
+@media (min-width: 1600px) and (min-height: 850px) {
+  .fa-blog-hero { padding-top: clamp(7rem, calc(4rem + 3.3vw), 11.5rem); }
+}
 .fa-blog-hero .nr-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.55fr); align-items: end; gap: 1rem 2rem; }
 .fa-blog-hero .fa-kicker { grid-column: 1 / -1; }
 .fa-blog-hero h1 { font-size: clamp(3.5rem, 4vw, 7rem); line-height: 0.9; }
@@ -259,7 +262,7 @@ main.fa-blog-page[data-design="night-runway"] {
 
 .fa-blog-back {
   display: inline-flex;
-  min-height: 44px;
+  min-height: 2.75rem;
   align-items: center;
   color: var(--nr-ice);
   font-family: "IBM Plex Mono", monospace;

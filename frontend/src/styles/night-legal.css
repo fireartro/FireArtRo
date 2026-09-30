@@ -61,6 +61,11 @@ main.legal-page[data-design="night-runway"] .legal-hero-inner > span {
   text-transform: uppercase;
 }
 
+main.legal-page[data-design="night-runway"] .legal-hero-inner > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 main.legal-page[data-design="night-runway"] .legal-hero h1 {
   grid-column: 1;
   max-width: 15ch;
@@ -155,6 +160,11 @@ main.legal-page[data-design="night-runway"] .legal-nav svg {
 
 main.legal-page[data-design="night-runway"] .legal-article {
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+main.legal-page[data-design="night-runway"] :where(.legal-article > section > div, .legal-contact > div) {
+  min-width: 0;
 }
 
 .legal-identity {
@@ -220,6 +230,7 @@ main.legal-page[data-design="night-runway"] .legal-sources {
 main.legal-page[data-design="night-runway"] .legal-source {
   display: inline-flex;
   width: fit-content;
+  max-width: 100%;
   align-items: center;
   gap: 0.6rem;
   margin-top: 0;
@@ -234,6 +245,7 @@ main.legal-page[data-design="night-runway"] .legal-source {
 main.legal-page[data-design="night-runway"] .legal-source svg {
   width: 0.9rem;
   height: 0.9rem;
+  flex: none;
 }
 
 main.legal-page[data-design="night-runway"] .legal-contact {
@@ -293,6 +305,16 @@ main.legal-page[data-design="night-runway"] :where(.legal-nav a, .legal-source, 
   }
 }
 
+@media (min-width: 1600px) and (min-height: 850px) {
+  main.legal-page[data-design="night-runway"] .legal-hero {
+    padding-top: clamp(6.5rem, calc(3.25rem + 3.3vw), 11.5rem);
+  }
+
+  main.legal-page[data-design="night-runway"] .legal-article h2 {
+    font-size: clamp(2rem, 1.5vw, 3rem);
+  }
+}
+
 @media (max-width: 899px) {
   main.legal-page[data-design="night-runway"]::before {
     opacity: 0.24;
@@ -325,7 +347,8 @@ main.legal-page[data-design="night-runway"] :where(.legal-nav a, .legal-source, 
     gap: 1.35rem;
   }
 
-  main.legal-page[data-design="night-runway"] .legal-hero-inner > :where(span, h1, p, small) {
+  /* Match the desktop type selectors so the intro cannot create a second column. */
+  main.legal-page[data-design="night-runway"] .legal-hero-inner > :is(span, h1, p, small) {
     grid-column: 1;
     grid-row: auto;
   }
@@ -351,6 +374,7 @@ main.legal-page[data-design="night-runway"] :where(.legal-nav a, .legal-source, 
     display: flex;
     overflow-x: auto;
     flex-direction: row;
+    flex-wrap: wrap;
     gap: 0.5rem;
     padding-bottom: 0.35rem;
     scrollbar-width: none;
@@ -365,11 +389,14 @@ main.legal-page[data-design="night-runway"] :where(.legal-nav a, .legal-source, 
   }
 
   main.legal-page[data-design="night-runway"] .legal-nav a {
-    flex: 0 0 auto;
+    flex: 1 1 9rem;
+    min-width: 0;
+    max-width: 100%;
     min-height: 2.75rem;
     padding: 0.65rem 0.2rem;
     border-bottom-color: rgba(255, 255, 255, 0.14);
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   main.legal-page[data-design="night-runway"] .legal-nav a:hover,
@@ -393,6 +420,12 @@ main.legal-page[data-design="night-runway"] :where(.legal-nav a, .legal-source, 
     align-items: flex-start;
     margin-top: 2.4rem;
     padding: 1.1rem 0.85rem;
+  }
+}
+
+@media (max-width: 360px) {
+  main.legal-page[data-design="night-runway"] .legal-hero h1 {
+    font-size: 1.9rem;
   }
 }
 

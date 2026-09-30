@@ -243,8 +243,8 @@
   }
 
   .nr-gallery-mosaic {
-    column-width: clamp(18rem, 25vw, 28rem);
-    column-gap: clamp(1rem, 1.3vw, 1.5rem);
+    column-width: clamp(14rem, 18vw, 20rem);
+    column-gap: clamp(0.75rem, 1.2vmin, 1.25rem);
   }
 }
 

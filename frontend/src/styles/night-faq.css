@@ -321,6 +321,21 @@ main.nr-faq-page[data-design="night-runway"] {
   }
 }
 
+@media (min-width: 1600px) and (min-height: 850px) {
+  .nr-faq-hero { padding-top: clamp(7.5rem, calc(4.25rem + 3.3vw), 12.5rem); }
+
+  .nr-faq__trigger {
+    min-height: 5.4rem;
+    grid-template-columns: 3rem minmax(0, 1fr) 1.65rem;
+    gap: 1.5rem;
+  }
+
+  .nr-faq__trigger > svg { width: 1.4rem; height: 1.4rem; }
+  .nr-faq__contact h2 { font-size: clamp(2rem, 1.45vw, 2.75rem); }
+  .nr-faq__contact p,
+  .nr-faq__contact a { font-size: var(--nr-type-small); }
+}
+
 @media (max-width: 899px) {
   .nr-faq-route::before {
     opacity: 0.24;

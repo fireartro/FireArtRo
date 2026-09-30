@@ -30,13 +30,13 @@ export const Footer = () => {
         <div className="fa-footer__upper">
           <div className="fa-footer__mast">
             <a className="fa-footer__brand" href="/#acasa" aria-label="FireArtRo, pagina principală">
-              <img src={LOGO_URL} srcSet={LOGO_SRC_SET} sizes="136px" alt="FireArtRo" width="720" height="311" loading="lazy" decoding="async" />
+              <img src={LOGO_URL} srcSet={LOGO_SRC_SET} sizes="(min-width: 1600px) and (min-height: 850px) 10vw, 136px" alt="FireArtRo" width="720" height="311" loading="lazy" decoding="async" />
             </a>
             <p>{copy.tagline}</p>
           </div>
 
           <div className="fa-footer__directory">
-            <nav className="fa-footer__column" aria-label="Explorează">
+            <nav className="fa-footer__column fa-footer__explore" aria-label="Explorează">
               <p>{copy.exploreHeading}</p>
               {copy.exploreLinks.map((item) => <a key={item.id} href={item.href}>{item.label}</a>)}
             </nav>
@@ -62,7 +62,7 @@ export const Footer = () => {
               </a>
             </div>
 
-            <nav className="fa-footer__column" aria-label="Urmărește">
+            <nav className="fa-footer__column fa-footer__social" aria-label="Urmărește">
               <p>{copy.socialHeading}</p>
               {socialLinks.map((item) => (
                 <a key={item.id} href={item.href} target="_blank" rel="noopener noreferrer">{item.label}</a>
@@ -72,15 +72,17 @@ export const Footer = () => {
         </div>
 
         <div className="fa-footer__identity">
-          <p><strong>{siteDetails.legalName}</strong> · CUI {siteDetails.taxId} · Reg. Com. {siteDetails.registrationNumber}</p>
-          <p>Sediu social: {siteDetails.registeredOffice}</p>
-          {shareCapital && <p>Capital social: {shareCapital}</p>}
+          <div className="fa-footer__company">
+            <p><strong>{siteDetails.legalName}</strong> · CUI {siteDetails.taxId} · Reg. Com. {siteDetails.registrationNumber}</p>
+            <p>Sediu social: {siteDetails.registeredOffice}</p>
+            {shareCapital && <p>Capital social: {shareCapital}</p>}
+          </div>
           <div className="fa-footer__badges">
             <a className="fa-footer__sal" href="https://reclamatiisal.anpc.ro/" target="_blank" rel="noopener noreferrer">
-              <img src="/legal/anpc-sal.png" alt="ANPC — Soluționarea Alternativă a Litigiilor" width="250" height="50" loading="lazy" />
+              <img src="/legal/anpc-sal.png" alt="ANPC — Soluționarea Alternativă a Litigiilor" width="201" height="50" loading="lazy" />
             </a>
             <a className="fa-footer__pnrr" href="https://mfe.gov.ro/pnrr/" target="_blank" rel="noopener noreferrer" aria-label="PNRR — află mai multe despre finanțarea prin Planul Național de Redresare și Reziliență">
-              <img src="/legal/pnrr-banner.png" alt="PNRR: Fonduri pentru România modernă și reformată — finanțat de Uniunea Europeană" width="1424" height="175" loading="lazy" />
+              <img src="/legal/pnrr-banner.png" alt="PNRR: Fonduri pentru România modernă și reformată — finanțat de Uniunea Europeană" width="1416" height="175" loading="lazy" />
               <span>PNRR · Fonduri pentru România modernă și reformată <ArrowUpRight aria-hidden="true" /></span>
             </a>
           </div>

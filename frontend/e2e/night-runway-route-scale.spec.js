@@ -65,6 +65,27 @@ const wideRoutes = [
   { route: "/cookies", heading: ".legal-hero h1", body: ".legal-article > section p", feature: ".legal-layout", minWidth: 1350, minHeight: 200, reading: ".legal-article", maxReadingWidth: 1000 },
 ];
 
+test("wide route introductions clear the enlarged fixed header", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 2560, height: 1440 });
+  for (const { route, selector } of [
+    { route: "/pachete", selector: ".nr-package-comparator h1" },
+    { route: "/galerie", selector: ".nr-gallery-header h1" },
+    { route: "/intrebari-frecvente", selector: ".nr-faq-hero__eyebrow" },
+    { route: "/contact", selector: ".nr-contact-kicker" },
+    { route: "/blog", selector: ".fa-blog-hero .fa-kicker" },
+    { route: "/termeni-si-conditii", selector: ".legal-hero-inner > span" },
+  ]) {
+    await page.goto(route, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(selector)).toBeVisible();
+    const clearance = await page.evaluate((target) => (
+      document.querySelector(target).getBoundingClientRect().top
+      - document.querySelector(".site-navbar").getBoundingClientRect().bottom
+    ), selector);
+    expect(clearance, `${route} introduction clears fixed navigation`).toBeGreaterThanOrEqual(24);
+  }
+});
+
 for (const probe of wideRoutes) {
   test(`${probe.route} uses the wide route composition with readable copy at 2560`, async ({ page }) => {
     test.setTimeout(60_000);
@@ -87,6 +108,7 @@ for (const probe of wideRoutes) {
         featureRect: { left: featureRect.left, right: featureRect.right, width: featureRect.width, height: featureRect.height },
         readingWidth: reading ? rect(reading).width : null,
         compositionWidth: composition ? rect(composition).width : null,
+        rootSize: Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
         overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         viewportWidth: document.documentElement.clientWidth,
       };
@@ -95,9 +117,9 @@ for (const probe of wideRoutes) {
     expect(metrics.headingSize, "page title").toBeGreaterThanOrEqual(64);
     expect(metrics.bodySize, "body copy").toBeGreaterThanOrEqual(18);
     expect(metrics.featureRect.width, "primary block width").toBeGreaterThanOrEqual(probe.minWidth);
-    expect(metrics.featureRect.width, "primary block cap").toBeLessThanOrEqual(2224);
+    expect(metrics.featureRect.width, "primary block cap").toBeLessThanOrEqual((90 * metrics.rootSize) + 1);
     expect(metrics.featureRect.height, "primary block height").toBeGreaterThanOrEqual(probe.minHeight);
-    if (probe.reading) expect(metrics.readingWidth, "reading column cap").toBeLessThanOrEqual(probe.maxReadingWidth);
+    if (probe.reading) expect(metrics.readingWidth, "reading column cap").toBeLessThanOrEqual(probe.maxReadingWidth * (metrics.rootSize / 16));
     if (probe.composition) expect(metrics.compositionWidth, "surrounding composition").toBeGreaterThanOrEqual(probe.minCompositionWidth);
     for (const key of ["headingRect", "bodyRect", "featureRect"]) {
       expect(metrics[key].left, `${key} left edge`).toBeGreaterThanOrEqual(-1);
@@ -108,11 +130,11 @@ for (const probe of wideRoutes) {
 }
 
 for (const control of [
-  { route: "/pachete", selector: ".nr-package-categories button", minimum: 18 },
-  { route: "/galerie", selector: ".nr-gallery-filters button", minimum: 18 },
-  { route: "/intrebari-frecvente", selector: ".nr-faq__trigger", minimum: 19 },
-  { route: "/contact", selector: ".nr-contact-field input", minimum: 18 },
-  { route: "/confidentialitate", selector: ".legal-nav a", minimum: 16 },
+  { route: "/pachete", selector: ".nr-package-categories button", minimum: 22 },
+  { route: "/galerie", selector: ".nr-gallery-filters button", minimum: 22 },
+  { route: "/intrebari-frecvente", selector: ".nr-faq__trigger", minimum: 25 },
+  { route: "/contact", selector: ".nr-contact-field input", minimum: 23 },
+  { route: "/confidentialitate", selector: ".legal-nav a", minimum: 19 },
 ]) {
   test(`${control.route} keeps its main controls readable at 2560`, async ({ page }) => {
     await page.setViewportSize({ width: 2560, height: 1440 });
@@ -141,9 +163,10 @@ test("long CMS Blog titles wrap inside archive cards and the article reading col
     width: node.getBoundingClientRect().width,
     headingClient: node.querySelector("h1").clientWidth,
     headingScroll: node.querySelector("h1").scrollWidth,
+    rootSize: Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
   }));
-  expect(reading.width, "article reading column").toBeLessThanOrEqual(900);
+  expect(reading.width, "article reading column").toBeLessThanOrEqual(900 * (reading.rootSize / 16));
   expect(reading.headingScroll, "article heading clipping").toBeLessThanOrEqual(reading.headingClient + 1);
   expect(reading.overflow, "article page overflow").toBeLessThanOrEqual(1);
 });

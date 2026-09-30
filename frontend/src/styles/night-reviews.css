@@ -80,7 +80,7 @@
 .fa-page-reviews__google-logo {
   display: block;
   width: auto;
-  height: 19px;
+  height: 1.1875rem;
   max-width: min(9rem, 42vw);
   object-fit: contain;
   object-position: left center;
@@ -96,7 +96,7 @@
 .fa-page-reviews__lane-head > a {
   position: relative;
   display: inline-flex;
-  min-height: 44px;
+  min-height: 2.75rem;
   align-items: center;
   gap: 0.65rem;
   color: rgba(244, 247, 251, 0.67);

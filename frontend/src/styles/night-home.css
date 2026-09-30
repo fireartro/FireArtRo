@@ -1223,6 +1223,22 @@
   }
 }
 
+@media (min-width: 1920px) and (min-height: 850px) {
+  #acasa .nr-hero__title {
+    font-size: min(clamp(7rem, 6.1vw, 12rem), 18cqi);
+  }
+
+  .nr-hero__eyebrow,
+  .fa-service-stage__copy > p,
+  .fa-gallery-preview__head p,
+  .fa-process__content > div > p,
+  .fa-final__content > p {
+    font-size: var(--nr-type-label);
+  }
+
+  .nr-hero__description { font-size: var(--nr-type-body); }
+}
+
 @media (max-height: 440px) and (orientation: landscape) {
   .fa-service-stage__sticky,
   .fa-shutter__stage {

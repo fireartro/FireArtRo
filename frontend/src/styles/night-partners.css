@@ -9,7 +9,7 @@
   padding: clamp(4rem, 8vw, 7.5rem) 0 clamp(4rem, 7vw, 6.5rem);
   overflow: clip;
   scroll-margin-top: 5rem;
-  background: radial-gradient(ellipse 65% 58% at 50% 22%, #132035 0%, #080e18 62%, #05080f 100%);
+  background: transparent;
 }
 
 .fa-partners.fa-partners-gallery::before {
@@ -32,12 +32,12 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: min(100% - 3rem, 1020px);
+  width: min(100% - 3rem, 63.75rem);
   margin: 0 auto clamp(2.4rem, 5vw, 4.5rem);
   text-align: center;
 }
 
-.fa-partner-marquee__copy { max-width: 780px; }
+.fa-partner-marquee__copy { max-width: 48.75rem; }
 .fa-partner-marquee__copy .fa-kicker {
   margin: 0 auto 1.1rem;
   color: #a7cbed;
@@ -62,26 +62,6 @@
   font-size: .8rem;
   letter-spacing: .035em;
 }
-.fa-partner-marquee__pause {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  transform: translateY(-50%);
-  border: 1px solid #a4c7e83d;
-  border-radius: 50%;
-  background: #172437bd;
-  color: #d8ebff;
-  cursor: pointer;
-  transition: background .2s ease, border-color .2s ease;
-}
-.fa-partner-marquee__pause svg { width: 17px; height: 17px; fill: currentColor; }
-.fa-partner-marquee__pause:hover { background: #223c5e; border-color: #a4c7e8a0; }
-.fa-partner-marquee__pause:focus-visible { outline: 2px solid #9ed4ff; outline-offset: 4px; }
 
 .fa-partner-marquee__lanes {
   display: grid;
@@ -114,41 +94,46 @@
 .fa-partner {
   flex: none;
   display: block;
-  width: clamp(160px, 16vw, 232px);
+  width: clamp(10rem, 16vw, 14.5rem);
   min-width: 0;
   margin-right: var(--partner-gap);
 }
 .fa-partner__body {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: .45rem;
   min-width: 0;
-  height: clamp(116px, 10vw, 146px);
-  padding: .7rem;
-  border: 1px solid #abc8e622;
-  border-radius: 16px;
-  background: linear-gradient(155deg, #152235 0%, #0c1625 100%);
-  box-shadow: inset 0 1px 0 #ffffff0c, 0 14px 30px #0003;
-  transition: border-color .2s ease, background .2s ease;
+  min-height: clamp(9rem, 12vw, 10.5rem);
+  padding: .9rem .7rem;
+  border: 1px solid transparent;
+  border-radius: 1rem;
+  background: transparent;
+  box-shadow: none;
+  text-decoration: none;
+  transition: border-color .2s ease, transform .2s ease;
 }
 .fa-partner__mark {
-  display: grid;
-  place-items: center;
-  width: min(100%, 158px);
-  height: 74px;
-  padding: .65rem;
-  overflow: hidden;
-  border-radius: 9px;
+  position: relative;
+  display: block;
+  width: min(100%, 9.875rem);
+  flex: none;
+  height: 5.25rem;
+  padding: 0;
+  overflow: visible;
+  border-radius: .5625rem;
   background: #f2f5fa;
 }
-.fa-partner__mark[data-theme="dark"] { background: #0b2239; }
+.fa-partner__mark[data-theme="dark"] { background: transparent; }
 .fa-partner__mark[data-theme="neutral"] { background: #7b8794; }
 .fa-partner__mark img {
+  position: absolute;
+  inset: .65rem;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: calc(100% - 1.3rem);
+  height: calc(100% - 1.3rem);
   object-fit: contain;
 }
 .fa-partner__body--text .fa-partner__name {
@@ -157,18 +142,28 @@
   font-weight: 600;
 }
 .fa-partner__name {
-  display: -webkit-box;
+  display: block;
   max-width: 100%;
-  overflow: hidden;
+  min-height: 2.7em;
   color: #e0e8f2;
-  font-size: .72rem;
+  font-size: .875rem;
   font-weight: 500;
   line-height: 1.35;
   text-align: center;
-  text-overflow: ellipsis;
   overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+}
+.fa-partner__body:focus-visible {
+  outline: 2px solid var(--nr-ice, #8dd3ff);
+  outline-offset: -2px;
+}
+.fa-partner__external {
+  position: absolute;
+  top: .35rem;
+  right: .35rem;
+  width: .9rem;
+  height: .9rem;
+  color: var(--nr-ice, #8dd3ff);
+  opacity: .55;
 }
 
 .fa-partner-lane[data-motion="moving"][data-direction="left"] .fa-partner-lane__track {
@@ -198,26 +193,33 @@
   will-change: auto;
 }
 @media (min-width: 1600px) {
-  .fa-partner-marquee__head { width: min(100% - 4rem, 1400px); }
-  .fa-partner-marquee__copy { max-width: 1000px; }
+  .fa-partner-marquee__head { width: min(100% - 4rem, 63.75rem); }
+  .fa-partner-marquee__copy { max-width: 48.75rem; }
   .fa-partner-marquee__copy .fa-kicker { font-size: var(--nr-type-label); }
   .fa-partner-marquee__caption { font-size: var(--nr-type-small); }
-  .fa-partner { width: clamp(240px, 11vw, 288px); }
-  .fa-partner__body { height: clamp(156px, 8vw, 176px); }
-  .fa-partner__mark { width: min(100%, 190px); height: 88px; }
-  .fa-partner__name { font-size: clamp(13px, .58vw, 16px); }
+  .fa-partner { width: clamp(10rem, 16vw, 14.5rem); }
+  .fa-partner__body { min-height: clamp(9rem, 12vw, 10.5rem); }
+  .fa-partner__mark { width: min(100%, 9.875rem); height: 5.25rem; }
+  .fa-partner__name { font-size: clamp(.875rem, .8vw, 1rem); }
+}
+@media (min-width: 1600px) and (min-height: 850px) {
+  .fa-partner-marquee__copy h2 { font-size: clamp(4.75rem, 3.2vw, 7rem); }
+  .fa-partner { width: clamp(10rem, 16vw, 14.5rem); }
+  .fa-partner__body { min-height: clamp(9rem, 12vw, 10.5rem); gap: .8rem; }
+  .fa-partner__mark { width: min(100%, 9.875rem); height: 5.25rem; }
+  .fa-partner__name { font-size: clamp(.875rem, .8vw, 1rem); }
+  .fa-partner__body--text .fa-partner__name { font-size: clamp(1rem, 1vw, 1.875rem); }
 }
 @media (hover: hover) and (pointer: fine) {
-  .fa-partner:hover .fa-partner__body { border-color: #a0cffc69; background: #17283d; }
+  .fa-partner:hover .fa-partner__body { border-color: #a0cffc69; transform: translateY(-.2rem); }
 }
 @media (max-width: 700px) {
   .fa-partners.fa-partners-gallery { padding-block: 4rem 4.5rem; }
   .fa-partner-marquee__head { width: min(100% - 2.5rem, 540px); margin-bottom: 2.6rem; }
   .fa-partner-marquee__copy h2 { font-size: clamp(2.1rem, 8vw, 3.25rem); }
-  .fa-partner-marquee__pause { position: relative; top: auto; right: auto; margin-top: 1.35rem; transform: none; }
   .fa-partner-lane { --partner-gap: .7rem; }
   .fa-partner { width: clamp(152px, 42vw, 190px); }
-  .fa-partner__body { height: 116px; border-radius: 13px; }
+  .fa-partner__body { min-height: 148px; border-radius: 13px; }
   .fa-partner__mark { height: 68px; }
   .fa-partner-lane { -webkit-mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent); }
   .fa-partner-lane[data-motion="static"] { -webkit-mask-image: none; mask-image: none; }
