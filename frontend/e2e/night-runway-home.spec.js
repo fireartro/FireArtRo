@@ -409,7 +409,7 @@ test.describe("FireArt scroll canvas landing", () => {
         };
         const paragraph = document.querySelector(".fa-about__copy p");
         return {
-          selector: width(".fa-packages--selector .fa-packages__inner"),
+          selector: width('[data-testid="home-packages"] .fa-packages__inner'),
           panel: width(".fa-work [data-gallery-item]"),
           figure: width(".fa-work [data-gallery-item] figure"),
           about: width(".fa-about__copy"),
@@ -421,7 +421,7 @@ test.describe("FireArt scroll canvas landing", () => {
         };
       });
 
-      expect(metrics.selector, "package selector width").toBeGreaterThanOrEqual(viewport.selectorMin);
+      expect(metrics.selector, "package grid width").toBeGreaterThanOrEqual(viewport.selectorMin);
       expect(metrics.panel, "featured gallery panel width").toBeGreaterThanOrEqual(viewport.panelMin);
       expect(metrics.figure, "gallery figure width").toBeGreaterThanOrEqual(viewport.figureMin);
       expect(metrics.about, "about composition width").toBeGreaterThanOrEqual(viewport.aboutMin);
