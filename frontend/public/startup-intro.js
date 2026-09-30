@@ -133,6 +133,7 @@
         return { x: Math.cos(angle) * radius, y, z: Math.sin(angle) * radius, seed: (index * 0.618034) % 1 };
     });
     const centerY = () => height * (width < 600 ? .42 : height < 500 ? .39 : .44);
+    const sceneScale = () => Math.max(1, Math.min(width / 1440, height / 900));
     const clamp = value => Math.max(0, Math.min(1, value));
     const project = (x, y, z, rotation, size) => {
         const rotatedX = x * Math.cos(rotation) + z * Math.sin(rotation);
@@ -163,8 +164,8 @@
         context.globalAlpha = 1;
     };
     const clearCenter = point => {
-        const rx = width < 600 ? 127 : Math.min(width * .14, 194);
-        const ry = height < 500 ? 69 : width < 600 ? 85 : 112;
+        const rx = width < 600 ? 127 : Math.min(width * .14, 194 * sceneScale());
+        const ry = height < 500 ? 69 : width < 600 ? 85 : 112 * sceneScale();
         const distance = Math.hypot((point.x - width / 2) / rx, (point.y - centerY()) / ry);
         return clamp((distance - .88) * 2.5);
     };
@@ -174,7 +175,8 @@
         if (time - lastFrame < 25 && !motion.matches) { frame = requestAnimationFrame(draw); return; }
         lastFrame = time;
         const seconds = motion.matches ? 1.8 : Math.max(0, (time - started) / 1000);
-        const size = Math.min(width * .405, height * .35, 335);
+        const scale = sceneScale();
+        const size = Math.min(width * .405, height * .35, 335 * scale);
         const rotation = seconds * .075 + .3;
         context.clearRect(0, 0, width, height);
         // Sparse light dust establishes a much deeper plane behind the sculpture.
@@ -183,7 +185,7 @@
             const y = (((index * .381966 + .13) + seconds * .002) % 1) * height;
             const alpha = .10 + .18 * (Math.sin(index + seconds * .4) + 1) / 2;
             context.fillStyle = `rgba(178,208,241,${alpha})`;
-            context.beginPath(); context.arc(x, y, index % 6 === 0 ? 1.1 : .6, 0, Math.PI * 2); context.fill();
+            context.beginPath(); context.arc(x, y, (index % 6 === 0 ? 1.1 : .6) * scale, 0, Math.PI * 2); context.fill();
         }
         context.globalCompositeOperation = 'lighter';
         rays.forEach((ray, index) => {
@@ -204,17 +206,17 @@
                 const toRadius = expansion - length * (1 - b);
                 const from = project(ray.x * fromRadius, ray.y * fromRadius + drift * a * a, ray.z * fromRadius, rotation * .65, size);
                 const to = project(ray.x * toRadius, ray.y * toRadius + drift * b * b, ray.z * toRadius, rotation * .65, size);
-                context.lineWidth = (.25 + b * .8) * head.scale;
+                context.lineWidth = (.25 + b * .8) * head.scale * scale;
                 context.strokeStyle = `rgba(${color},${alpha * b * .82 * clearCenter(from)})`;
                 context.beginPath(); context.moveTo(from.x, from.y); context.lineTo(to.x, to.y); context.stroke();
             }
             const shimmer = .83 + .17 * Math.sin(seconds * 2.1 + ray.seed * 16);
-            glowAt(fireworkGlows[colorIndex], head.x, head.y, (6 + ray.seed * 6) * head.scale, alpha * shimmer);
+            glowAt(fireworkGlows[colorIndex], head.x, head.y, (6 + ray.seed * 6) * head.scale * scale, alpha * shimmer);
             context.fillStyle = `rgba(${color},${alpha})`;
-            context.beginPath(); context.arc(head.x, head.y, (ray.seed > .85 ? 1.25 : .8) * head.scale, 0, Math.PI * 2); context.fill();
+            context.beginPath(); context.arc(head.x, head.y, (ray.seed > .85 ? 1.25 : .8) * head.scale * scale, 0, Math.PI * 2); context.fill();
             // A few elongated glints catch the light, never a full-screen flash.
             if (index % 19 === 0) {
-                const glint = (3 + ray.seed * 4) * head.scale;
+                const glint = (3 + ray.seed * 4) * head.scale * scale;
                 context.strokeStyle = `rgba(${color},${alpha * .55})`;
                 context.lineWidth = .5;
                 context.beginPath(); context.moveTo(head.x - glint, head.y); context.lineTo(head.x + glint, head.y);

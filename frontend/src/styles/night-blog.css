@@ -186,6 +186,8 @@
 .fa-blog-card__meta time::before { margin-right: 0.65rem; color: var(--nr-line); content: "/"; }
 
 .fa-blog-card h3 {
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
   font-family: "Sora", sans-serif;
   font-size: clamp(1.25rem, 1.5vw, 3rem);
@@ -193,6 +195,7 @@
   line-height: 1.13;
   letter-spacing: -0.035em;
   text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .fa-blog-card.is-lead h3 { max-width: 18ch; font-size: clamp(1.75rem, 2.5vw, 4rem); line-height: 1.04; }
@@ -215,7 +218,7 @@
 
 .fa-blog-card__link {
   display: inline-flex;
-  min-height: 44px;
+  min-height: 2.75rem;
   align-items: center;
   gap: 0.65rem;
   margin-top: auto;
@@ -236,6 +239,9 @@ main.fa-blog-page[data-design="night-runway"] {
 }
 
 .fa-blog-hero { padding: clamp(7rem, 8vmin, 10rem) 0 clamp(3rem, 4.5vmin, 5rem); border-bottom: 1px solid var(--fa-blog-line); }
+@media (min-width: 1600px) and (min-height: 850px) {
+  .fa-blog-hero { padding-top: clamp(7rem, calc(4rem + 3.3vw), 11.5rem); }
+}
 .fa-blog-hero .nr-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.55fr); align-items: end; gap: 1rem 2rem; }
 .fa-blog-hero .fa-kicker { grid-column: 1 / -1; }
 .fa-blog-hero h1 { font-size: clamp(3.5rem, 4vw, 7rem); line-height: 0.9; }
@@ -256,7 +262,7 @@ main.fa-blog-page[data-design="night-runway"] {
 
 .fa-blog-back {
   display: inline-flex;
-  min-height: 44px;
+  min-height: 2.75rem;
   align-items: center;
   color: var(--nr-ice);
   font-family: "IBM Plex Mono", monospace;
@@ -269,7 +275,7 @@ main.fa-blog-page[data-design="night-runway"] {
 
 .fa-blog-back::before { margin-right: 0.65rem; content: "←"; }
 .fa-blog-article__head { margin-top: clamp(1.5rem, 3vw, 2.5rem); }
-.fa-blog-article__head h1 { font-size: clamp(2.25rem, 2.9vw, 5rem); line-height: 1.02; }
+.fa-blog-article__head h1 { font-size: clamp(2.25rem, 2.9vw, 5rem); line-height: 1.02; overflow-wrap: anywhere; }
 .fa-blog-article__head > p:last-child:not(.fa-blog-card__meta) { max-width: 52rem; margin: 1.5rem 0 0; color: var(--nr-muted); font-size: var(--nr-type-lead); line-height: 1.7; }
 .fa-blog-article__cover { margin: clamp(2rem, 4vw, 3rem) 0 0; }
 .fa-blog-article__cover img { display: block; width: 100%; max-height: 34rem; object-fit: cover; }

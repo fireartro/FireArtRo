@@ -27,47 +27,50 @@ html[data-fireart-intro] .fireart-intro {
     box-shadow: 0 0 22px 3px #1677ff15;
 }
 .fireart-intro__identity {
-    position: absolute; z-index: 1; top: 44%; left: 50%; width: min(86%, 440px);
+    position: absolute; z-index: 1; top: 44%; left: 50%; width: min(86%, 27.5rem);
     transform: translate(-50%,-50%); text-align: center;
     animation: fireart-intro-arrive .85s cubic-bezier(.16,1,.3,1) both;
 }
 .fireart-intro__eyebrow {
-    margin: 0 0 25px; font-size: 9px; font-weight: 600;
+    margin: 0 0 1.5625rem; font-size: .5625rem; font-weight: 600;
     letter-spacing: .38em; color: #a6c5e8; line-height: 1.6;
 }
 .fireart-intro__logo {
-    display: block; width: clamp(200px, 23vw, 300px); height: auto;
-    max-height: 160px; object-fit: contain; margin: 0 auto;
+    display: block; width: clamp(12.5rem, 23vw, 18.75rem); height: auto;
+    max-height: 10rem; object-fit: contain; margin: 0 auto;
     filter: drop-shadow(0 0 28px #8dd3ff28);
 }
 .fireart-intro__signature {
-    margin: 26px 0 0; color: #c3d0e3; font-size: 11px; letter-spacing: .15em;
+    margin: 1.625rem 0 0; color: #c3d0e3; font-size: .6875rem; letter-spacing: .15em;
     font-weight: 400; line-height: 1.6;
 }
 .fireart-intro__foot {
-    position: absolute; z-index: 2; left: 20px; right: 20px;
-    bottom: max(6.5%, calc(env(safe-area-inset-bottom) + 22px)); text-align: center;
+    position: absolute; z-index: 2; left: 1.25rem; right: 1.25rem;
+    bottom: max(6.5%, calc(env(safe-area-inset-bottom) + 1.375rem)); text-align: center;
 }
-.fireart-intro__line { margin: 0 0 24px; font-size: clamp(21px, 2.4vw, 32px); line-height: 1.4; font-weight: 300; letter-spacing: -.045em; }
+.fireart-intro__line { margin: 0 0 1.5rem; font-size: clamp(1.3125rem, 2.4vw, 2rem); line-height: 1.4; font-weight: 300; letter-spacing: -.045em; }
 .fireart-intro__line span { color: #78b8ff; background: linear-gradient(110deg, #b7e6ff 0%, #78b8ff 45%, #427aff 100%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.fireart-intro__progress { display: flex; width: 168px; margin: auto; gap: 9px; }
+.fireart-intro__progress { display: flex; width: 10.5rem; margin: auto; gap: .5625rem; }
 .fireart-intro__progress i { display: block; position: relative; flex: 1; height: 2px; overflow: hidden; background: #8dd3ff28; }
 .fireart-intro__progress i::after { content: ''; display: block; height: 100%; background: linear-gradient(90deg, #4c7dff, #b3e5ff); transform: scaleX(0); transform-origin: left; transition: transform .4s ease; }
 .fireart-intro[data-content-ready] .fireart-intro__progress i:nth-child(1)::after,
 .fireart-intro[data-route-ready] .fireart-intro__progress i:nth-child(2)::after,
 .fireart-intro[data-media-ready] .fireart-intro__progress i:nth-child(3)::after { transform: scaleX(1); }
 .fireart-intro__skip {
-    display: block; min-height: 44px; margin: 14px auto -14px; padding: 10px 16px;
+    display: block; min-height: 2.75rem; margin: .875rem auto -.875rem; padding: .625rem 1rem;
     border: 0; border-radius: 0; background: none; color: #bacde5; cursor: pointer;
-    font: 10px Inter, Arial, sans-serif; letter-spacing: .1em;
+    font: .625rem Inter, Arial, sans-serif; letter-spacing: .1em;
 }
 .fireart-intro__skip[hidden] { display: none; }
-.fireart-intro__skip span { display: inline-block; margin-left: 9px; color: #8dd3ff; }
+.fireart-intro__skip span { display: inline-block; margin-left: .5625rem; color: #8dd3ff; }
 .fireart-intro__skip:hover { color: #fff; }
 .fireart-intro__skip:focus-visible { outline: 1px solid #8dd3ff; outline-offset: 2px; }
 html[data-fireart-intro='leaving'] .fireart-intro { opacity: 0; }
 html[data-fireart-intro='leaving'] .fireart-intro__sky { transform: scale(1.2); }
 @keyframes fireart-intro-arrive { from { opacity: .6; } to { opacity: 1; } }
+@media (min-width: 1600px) and (min-height: 850px) {
+    html[data-fireart-intro] { font-size: clamp(16px, min(1.111111vw, 1.777778vh), 42.6667px); }
+}
 @media (max-width: 600px) {
     .fireart-intro__identity { top: 42%; }
     .fireart-intro__eyebrow { font-size: 8px; letter-spacing: .23em; margin-bottom: 19px; }

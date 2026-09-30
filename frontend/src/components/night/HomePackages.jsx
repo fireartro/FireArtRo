@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CMS_DEFAULTS } from '@/data/cmsDefaults';
@@ -12,12 +12,15 @@ import { HOME_PACKAGE_IMAGE_IDS } from '@/lib/homeMediaSelection';
 export { HOME_PACKAGE_IMAGE_IDS } from '@/lib/homeMediaSelection';
 
 const originals = new Map(catalogue.map(item => [item.id, item]));
+// Source-size font units use the initial font, not the site's fluid CSS rem.
+// Lazy auto sizing follows the rendered card; viewport fallbacks cover older browsers.
+const GRID_IMAGE_SIZES = 'auto, (max-width: 599px) 100vw, (min-width: 1600px) and (min-height: 850px) 39vw, min(50vw, 551px)';
+const FULL_WIDTH_IMAGE_SIZES = 'auto, (min-width: 1600px) and (min-height: 850px) 78vw, min(100vw, 1120px)';
 
 export default function HomePackages() {
   const homePage = useManagedContent('homePage', CMS_DEFAULTS.homePage);
   const packages = useManagedContent('packages', CMS_DEFAULTS.packages);
   const mediaItems = useManagedContent('mediaItems', CMS_DEFAULTS.mediaItems);
-  const [selected, setSelected] = useState('');
   const scenes = useMemo(() => {
     const byId = new Map(mediaItems.map(item => [item.id, item]));
     return buildCategoryRanges(packages, { includeDroneRequest: true }).map(range => {
@@ -29,33 +32,25 @@ export default function HomePackages() {
         src: image?.src || getCategoryPhoto(range.category, byId) || MEDIA.fireworksSky };
     });
   }, [packages, mediaItems]);
-  const active = scenes.find(scene => scene.category === selected) || scenes[0];
   const copy = homePage.packages;
-  const picture = scene => <img {...homeImageProps(scene.src)} sizes="(max-width: 899px) 100vw, 62vw" alt="" loading="lazy" decoding="async" />;
-  const caption = scene => <span className="fa-packages__scene-caption"><span>{scene.description}</span><span className="fa-packages__discover">Vezi mai multe opțiuni <ArrowUpRight aria-hidden="true" /></span></span>;
 
-  return <section className="fa-packages fa-packages--selector" data-testid="home-packages" data-home-scene="packages" aria-labelledby="fa-packages-title">
+  return <section className="fa-packages fa-packages--grid" data-testid="home-packages" data-home-scene="packages" aria-labelledby="fa-packages-title">
     <div className="fa-packages__inner nr-shell">
       <header className="fa-packages__header">
         <p className="fa-kicker">{copy.eyebrow}</p><h2 id="fa-packages-title">{copy.title}</h2>
         {copy.description && <p>{copy.description}</p>}
       </header>
-      {active && <div className="fa-packages__selector">
-        <nav className="fa-packages__categories" aria-label="Game de spectacole">
-          {scenes.map(scene => <Link key={scene.category} to={scene.href} className="fa-packages__category" data-package-category={scene.category}
-            data-active={scene === active} onMouseEnter={() => setSelected(scene.category)} onFocus={() => setSelected(scene.category)}>
-            <h3>{scene.label}</h3><ArrowUpRight aria-hidden="true" /><span>Vezi mai multe opțiuni</span>
-          </Link>)}
-        </nav>
-        <Link key={active.src} to={active.href} className="fa-packages__scene" aria-label={'Vezi ' + active.label}>
-          {picture(active)}{caption(active)}
-        </Link>
-      </div>}
-      <div className="fa-packages__mobile-scenes">
-        {scenes.map(scene => <Link key={scene.category} className="fa-packages__mobile-scene" to={scene.href} aria-label={'Vezi ' + scene.label}>
-          {picture(scene)}<span className="fa-packages__mobile-caption"><h3>{scene.label}</h3>{caption(scene)}</span>
+      <nav className="fa-packages__grid" aria-label="Game de spectacole">
+        {scenes.map((scene, index) => <Link key={scene.category} to={scene.href} className="fa-packages__category"
+          data-package-category={scene.category} aria-label={'Vezi ' + scene.label}>
+          <img {...homeImageProps(scene.src)} sizes={scenes.length % 2 === 1 && index === scenes.length - 1 ? FULL_WIDTH_IMAGE_SIZES : GRID_IMAGE_SIZES} alt="" loading="lazy" decoding="async" />
+          <div className="fa-packages__caption">
+            <h3>{scene.label}</h3>
+            <p>{scene.description}</p>
+            <span className="fa-packages__discover"><span>Vezi mai multe opțiuni</span><ArrowUpRight aria-hidden="true" /></span>
+          </div>
         </Link>)}
-      </div>
+      </nav>
       {copy.ctaLabel && <Link className="fa-line-link fa-packages__all" to={copy.ctaHref}><span>{copy.ctaLabel}</span><ArrowUpRight aria-hidden="true" /></Link>}
     </div>
   </section>;

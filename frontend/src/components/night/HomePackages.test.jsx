@@ -54,7 +54,6 @@ const render = async (data = content) => act(async () => root.render(
   </MemoryRouter>,
 ));
 const rows = () => [...container.querySelectorAll(".fa-packages__category")];
-const scene = () => container.querySelector(".fa-packages__scene");
 
 test("keeps CMS category order, native deep links and discovery copy without option counts", async () => {
   await render();
@@ -67,38 +66,36 @@ test("keeps CMS category order, native deep links and discovery copy without opt
   expect(container.textContent).not.toMatch(/\d+\s+opțiun/);
 });
 
-test("starts with a single night scene using the curated catalogue when CMS entries are missing", async () => {
+test("shows all category images together using the curated catalogue when CMS entries are missing", async () => {
   await render();
-  expect(container.querySelectorAll(".fa-packages__scene")).toHaveLength(1);
-  expect(scene().querySelectorAll("img")).toHaveLength(1);
-  expect(scene().querySelector("img").getAttribute("src")).toBe(curatedSources[0]);
-  expect(scene().getAttribute("href")).toBe("/pachete?categorie=Artificii%20de%20noapte");
-  expect(rows()[0].dataset.active).toBe("true");
+  expect(rows()).toHaveLength(4);
+  expect(rows().map(row => row.querySelector("img").getAttribute("src"))).toEqual(curatedSources);
+  expect(container.querySelectorAll("img")).toHaveLength(4);
+  expect(rows()[0].getAttribute("href")).toBe("/pachete?categorie=Artificii%20de%20noapte");
 });
 
-test("hover changes the scene image, description and destination together", async () => {
+test("hover keeps each category image, description and destination available", async () => {
   await render();
   await act(async () => rows()[1].dispatchEvent(new MouseEvent("mouseover", { bubbles: true })));
-  expect(scene().querySelector("img").getAttribute("src")).toBe(curatedSources[1]);
-  expect(scene().textContent).toContain("Culoare și efecte cu impact vizibil în lumină naturală.");
-  expect(scene().getAttribute("href")).toBe("/pachete?categorie=Artificii%20de%20zi");
-  expect(rows()[0].dataset.active).toBe("false");
-  expect(rows()[1].dataset.active).toBe("true");
+  expect(rows()[1].querySelector("img").getAttribute("src")).toBe(curatedSources[1]);
+  expect(rows()[1].textContent).toContain("Culoare și efecte cu impact vizibil în lumină naturală.");
+  expect(rows()[1].getAttribute("href")).toBe("/pachete?categorie=Artificii%20de%20zi");
+  expect(rows()[0].querySelector("img").getAttribute("src")).toBe(curatedSources[0]);
 });
 
-test("keyboard focus previews a category and the active scene navigates to its CMS URL", async () => {
+test("keyboard focus stays on the category card and its link navigates to the CMS URL", async () => {
   await render();
   await act(async () => rows()[2].focus());
   expect(document.activeElement).toBe(rows()[2]);
-  expect(scene().querySelector("img").getAttribute("src")).toBe(curatedSources[2]);
-  expect(scene().getAttribute("aria-label")).toBe("Vezi Spectacole de drone");
-  await act(async () => scene().dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })));
+  expect(rows()[2].querySelector("img").getAttribute("src")).toBe(curatedSources[2]);
+  expect(rows()[2].getAttribute("aria-label")).toBe("Vezi Spectacole de drone");
+  await act(async () => rows()[2].dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })));
   expect(container.querySelector("output").textContent).toBe("/pachete?categorie=Show%20drone");
 });
 
-test("touch scenes expose every distinct image and category link without interaction", async () => {
+test("category cards expose every distinct image and link without interaction", async () => {
   await render();
-  const scenes = [...container.querySelectorAll(".fa-packages__mobile-scene")];
+  const scenes = rows();
   expect(scenes.map(item => item.querySelector("img").getAttribute("src"))).toEqual(curatedSources);
   expect(scenes.map(item => item.getAttribute("href"))).toEqual(categories.map(category => `/pachete?categorie=${encodeURIComponent(category)}`));
   expect(scenes.slice(1).every(item => item.querySelector("img").getAttribute("loading") === "lazy")).toBe(true);
@@ -117,18 +114,17 @@ test("honors a published replacement for the curated ID and retains additional C
     ],
   });
   expect(container.querySelector("h2").textContent).toBe("Spectacolele noastre");
-  expect(scene().querySelector("img").getAttribute("src")).toBe("/owned/night-v2.webp?v=2");
+  expect(rows()[0].querySelector("img").getAttribute("src")).toBe("/owned/night-v2.webp?v=2");
   await act(async () => rows()[4].focus());
-  expect(scene().textContent).toContain("Descriere din CMS");
-  expect(scene().querySelector("img").getAttribute("src")).toBe("/owned/custom.webp");
-  expect(scene().getAttribute("href")).toBe("/pachete?categorie=Lumin%C4%83%20%26%20scen%C4%83");
+  expect(rows()[4].textContent).toContain("Descriere din CMS");
+  expect(rows()[4].querySelector("img").getAttribute("src")).toBe("/owned/custom.webp");
+  expect(rows()[4].getAttribute("href")).toBe("/pachete?categorie=Lumin%C4%83%20%26%20scen%C4%83");
 });
 
-test("falls back to the first available scene when CMS removes the active category", async () => {
+test("keeps only available category cards when CMS removes packages", async () => {
   await render();
   await act(async () => rows()[3].focus());
   await render({ ...content, packages: [] });
   expect(rows().map(row => row.dataset.packageCategory)).toEqual(["Show drone"]);
-  expect(scene().getAttribute("href")).toBe("/pachete?categorie=Show%20drone");
-  expect(rows()[0].dataset.active).toBe("true");
+  expect(rows()[0].getAttribute("href")).toBe("/pachete?categorie=Show%20drone");
 });

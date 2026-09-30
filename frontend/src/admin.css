@@ -604,6 +604,10 @@
 /* Editorial workspace: compact controls, real content, accessible mobile navigation. */
 .cms-shell { background: #090d16; }
 .cms-shell .admin-workspace { grid-template-columns: 220px minmax(0, 1fr); }
+@media (max-width: 1050px) {
+  .cms-shell .admin-workspace { grid-template-columns: minmax(0, 1fr); }
+  .cms-shell .admin-sidebar:not(.is-open) { visibility: hidden; }
+}
 .cms-shell .admin-appbar { padding: 10px 18px; gap: 12px; }
 .cms-shell .admin-appbar-actions > .admin-button { width: auto; padding: 8px 12px; }
 .cms-shell .admin-button, .cms-shell .admin-session-logout { min-height: 44px; border-radius: 7px; font-size: 12px; }
@@ -1042,4 +1046,74 @@
   .admin-auth-shell *,
   .admin-auth-shell *::before,
   .admin-auth-shell *::after { transition-duration: .01ms !important; }
+}
+
+@media (min-width: 1600px) {
+  .cms-shell .cms-main { padding: clamp(32px, 2.5vw, 72px); }
+  .cms-shell .cms-panel,
+  .cms-shell .cms-dashboard { width: min(100%, 1960px); }
+  .cms-shell .admin-blog-view { width: min(100%, 1800px); }
+  .cms-shell .cms-collection,
+  .cms-shell .admin-blog-layout { grid-template-columns: minmax(320px, 360px) minmax(0, 1fr); }
+
+  .cms-shell .admin-button,
+  .cms-shell .admin-session-logout,
+  .cms-shell .admin-sidebar nav button { font-size: 14px; }
+  .cms-shell .admin-sidebar summary { min-height: 44px; font-size: 13px; }
+  .cms-shell .admin-session-user,
+  .cms-shell .cms-save-state,
+  .cms-shell .cms-collection-list label,
+  .cms-shell .cms-field-group > legend,
+  .cms-shell .admin-field label,
+  .cms-shell .admin-blog-fields > label > span:first-child { font-size: 13px; }
+  .cms-shell .cms-panel-heading p,
+  .cms-shell .cms-collection-choice strong,
+  .cms-shell .admin-blog-list strong,
+  .cms-shell .admin-inbox-list li > button strong { font-size: 14px; }
+  .cms-shell input,
+  .cms-shell textarea,
+  .cms-shell select { font-size: 15px; }
+
+  .cms-shell .cms-collection-choice small,
+  .cms-shell .cms-collection-count,
+  .cms-shell .cms-media-card > small,
+  .cms-shell .cms-publication-date,
+  .cms-shell .admin-blog-list small,
+  .cms-shell .admin-blog-list span,
+  .cms-shell .admin-blog-fields > label > small,
+  .cms-shell .admin-blog-published small,
+  .cms-shell .admin-blog-form-head span,
+  .cms-shell .admin-blog-form-head code,
+  .cms-shell .admin-inbox-kicker,
+  .cms-shell .admin-inbox-count,
+  .cms-shell .admin-inbox-state,
+  .cms-shell .admin-inbox-list li > button time,
+  .cms-shell .admin-inbox-list li > button small,
+  .cms-shell .admin-inbox-list nav span,
+  .cms-shell .admin-inbox-attachments li span,
+  .cms-shell .admin-inbox-thread li > div { font-size: 12px; }
+  .cms-shell .admin-inbox-attachments li strong,
+  .cms-shell .admin-inbox-detail__header > div > p:last-child,
+  .cms-shell .admin-inbox-reply__actions > span { font-size: 13px; }
+}
+
+@media (min-width: 3000px) {
+  .cms-shell .admin-workspace { grid-template-columns: 280px minmax(0, 1fr); }
+  .cms-shell .cms-panel,
+  .cms-shell .cms-dashboard { width: min(100%, 2208px); }
+  .cms-shell .admin-blog-view { width: min(100%, 2050px); }
+  .cms-shell .cms-collection,
+  .cms-shell .admin-blog-layout { grid-template-columns: minmax(380px, 430px) minmax(0, 1fr); }
+  .cms-shell .cms-panel h1,
+  .cms-shell .cms-dashboard h1 { font-size: 2.75rem; }
+  .cms-shell .admin-sidebar summary,
+  .cms-shell .admin-field label,
+  .cms-shell .cms-field-group > legend,
+  .cms-shell .admin-blog-fields > label > span:first-child { font-size: 16px; }
+  .cms-shell .admin-button,
+  .cms-shell .admin-session-logout,
+  .cms-shell .admin-sidebar nav button { font-size: 16px; }
+  .cms-shell input,
+  .cms-shell textarea,
+  .cms-shell select { font-size: 17px; }
 }

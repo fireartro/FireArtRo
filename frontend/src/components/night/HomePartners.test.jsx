@@ -37,6 +37,77 @@ test("replaces only the original empty partner seed with the owner's real collab
   expect(container.querySelector('img[src="/media/partners/shopping-city-satu-mare.png"]')).not.toBeNull();
 });
 
+test("every supplied collaboration has an external site or local Maps destination", async () => {
+  await render();
+  const links = [...container.querySelectorAll('.fa-partner__body')];
+  expect(links).toHaveLength(26);
+  expect(links.every(link => link.matches('a[target="_blank"][rel="noopener noreferrer"]') && link.href.startsWith("https://"))).toBe(true);
+  const palat = container.querySelector('[data-partner-id="palatul"] a');
+  expect(new URL(palat.href).searchParams.get("query")).toBe("Palat Ioan Festeleu Negrești-Oaș");
+});
+
+test("marquee copies stay clickable without creating duplicate keyboard stops", async () => {
+  useReducedMotion.mockReturnValue(false);
+  await render();
+  expect(container.querySelectorAll('.fa-partner__body:not([tabindex="-1"])')).toHaveLength(26);
+  const copies = [...container.querySelectorAll('[data-marquee-copy="true"] a')];
+  expect(copies).toHaveLength(26);
+  expect(copies.every(link => link.tabIndex === -1 && link.href.startsWith("https://"))).toBe(true);
+});
+
+test("uses stationary original lanes while a partner is focused and resumes after focus leaves", async () => {
+  useReducedMotion.mockReturnValue(false);
+  await render();
+  const scene = container.querySelector('[data-testid="partner-marquee"]');
+  const firstLink = scene.querySelector('.fa-partner__body');
+  await act(async () => firstLink.focus());
+  expect([...scene.querySelectorAll('[data-partner-lane]')].every(lane => lane.dataset.motion === 'static')).toBe(true);
+  expect(scene.querySelectorAll('.fa-partner__body')).toHaveLength(26);
+  expect(document.activeElement).toBe(firstLink);
+  expect(scene.querySelector('button')).toBeNull();
+  await act(async () => scene.querySelectorAll('.fa-partner__body')[1].focus());
+  expect(scene.querySelector('[data-partner-lane]').dataset.motion).toBe('static');
+  await act(async () => document.activeElement.blur());
+  expect(scene.querySelector('[data-partner-lane]').dataset.motion).toBe('moving');
+  expect(scene.querySelectorAll('[data-marquee-copy="true"]')).toHaveLength(2);
+});
+
+test("keeps a pointer-focused visual copy mounted so its native external link can open", async () => {
+  useReducedMotion.mockReturnValue(false);
+  await render();
+  const scene = container.querySelector('[data-testid="partner-marquee"]');
+  const copy = scene.querySelector('[data-marquee-copy="true"] a');
+  await act(async () => copy.focus());
+  expect(copy.isConnected).toBe(true);
+  expect(scene.querySelector('[data-partner-lane]').dataset.motion).toBe('moving');
+  expect(copy.href).toBe('https://restaurantcapricci.ro/');
+});
+
+test("prevents pointer focus on decorative copies without canceling their native click", async () => {
+  useReducedMotion.mockReturnValue(false);
+  await render();
+  const copy = container.querySelector('[data-marquee-copy="true"] a');
+  const press = new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 });
+  await act(async () => copy.dispatchEvent(press));
+  expect(press.defaultPrevented).toBe(true);
+  const click = new Event('click', { bubbles: true, cancelable: true });
+  await act(async () => copy.dispatchEvent(click));
+  expect(click.defaultPrevented).toBe(false);
+  expect(copy.isConnected).toBe(true);
+});
+
+test("rejects unsafe managed URLs while retaining a destination for the actual partner name", async () => {
+  await render({ partners: [{ id: "dedeman", name: "Noua locație", logoMediaId: "", href: "javascript:alert(1)" }] });
+  const link = container.querySelector('.fa-partner__body');
+  expect(new URL(link.href).hostname).toBe("www.google.com");
+  expect(new URL(link.href).searchParams.get("query")).toBe("Noua locație");
+});
+
+test("preserves a valid managed partner destination", async () => {
+  await render({ partners: [{ id: "venue", name: "Locație reală", logoMediaId: "", href: "https://example.com/locatie" }] });
+  expect(container.querySelector('.fa-partner__body').href).toBe("https://example.com/locatie");
+});
+
 test("honors an intentionally empty published list without restoring deleted partners", async () => {
   await render({ partners: [] });
   expect(names()).toHaveLength(0);
@@ -194,14 +265,61 @@ test("renders one accessible copy of each partner and no all-partners button", a
   expect(container.textContent).not.toContain("Vezi toți");
 });
 
-test("lets the visitor pause the two bands", async () => {
+test("does not render a manual pause button", async () => {
   useReducedMotion.mockReturnValue(false);
   await render();
-  const button = container.querySelector('[aria-label="Oprește mișcarea partenerilor"]');
-  expect(button).not.toBeNull();
-  await act(async () => button.click());
   const scene = container.querySelector('[data-testid="partner-marquee"]');
-  expect(scene.dataset.running).toBe("false");
-  expect(container.querySelector('[aria-label="Pornește mișcarea partenerilor"]').getAttribute('aria-pressed')).toBe("true");
+  expect(scene.querySelector('button')).toBeNull();
   expect(names()).toHaveLength(26);
+});
+
+test("keeps original links stationary during a primary pointer press without canceling native clicks", async () => {
+  useReducedMotion.mockReturnValue(false);
+  await render();
+  const original = container.querySelector('[data-marquee-copy="false"] a');
+  const press = new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 });
+  await act(async () => original.dispatchEvent(press));
+  expect(press.defaultPrevented).toBe(true);
+  const click = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+  await act(async () => original.dispatchEvent(click));
+  expect(click.defaultPrevented).toBe(false);
+  expect(original.isConnected).toBe(true);
+  expect(container.querySelector('[data-partner-lane]').dataset.motion).toBe('moving');
+});
+
+test("adds hidden real partners to fill a wide lane and remeasures on resize", async () => {
+  useReducedMotion.mockReturnValue(false);
+  const partners = ["A", "B", "C", "D"].map(name => ({ id: name, name: `Brand ${name}`, logoMediaId: "", replaceable: false }));
+  let laneWidth = 3840;
+  const originalObserver = window.ResizeObserver;
+  const originalRect = Element.prototype.getBoundingClientRect;
+  let notifyResize;
+  window.ResizeObserver = class {
+    constructor(callback) { notifyResize = callback; }
+    observe() {}
+    disconnect() {}
+  };
+  const rect = jest.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function getRect() {
+    if (this.matches?.(".fa-partner-lane")) return { width: laneWidth };
+    if (this.matches?.(".fa-partner")) return { width: 200 };
+    return originalRect.call(this);
+  });
+  try {
+    await render({ partners });
+    const scene = container.querySelector('[data-testid="partner-marquee"]');
+    const originalGroups = [...scene.querySelectorAll('[data-marquee-copy="false"]')];
+    expect(originalGroups).toHaveLength(2);
+    expect(originalGroups.every(group => group.querySelectorAll("li").length >= 20)).toBe(true);
+    expect(originalGroups.every(group => [...group.querySelectorAll("li")].slice(2).every(item => item.getAttribute("aria-hidden") === "true"))).toBe(true);
+    expect(names()).toEqual(partners.map(partner => partner.name));
+
+    laneWidth = 4200;
+    await act(async () => notifyResize());
+    expect(originalGroups.every(group => group.querySelectorAll("li").length >= 21)).toBe(true);
+    expect(scene.querySelectorAll('[data-marquee-copy="true"][aria-hidden="true"]')).toHaveLength(2);
+    expect(names()).toEqual(partners.map(partner => partner.name));
+  } finally {
+    rect.mockRestore();
+    window.ResizeObserver = originalObserver;
+  }
 });

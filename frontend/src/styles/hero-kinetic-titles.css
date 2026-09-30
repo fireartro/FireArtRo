@@ -17,7 +17,7 @@
   user-select: none;
   color: #f6f1e8;
   font-family: "FireArt Film", "Arial Black", sans-serif;
-  font-size: clamp(32px, 4.5vw, 100px);
+  font-size: clamp(2rem, 4.5vw, 6.25rem);
   font-weight: 900;
   line-height: .94;
   letter-spacing: -.055em;
