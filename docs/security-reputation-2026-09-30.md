@@ -19,15 +19,17 @@ Nu există dovezi că vulnerabilitățile de dependențe sau permisiunea CSP exp
 
 1. Cele trei blocuri JavaScript executabile de startup sunt mutate într-un script same-origin, blocant. JSON-LD rămâne date, nu cod executabil. CSP `script-src` nu mai permite `unsafe-inline` sau `unsafe-eval`; originile explicite Cloudflare și GA4 sunt păstrate. Politica pentru stiluri nu este schimbată.
 2. Dependența HTTP `undici` este actualizată la versiuni 6.x corectate, fără schimbarea API-ului Blob SDK: 6.29.0 în lockfile-ul Node și 6.28.1 în cel Yarn. Auditul npm al dependențelor Node de producție raportează zero advisories; acesta nu reprezintă auditul tuturor dependențelor Python sau al uneltelor CRA.
-3. Protecția timpurie pentru încărcări Blog este inclusă în verificarea de securitate, separat de parsarea și blocarea referințelor JSON. Starea finală este consemnată după testarea agentului.
+3. Încărcările Blog verifică sesiunea, originea și CSRF înainte de parsarea formularelor, inclusiv pentru URL-ul cu slash final. Cererile autentificate care nu sunt multipart primesc 415. Limitele existente pentru fișiere și corpul total rămân active, iar multipart nu este tratat ca JSON și nu ocupă blocarea referințelor CMS.
 
 ## Evidență de verificare
 
 - API Node: 17 teste trecute; artifact/startup/CSP: 22 teste trecute.
 - Frontend: 57 suite, 342 teste trecute. Testul first-paint execută acum scriptul extern declarat de HTML, cu transportul anonim simulat la granița de rețea.
 - Build de producție: compilat cu succes.
+- Backend: 42 teste noi reproduse RED și apoi GREEN; suita completă are 456 teste trecute și 10 teste Mongo omise, cu un avertisment de depreciere preexistent. Nu sunt testate încărcări reale sau baze Mongo live.
 - Verificarea inițială în Chrome folosește build-ul real, antetele exacte din `vercel.json` și fixture-ul CMS versionat, exclusiv pe un server separat local la 4193. Acest fixture nu este publicat și nu reprezintă datele live ale firmei. Homepage-ul se montează, loading-ul dispare și `inert` se eliberează fără erori CSP ale aplicației. Testele unitare păstrează minimul de trei secunde și comportamentul pentru încărcări lente.
 - Serverul de dezvoltare la 4191 este păstrat. Nu sunt schimbate parole, DNS, datele firmei sau integrările de recenzii.
+- Preview-ul Vercel a ajuns Ready; scripturile externe de startup sunt permise de politica publicată. API-ul anonim de preview redirecționează către `vercel.com/sso-api`, apoi este blocat de CSP. Nu este slăbită politica și nu este dezactivată protecția Vercel pentru a ocoli autentificarea; validarea conținutului public și a widget-ului configurat trebuie făcută pe producție la publicare.
 
 ## Ce rămâne extern sau necesită o etapă separată
 
