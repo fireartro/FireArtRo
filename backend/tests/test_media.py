@@ -2,16 +2,23 @@
 import asyncio
 from contextlib import asynccontextmanager
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
+import httpx
 import pytest
-from fastapi import FastAPI
+import pytest_asyncio
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
+from auth import ADMIN_COOKIE_NAME
+from blog import BlogService, create_blog_router
 from media import (
     MediaError, MediaInUse, MediaService, MediaWriteGuardMiddleware,
     create_media_router, find_references, validate_blob,
 )
+from test_auth import domain, login, password_hash, server_loader
+from test_blog import FakeBlogRepository, FakeMediaStore
 from test_cms_routes import RouteAuthService, authorize
 
 
@@ -247,3 +254,189 @@ def test_middleware_guards_cms_and_blog_writes_and_releases_lock(service):
             service.repository.items[MEDIA_ID]["state"] = "deleted"
             assert client.request(method, path, headers=headers, json={"cover": MEDIA_ID}).status_code == 409
             service.repository.items[MEDIA_ID]["state"] = "ready"
+
+
+@pytest_asyncio.fixture
+async def blog_upload(domain, service, monkeypatch):
+    """Real session/CSRF and UploadFile handling, with in-memory storage only."""
+    store = FakeMediaStore()
+    app = FastAPI()
+    app.state.auth_service = domain.auth
+    app.add_middleware(MediaWriteGuardMiddleware, service=service)
+    app.include_router(create_blog_router(BlogService(FakeBlogRepository(), store)))
+    issued = await login(domain.auth)
+    probe = SimpleNamespace(body_reads=0, form_parses=0)
+    original_form = Request.form
+
+    def count_form(request, *args, **kwargs):
+        probe.form_parses += 1
+        return original_form(request, *args, **kwargs)
+
+    monkeypatch.setattr(Request, "form", count_form)
+
+    async def observed_app(scope, receive, send):
+        async def count_receive():
+            probe.body_reads += 1
+            return await receive()
+
+        await app(scope, count_receive, send)
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=observed_app),
+        base_url="https://fireart.test",
+    ) as client:
+        yield SimpleNamespace(
+            app=observed_app, client=client, auth=domain.auth, clock=domain.clock,
+            issued=issued, store=store, probe=probe,
+            headers={"Origin": "https://fireart.test", "X-CSRF-Token": issued.csrf_token},
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["/api/admin/blog/media", "/api/admin/blog/media/"])
+@pytest.mark.parametrize("content_type,body", [
+    ("multipart/form-data", b"--hostile-private-data-without-a-boundary"),
+    ("application/x-www-form-urlencoded", b"file=hostile-private-data&" * 2000),
+], ids=["missing-boundary", "urlencoded-fields"])
+@pytest.mark.parametrize("denial,status", [
+    ("missing-session", 401), ("invalid-session", 401),
+    ("expired-session", 401), ("revoked-session", 401),
+    ("missing-csrf", 403), ("invalid-csrf", 403),
+    ("cross-origin", 403), ("cross-site", 403),
+])
+async def test_blog_upload_denied_before_body_receive_or_form_parse(
+    blog_upload, service, path, content_type, body, denial, status,
+):
+    upload = blog_upload
+    headers = {**upload.headers, "Content-Type": content_type}
+    if denial != "missing-session":
+        token = "invalid" if denial == "invalid-session" else upload.issued.raw_token
+        upload.client.cookies.set(ADMIN_COOKIE_NAME, token)
+    if denial == "expired-session":
+        upload.clock.now += timedelta(hours=12)
+    elif denial == "revoked-session":
+        await upload.auth.logout(upload.issued.raw_token)
+    elif denial == "missing-csrf":
+        headers.pop("X-CSRF-Token")
+    elif denial == "invalid-csrf":
+        headers["X-CSRF-Token"] = "wrong"
+    elif denial == "cross-origin":
+        headers["Origin"] = "https://evil.example"
+    elif denial == "cross-site":
+        headers["Sec-Fetch-Site"] = "cross-site"
+
+    response = await upload.client.post(path, content=body, headers=headers)
+
+    assert response.status_code == status
+    assert upload.probe.body_reads == 0
+    assert upload.probe.form_parses == 0
+    assert response.headers["cache-control"] == "no-store"
+    assert set(response.json()) == {"detail"}
+    assert "hostile-private-data" not in response.text
+    assert upload.store.items == {}
+    assert not service.repository.locked
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["/api/admin/blog/media", "/api/admin/blog/media/"])
+@pytest.mark.parametrize("content_type", [
+    None, "application/x-www-form-urlencoded", "application/json",
+    "text/plain", "multipart/form-data-evil",
+])
+async def test_authenticated_blog_upload_requires_multipart_before_receiving(
+    blog_upload, path, content_type,
+):
+    upload = blog_upload
+    upload.client.cookies.set(ADMIN_COOKIE_NAME, upload.issued.raw_token)
+    headers = dict(upload.headers)
+    if content_type is not None:
+        headers["Content-Type"] = content_type
+
+    response = await upload.client.post(path, content=b"file=hostile-private-data", headers=headers)
+
+    assert response.status_code == 415
+    assert response.headers["cache-control"] == "no-store"
+    assert set(response.json()) == {"detail"}
+    assert "hostile-private-data" not in response.text
+    assert upload.probe.body_reads == 0
+    assert upload.probe.form_parses == 0
+    assert upload.store.items == {}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["/api/admin/blog/media", "/api/admin/blog/media/"])
+async def test_authenticated_blog_upload_preserves_bytes_and_bypasses_reference_lock(
+    blog_upload, service, path,
+):
+    upload = blog_upload
+    upload.client.cookies.set(ADMIN_COOKIE_NAME, upload.issued.raw_token)
+    # Larger than the Blog JSON limit, while a reference writer holds its lock.
+    image = b"RIFF\x04\x00\x00\x00WEBP" + b"\x00" * (128 * 1024)
+    service.repository.locked = True
+
+    response = await upload.client.post(
+        path, files={"file": ("coperta.webp", image, "image/webp")},
+        headers=upload.headers, follow_redirects=True,
+    )
+
+    assert response.status_code == 201
+    assert [item.status_code for item in response.history] == ([307] if path.endswith("/") else [])
+    assert upload.store.items[response.json()["id"]] == {
+        "filename": "coperta.webp", "content_type": "image/webp", "data": image,
+    }
+    assert response.json()["url"] == f"/api/blog/media/{response.json()['id']}"
+    assert upload.probe.body_reads > 0
+    assert upload.probe.form_parses == 1
+    assert service.repository.locked
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("file_type,data,status", [
+    ("text/plain", b"not-an-image", 415),
+    ("image/webp", b"not-an-image", 415),
+    ("image/webp", b"RIFF\x04\x00\x00\x00WEBP" + b"\x00" * (6 * 1024 * 1024), 413),
+], ids=["non-image", "false-signature", "oversized-image"])
+async def test_authenticated_blog_upload_preserves_image_checks(blog_upload, file_type, data, status):
+    upload = blog_upload
+    upload.client.cookies.set(ADMIN_COOKIE_NAME, upload.issued.raw_token)
+    response = await upload.client.post(
+        "/api/admin/blog/media", files={"file": ("coperta.webp", data, file_type)},
+        headers=upload.headers,
+    )
+    assert response.status_code == status
+    assert upload.store.items == {}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path,size,status", [
+    ("/api/admin/blog/media", 128 * 1024, 201),
+    ("/api/admin/blog/media", 6 * 1024 * 1024, 413),
+    ("/api/admin/blog/media/", 1024, 201),
+    ("/api/admin/blog/media/", 32 * 1024, 413),
+])
+async def test_blog_upload_keeps_outer_total_body_limit_and_no_store(
+    blog_upload, server_loader, monkeypatch, path, size, status,
+):
+    upload = blog_upload
+    server = server_loader()
+    # Only satisfy the middleware's readiness gate; no Mongo client or data.
+    monkeypatch.setattr(server, "db", object())
+    secured_app = server.RequestSecurityMiddleware(upload.app)
+    image = b"RIFF\x04\x00\x00\x00WEBP" + b"\x00" * (size - 12)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=secured_app), base_url="https://fireart.test",
+    ) as client:
+        client.cookies.set(ADMIN_COOKIE_NAME, upload.issued.raw_token)
+        response = await client.post(
+            path, files={"file": ("coperta.webp", image, "image/webp")},
+            headers=upload.headers, follow_redirects=True,
+        )
+
+    assert response.status_code == status
+    assert response.headers["cache-control"] == "no-store"
+    if status == 413:
+        # The file fits the existing path limit; multipart framing exceeds it.
+        assert upload.probe.body_reads == upload.probe.form_parses == 0
+        assert upload.store.items == {}
+    else:
+        assert upload.store.items[response.json()["id"]]["data"] == image

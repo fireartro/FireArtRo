@@ -2,7 +2,9 @@ import fs from 'fs';
 import path from 'path';
 
 const introScript = fs.readFileSync(path.join(process.cwd(), 'public/startup-intro.js'), 'utf8');
-const firstPaintScript = fs.readFileSync(path.join(process.cwd(), 'public/index.html'), 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+const firstPaintSource = fs.readFileSync(path.join(process.cwd(), 'public/index.html'), 'utf8')
+  .match(/<script\s+src="%PUBLIC_URL%\/(site-bootstrap\.js(?:\?[^"<>]*)?)"\s*><\/script>/)[1];
+const firstPaintScript = fs.readFileSync(path.join(process.cwd(), 'public', firstPaintSource.split('?')[0]), 'utf8');
 let strokes;
 let clock;
 beforeEach(() => {
@@ -94,7 +96,7 @@ test('does not block Tab or Enter and releases scroll guards on explicit skip', 
 
 test.each([false, true])('keeps native Space activation available with first-paint guard=%s', firstPaint => {
   if (firstPaint) {
-    new Function(firstPaintScript)();
+    new Function('fetch', firstPaintScript)(async () => ({ ok: false }));
     const before = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
     document.querySelector('#fireart-intro button').dispatchEvent(before);
     expect(before.defaultPrevented).toBe(false);
