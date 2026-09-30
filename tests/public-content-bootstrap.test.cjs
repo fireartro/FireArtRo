@@ -6,10 +6,12 @@ const path = require('node:path');
 const html = readFileSync(path.resolve(__dirname, '../frontend/public/index.html'), 'utf8');
 
 function bootstrap(pathname, fetch) {
-  const script = html.match(/<script id="published-content-bootstrap">([\s\S]*?)<\/script>/)?.[1];
-  assert.ok(script, 'An early public-content bootstrap must exist');
+  const source = html.match(/<script\s+src="%PUBLIC_URL%\/(site-bootstrap\.js(?:\?[^"<>]*)?)"\s*><\/script>/)?.[1];
+  assert.ok(source, 'An early public-content bootstrap must exist');
+  const script = readFileSync(path.resolve(__dirname, '../frontend/public', source.split('?')[0]), 'utf8');
   const window = {};
-  vm.runInNewContext(script, { window, location: { pathname }, fetch, Date });
+  const document = { documentElement: { dataset: {} }, readyState: 'loading', addEventListener() {} };
+  vm.runInNewContext(script, { window, document, navigator: {}, location: { pathname }, fetch, Date, performance: { now: () => 0 }, setInterval: () => 1 });
   return window;
 }
 test('starts an anonymous public-only request and exposes its handled promise', async () => {

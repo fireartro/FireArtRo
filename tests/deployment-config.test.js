@@ -70,3 +70,14 @@ test('the production CSP permits only the exact GA4 script and collection origin
   assert.ok(!directives['script-src'].includes('https:'));
   assert.ok(!directives['connect-src'].includes('https:'));
 });
+
+test('the production script policy blocks injected inline JavaScript and string execution', async () => {
+  const config = JSON.parse(await readFile(path.join(projectRoot, 'vercel.json'), 'utf8'));
+  const policy = config.headers.find(({ source }) => source === '/(.*)').headers
+    .find(({ key }) => key === 'Content-Security-Policy').value;
+  const scripts = policy.split(';').map(part => part.trim())
+    .find(part => part.startsWith('script-src ')).split(/\s+/).slice(1);
+  assert.ok(scripts.includes("'self'"), 'The local startup and React bundle must remain permitted');
+  assert.ok(!scripts.includes("'unsafe-inline'"), 'Arbitrary inline scripts must not execute');
+  assert.ok(!scripts.includes("'unsafe-eval'"), 'String-to-code execution must not be permitted');
+});
