@@ -332,21 +332,29 @@ class MediaWriteGuardMiddleware:
     """Serialize all HTTP CMS/Blog writes with physical media deletion.
 
     Uses pure ASGI so the lock covers the complete request, not a background task.
-    Authentication precedes buffering/locking. Upload callbacks do not need this
-    lock: they only transition pending -> ready, never replace/delete references.
+    Authentication precedes buffering/locking and Blog multipart parsing.
+    Blog uploads bypass the JSON reference guard. Upload callbacks do not need
+    this lock: they only transition pending -> ready, never replace/delete references.
     """
     def __init__(self, app, service):
         self.app, self.service = app, service
 
     async def __call__(self, scope, receive, send):
         path, method = scope.get("path", ""), scope.get("method", "GET")
+        blog_upload = path in {"/api/admin/blog/media", "/api/admin/blog/media/"}
         protected = (path.startswith("/api/admin/content/")
-                     or path == "/api/admin/blog/posts" or path.startswith("/api/admin/blog/posts/"))
+                     or path == "/api/admin/blog/posts" or path.startswith("/api/admin/blog/posts/")
+                     or blog_upload)
         if scope["type"] != "http" or not protected or method not in {"POST", "PUT", "PATCH", "DELETE"}:
             return await self.app(scope, receive, send)
         try:
             request = Request(scope)
             await require_admin_session(request, request.headers.get("x-csrf-token"))
+            if blog_upload:
+                content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+                if content_type != "multipart/form-data":
+                    raise MediaError(415, "Încărcarea imaginii necesită multipart/form-data.")
+                return await self.app(scope, receive, send)
             maximum = 128 * 1024 if path.startswith("/api/admin/blog/") else 1024 * 1024
             chunks, length = [], 0
             while True:
