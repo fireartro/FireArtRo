@@ -101,6 +101,7 @@ credentials.json
 .emergent/
 .superpowers/
 .venv-cms/
+.venv-audit-release/
 .pytest_cache/
 .gitconfig
 memory/

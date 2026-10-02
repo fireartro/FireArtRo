@@ -167,6 +167,22 @@ class NotificationDeliveryRepository:
             self.delivery.error_code = None
         return self.delivery
 
+    async def claim_notification(self, delivery_id, *, allow_unstarted=False):
+        if self.delivery.state == "sent" or getattr(self.delivery, "lease_token", None):
+            return None
+        if self.delivery.state == "pending" and not allow_unstarted:
+            return None
+        self.delivery.lease_token = "test-lease"
+        self.delivery.state = "pending"
+        return self.delivery
+
+    async def complete_notification(self, delivery_id, lease_token, *, error_code=None, resend_email_id=None, state=None):
+        assert lease_token == self.delivery.lease_token
+        self.delivery.lease_token = None
+        if error_code:
+            return await self.mark_failed(delivery_id, error_code=error_code)
+        return await self.mark_sent(delivery_id, resend_email_id=resend_email_id)
+
     async def mark_failed(self, delivery_id, *, error_code):
         self.delivery.state = "failed"
         self.delivery.error_code = error_code
@@ -300,6 +316,8 @@ def test_notification_retry_reuses_quote_idempotency_identity_and_sanitizes_deta
         "error_code": "provider_unavailable",
         "sent_at": None,
         "failed_at": first.json()["notification"]["failed_at"],
+        "retryable": True,
+        "recovery_required": False,
     }
     for unsafe in ("resend_email_id", "idempotency_key"):
         assert unsafe not in first.text

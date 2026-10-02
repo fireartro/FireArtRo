@@ -68,6 +68,50 @@ afterEach(() => {
   container.remove();
   jest.useRealTimers();
   jest.restoreAllMocks();
+  delete document.documentElement.dataset.fireartIntro;
+});
+
+test('buffers an admin video behind the intro and starts only when it can play through', () => {
+  jest.useFakeTimers();
+  document.documentElement.dataset.fireartIntro = 'loading';
+  jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ top: 0, left: 0, right: 1024, bottom: 768 });
+  render(<HeroVideo mediaOverride={{ type: 'video', src: '/custom.mp4', poster: '/custom.webp' }} />);
+  expect(container.querySelector('.hero-video-stage').dataset.heroPlayback).toBe('video');
+  loadPoster();
+  act(() => jest.advanceTimersByTime(2000));
+  const video = container.querySelector('video');
+  expect(video.getAttribute('preload')).toBe('auto');
+  expect(video.hasAttribute('autoplay')).toBe(false);
+  Object.defineProperty(video, 'readyState', { configurable: true, value: 2 });
+  act(() => video.dispatchEvent(new Event('loadeddata')));
+  act(() => jest.advanceTimersByTime(20000));
+  expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+  Object.defineProperty(video, 'readyState', { configurable: true, value: 4 });
+  act(() => video.dispatchEvent(new Event('canplaythrough')));
+  expect(HTMLMediaElement.prototype.play.mock.instances).toContain(video);
+});
+
+test('wakes a suspended admin preload but holds its first frame until sufficient buffer exists', async () => {
+  jest.useFakeTimers();
+  document.documentElement.dataset.fireartIntro = 'loading';
+  jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ top: 0, left: 0, right: 1024, bottom: 768 });
+  render(<HeroVideo mediaOverride={{ type: 'video', src: '/custom.mp4', poster: '/custom.webp' }} />);
+  loadPoster();
+  act(() => jest.advanceTimersByTime(2000));
+  const video = container.querySelector('video');
+  Object.defineProperty(video, 'readyState', { configurable: true, value: 1 });
+  Object.defineProperty(video, 'networkState', { configurable: true, value: 1 });
+  await act(async () => video.dispatchEvent(new Event('suspend')));
+  expect(HTMLMediaElement.prototype.play.mock.instances).toContain(video);
+  HTMLMediaElement.prototype.pause.mockClear();
+  Object.defineProperty(video, 'readyState', { configurable: true, value: 2 });
+  act(() => video.dispatchEvent(new Event('loadeddata')));
+  act(() => video.dispatchEvent(new Event('playing')));
+  expect(HTMLMediaElement.prototype.pause.mock.instances).toContain(video);
+  Object.defineProperty(video, 'readyState', { configurable: true, value: 4 });
+  HTMLMediaElement.prototype.play.mockClear();
+  act(() => video.dispatchEvent(new Event('canplaythrough')));
+  expect(HTMLMediaElement.prototype.play.mock.instances).toContain(video);
 });
 
 test('shows the existing poster without mounting a video when H264 is unsupported', () => {
@@ -76,6 +120,23 @@ test('shows the existing poster without mounting a video when H264 is unsupporte
   expect(container.querySelector('video')).toBeNull();
   expect(container.querySelector('img')?.getAttribute('fetchpriority')).toBe('high');
   expect(container.querySelector('img')?.style.objectFit).toBe('cover');
+  expect(container.querySelector('.hero-video-stage').dataset.heroPlayback).toBe('poster');
+});
+
+test('announces poster fallback when neither AV1 nor H264 can be decoded', async () => {
+  jest.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('');
+  const previous = Object.getOwnPropertyDescriptor(navigator, 'mediaCapabilities');
+  Object.defineProperty(navigator, 'mediaCapabilities', { configurable: true, value: {
+    decodingInfo: async () => ({ supported: false, smooth: false, powerEfficient: false }),
+  } });
+  try {
+    await act(async () => root.render(<HeroVideo />));
+    expect(container.querySelector('video')).toBeNull();
+    expect(container.querySelector('.hero-video-stage').dataset.heroPlayback).toBe('poster');
+  } finally {
+    if (previous) Object.defineProperty(navigator, 'mediaCapabilities', previous);
+    else delete navigator.mediaCapabilities;
+  }
 });
 
 test('paints the poster before mounting a compatible desktop hero video', () => {

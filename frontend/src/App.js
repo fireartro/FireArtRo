@@ -130,6 +130,18 @@ function AppRoutes() {
   );
 }
 
+export function focusRouteContent() {
+  // Public layouts contain their Navbar inside main. Focusing its wrapper
+  // alone leaves the next Tab in navigation; start at the route heading.
+  const target = document.querySelector('#main-content main h1')
+    || document.querySelector('#main-content main');
+  if (!target) return false;
+  target.setAttribute('tabindex', '-1');
+  target.focus({ preventScroll: true });
+  target.scrollIntoView({ block: 'start', behavior: 'auto' });
+  return true;
+}
+
 function App() {
   useEffect(() => {
     let stableWidth = window.innerWidth;
@@ -157,7 +169,10 @@ function App() {
       <BrowserRouter>
         <ManagedContentProvider>
         <RouteShutter>
-          <a className="skip-link" href="#main-content">Sari la conținut</a>
+          <a className="skip-link" href="#main-content" onClick={event => {
+            if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+            if (focusRouteContent()) event.preventDefault();
+          }}>Sari la conținut</a>
           <RouteScrollManager />
           <div id="main-content" tabIndex="-1">
             <AppRoutes />

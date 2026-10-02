@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, X } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Sheet,
@@ -16,20 +16,43 @@ import { getHeaderOffset, navigateToHref, scrollToHash, syncScrollOffset } from 
 import "@/styles/navigation-prominence.css";
 
 const publicHref = (href) => (href.startsWith("#") ? `/${href}` : href);
+const isPlainClick = (event) => !event.defaultPrevented && event.button === 0
+  && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey;
 
-const Logo = ({ onClick }) => (
+const Logo = ({ onClick }) => {
+  const imageRef = useRef(null);
+  const [sizes, setSizes] = useState("(max-width: 1023px) 192px, 12vw");
+  const measure = useCallback(() => {
+    const width = imageRef.current?.getBoundingClientRect().width;
+    if (width > 0) setSizes(`${Math.ceil(width)}px`);
+  }, []);
+  useLayoutEffect(() => {
+    measure();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    if (imageRef.current) observer?.observe(imageRef.current);
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+    };
+  }, [measure]);
+  return (
   <a
     href="/#acasa"
     onClick={(event) => {
+      if (!isPlainClick(event)) return;
       event.preventDefault();
       onClick?.();
     }}
     data-testid="nav-logo"
     className="site-navbar-brand"
   >
-    <img src={LOGO_URL} srcSet={LOGO_SRC_SET} sizes="(max-width: 767px) 110px, 180px" alt="FireArtRo" width="720" height="311" />
+    <img ref={imageRef} onLoad={measure} src={LOGO_URL} srcSet={LOGO_SRC_SET} sizes={sizes} alt="FireArtRo" width="720" height="311" />
   </a>
 );
+};
 
 export const Navbar = () => {
   const navigation = useManagedContent("navigation", CMS_DEFAULTS.navigation);
@@ -42,6 +65,7 @@ export const Navbar = () => {
   const programmaticScrollUntil = useRef(0);
   const location = useLocation();
   const navigate = useNavigate();
+  const reduceMotion = useReducedMotion();
 
   const goHome = useCallback((behavior = "smooth") => {
     programmaticScrollUntil.current = Date.now() + 3400;
@@ -196,9 +220,10 @@ export const Navbar = () => {
       <a
         key={link.id}
         href={publicHref(link.href)}
-        onClick={(event) => {
+          onClick={(event) => {
+          if (!isPlainClick(event)) return;
           event.preventDefault();
-          goTo(link.href);
+          goTo(link.href, reduceMotion ? "auto" : "smooth");
         }}
         data-testid={`nav-link-${link.href.replace(/[#/]/g, "") || "home"}`}
         className={isActive ? "is-active" : ""}
@@ -207,8 +232,8 @@ export const Navbar = () => {
         {link.label}
         {isActive && (
           <motion.span
-            layoutId="nav-active"
-            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            layoutId={reduceMotion ? undefined : "nav-active"}
+            transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 30 }}
             aria-hidden="true"
           />
         )}
@@ -218,9 +243,9 @@ export const Navbar = () => {
 
   return (
     <motion.header
-      initial={{ y: -80, opacity: 0 }}
-      animate={{ y: visible || open ? 0 : -110, opacity: 1 }}
-      transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+      initial={reduceMotion ? false : { y: "-100%", opacity: 0 }}
+      animate={{ y: visible || open || reduceMotion ? 0 : "-100%", opacity: 1 }}
+      transition={{ duration: reduceMotion ? 0 : 0.42, ease: [0.22, 1, 0.36, 1] }}
       className={`site-navbar ${scrolled ? "site-navbar-scrolled" : ""}`}
       data-testid="main-navbar"
     >
@@ -252,7 +277,7 @@ export const Navbar = () => {
               side="right"
               className="mobile-nav-sheet z-[11020] bg-[#06101c]/98 border-white/10 w-[88vw] max-w-[350px] p-0 [&>button]:hidden"
             >
-              <div className="flex flex-col min-h-[100dvh]">
+              <div className="mobile-nav-column flex flex-col">
                 <SheetTitle className="sr-only">Meniu de navigare</SheetTitle>
                 <SheetDescription className="sr-only">
                   Navighează către secțiunile site-ului FireArtRo
@@ -273,15 +298,16 @@ export const Navbar = () => {
                       key={link.id}
                       href={publicHref(link.href)}
                       onClick={(event) => {
+                        if (!isPlainClick(event)) return;
                         event.preventDefault();
                         closeAndGoTo(link.href);
                       }}
                       data-testid={`mobile-nav-link-${link.href.replace(/[#/]/g, "") || "home"}`}
                       className={active === link.href ? "is-active" : ""}
                       aria-current={active === link.href ? "page" : undefined}
-                      initial={{ opacity: 0, x: 20 }}
+                      initial={reduceMotion ? false : { opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.04 + index * 0.035 }}
+                      transition={reduceMotion ? { duration: 0, delay: 0 } : { delay: 0.04 + index * 0.035 }}
                     >
                       {link.label}
                       <ArrowRight />

@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
+from pymongo.errors import DuplicateKeyError
 
 
 def valid_payload(**overrides):
@@ -38,9 +39,14 @@ class QuoteCollection:
         self.events = events if events is not None else []
 
     async def insert_one(self, document):
+        if "_id" in document and any(d.get("_id") == document["_id"] for d in self.documents):
+            raise DuplicateKeyError("duplicate submission")
         self.documents.append(deepcopy(document))
         self.events.append("inserted")
         return SimpleNamespace(inserted_id=document["id"])
+
+    async def find_one(self, query, projection=None):
+        return deepcopy(next((d for d in self.documents if all(d.get(k) == v for k, v in query.items())), None))
 
 
 class QuoteRateLimiter:
@@ -95,6 +101,20 @@ class FakeNotificationDeliveryRepository:
         self.delivery.error_code = error_code
         return self.delivery
 
+    async def claim_notification(self, delivery_id, *, allow_unstarted=False):
+        if self.delivery.state == "sent" or getattr(self.delivery, "lease_token", None):
+            return None
+        self.delivery.lease_token = "test-lease"
+        self.delivery.state = "pending"
+        return self.delivery
+
+    async def complete_notification(self, delivery_id, lease_token, *, error_code=None, resend_email_id=None, state=None):
+        assert lease_token == self.delivery.lease_token
+        self.delivery.lease_token = None
+        if error_code:
+            return await self.mark_failed(delivery_id, error_code=error_code)
+        return await self.mark_sent(delivery_id, resend_email_id=resend_email_id)
+
     async def mark_sent(self, delivery_id, *, resend_email_id):
         self.delivery.state = "sent"
         self.delivery.error_code = None
@@ -125,7 +145,7 @@ def public_server(monkeypatch):
     import dotenv
 
     monkeypatch.setattr(dotenv, "load_dotenv", lambda *args, **kwargs: None)
-    for name in ("MONGODB_URI", "MONGO_URL", "DB_NAME", "VERCEL"):
+    for name in ("MONGODB_URI", "MONGO_MONGODB_URI", "MONGO_URL", "DB_NAME", "VERCEL"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv(
         "ADMIN_SESSION_SECRET", "quote-route-test-secret-at-least-32-bytes"
@@ -149,7 +169,7 @@ def public_server(monkeypatch):
 
 def api_client(server):
     return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=server.app, client=("198.51.100.7", 1234)),
+        transport=httpx.ASGITransport(app=server.app, client=("198.51.100.7", 1234), raise_app_exceptions=False),
         base_url="https://fireart.test",
     )
 
@@ -277,7 +297,7 @@ async def test_honeypot_submission_receives_acknowledgement_without_persistence(
 
 
 @pytest.mark.asyncio
-async def test_real_submission_verifies_turnstile_before_rate_limit_and_persistence(
+async def test_real_submission_rate_limits_before_turnstile_and_persistence(
     public_server,
 ):
     server, collection, _ = public_server
@@ -295,7 +315,7 @@ async def test_real_submission_verifies_turnstile_before_rate_limit_and_persiste
         )
 
     assert response.status_code == 200
-    assert events[:3] == ["turnstile", "rate-limited", "inserted"]
+    assert events[:3] == ["rate-limited", "turnstile", "inserted"]
     assert verifier.calls == [("single-use-browser-token", "198.51.100.7")]
     assert "turnstile_token" not in collection.documents[0]
 
@@ -341,4 +361,4 @@ async def test_turnstile_failure_creates_no_quote_and_leaks_no_token(public_serv
     assert response.json() == {"detail": VERIFICATION_MESSAGE}
     assert "private-browser-token" not in response.text
     assert collection.documents == []
-    assert limiter.client_ips == []
+    assert limiter.client_ips == ["198.51.100.7"]

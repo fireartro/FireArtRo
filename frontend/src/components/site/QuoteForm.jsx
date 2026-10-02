@@ -1,5 +1,5 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, Mail, MessageCircle, Phone } from "lucide-react";
 import NightButton from "@/components/night/NightButton";
@@ -55,6 +55,28 @@ const postQuote = async (payload) => {
 
 const freshForm = () => ({ ...EMPTY_FORM, services: [] });
 
+const localDate = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+
+const newSubmissionId = () => {
+  if (window.crypto.randomUUID) return window.crypto.randomUUID();
+  const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
+
+const submissionKey = ({ company_website: _honeypot, ...data }) => JSON.stringify(
+  Object.fromEntries(Object.entries(data).map(([key, value]) => [key,
+    key === "email" ? value.trim().toLowerCase()
+      : Array.isArray(value) ? [...new Set(value.map((item) => item.trim().replace(/\s+/g, " ")))]
+        : typeof value === "string" ? value.trim().replace(/\s+/g, " ") : value,
+  ])),
+);
+
 const queryPrefill = (showOptions) => {
   if (typeof window === "undefined") return {};
   const requestedService = new URLSearchParams(window.location.search).get("service");
@@ -73,6 +95,8 @@ export const QuoteForm = () => {
   const [done, setDone] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
+  const submissionRef = useRef(null);
+  const submittingRef = useRef(false);
 
   const packages = useManagedContent("packages", CMS_DEFAULTS.packages);
   const siteDetails = useManagedContent("siteDetails", CMS_DEFAULTS.siteDetails);
@@ -85,12 +109,16 @@ export const QuoteForm = () => {
   const phoneHref = contactSettings.phoneTel || phoneDisplay.replace(/\s/g, "");
   const whatsAppHref = buildWhatsappLink(contactSettings.whatsappNumber);
   const email = siteDetails.email || "contact@fireart.ro";
-  const minimumDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const minimumDate = localDate();
   const turnstileConfigured = Boolean(
     (process.env.REACT_APP_TURNSTILE_SITE_KEY || "").trim(),
   );
 
   useEffect(() => {
+    const resolveService = (label) => {
+      const mapped = label === "Efecte speciale" ? "Alte efecte pirotehnice" : label;
+      return showOptions.find((option) => option.label.localeCompare(mapped || "", "ro", { sensitivity: "base" }) === 0)?.label;
+    };
     const storedPrefill = readContactPrefill();
     const urlPrefill = queryPrefill(showOptions);
     if (Object.keys(storedPrefill).length || Object.keys(urlPrefill).length) {
@@ -102,7 +130,7 @@ export const QuoteForm = () => {
           ...(current.services || []),
           ...(storedPrefill.services || []),
           ...(urlPrefill.services || []),
-        ])],
+        ].map(resolveService).filter(Boolean))].slice(0, 1),
       }));
     }
 
@@ -113,7 +141,7 @@ export const QuoteForm = () => {
         package_id: item.id || "",
         package_title: item.title || String(item),
         services: item.category
-          ? [...new Set([...(current.services || []), item.category])]
+          ? [resolveService(item.category)].filter(Boolean)
           : current.services,
       }));
     };
@@ -148,8 +176,15 @@ export const QuoteForm = () => {
     const nextErrors = {};
     if (!form.event_type) nextErrors.event_type = "Alege tipul evenimentului.";
     if (!form.event_date) nextErrors.event_date = "Completează data evenimentului.";
+    else {
+      const parsed = new Date(`${form.event_date}T12:00:00`);
+      const validDate = /^\d{4}-\d{2}-\d{2}$/.test(form.event_date)
+        && !Number.isNaN(parsed.getTime())
+        && `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}` === form.event_date;
+      if (!validDate || form.event_date < localDate()) nextErrors.event_date = "Alege o dată validă, de astăzi sau din viitor.";
+    }
     if (form.locality.trim().length < 2) nextErrors.locality = "Completează localitatea.";
-    if (!form.services.length) nextErrors.services = "Alege spectacolul dorit sau cere o recomandare.";
+    if (!form.services.length || form.services.some((service) => !showOptions.some((option) => option.label === service))) nextErrors.services = "Alege spectacolul dorit sau cere o recomandare.";
     if (form.first_name.trim().length < 2) nextErrors.first_name = "Completează numele.";
     if (form.last_name.trim().length < 2) nextErrors.last_name = "Completează prenumele.";
     if (form.phone.trim().length < 7) nextErrors.phone = "Introdu un număr de telefon valid.";
@@ -184,18 +219,26 @@ export const QuoteForm = () => {
 
   const submit = async (event) => {
     event.preventDefault();
+    if (submittingRef.current) return;
     if (!validate()) return;
 
+    submittingRef.current = true;
     setLoading(true);
     setAnnouncement("");
     setSubmissionError("");
     try {
-      await postQuote({ ...form, turnstile_token: turnstileToken });
+      const key = submissionKey(form);
+      if (submissionRef.current?.key !== key) submissionRef.current = { key, id: newSubmissionId() };
+      const result = await postQuote({ ...form, submission_id: submissionRef.current.id, turnstile_token: turnstileToken });
+      if (result?.accepted !== true) throw new Error("Confirmarea trimiterii lipsește.");
+      submissionRef.current = null;
       setDone(true);
       setForm(freshForm());
       toast.success("Cererea a fost trimisă.");
     } catch (error) {
-      const message = error.status === 429
+      const message = error.status === 409
+        ? "Această trimitere nu a putut fi confirmată. Verifică datele sau contactează-ne direct."
+        : error.status === 429
         ? "Ai trimis mai multe solicitări într-un interval scurt. Încearcă mai târziu."
         : error.status === 422 && turnstileConfigured
           ? "Verificarea anti-abuz nu a reușit. Reîncarcă formularul și încearcă din nou."
@@ -210,10 +253,12 @@ export const QuoteForm = () => {
         setTurnstileResetSignal((current) => current + 1);
       }
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
   const restart = () => {
+    submissionRef.current = null;
     setDone(false);
     setErrors({});
     setAnnouncement("");
@@ -429,7 +474,7 @@ export const QuoteForm = () => {
 
               <label className="nr-contact-consent" htmlFor="quote-consent">
                 <input id="quote-consent" type="checkbox" checked={form.consent} onChange={(event) => update("consent", event.target.checked)} aria-invalid={Boolean(errors.consent)} aria-describedby={errors.consent ? "quote-consent-error" : undefined} />
-                <span>{contactPage.consentLabel} <a href="/confidentialitate">politicii de confidențialitate</a>.</span>
+                <span>{contactPage.consentLabel} <a href="/confidentialitate" target="_blank" rel="noopener noreferrer" aria-label="Politica de confidențialitate (se deschide într-o filă nouă)">politicii de confidențialitate</a>.</span>
               </label>
               {fieldError("consent")}
 

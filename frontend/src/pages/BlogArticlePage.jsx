@@ -13,6 +13,7 @@ import {
   blogMediaUrl,
   getPublishedPost,
 } from "@/lib/blogApi";
+import { watchBlogPublications } from "@/lib/blogPublicationSync";
 import "@/styles/night-blog.css";
 
 const roDate = new Intl.DateTimeFormat("ro-RO", {
@@ -33,27 +34,35 @@ export default function BlogArticlePage() {
   });
 
   useEffect(() => {
-    const controller = new AbortController();
+    let active = true, controller;
     setState({ loading: true, post: null, error: "", notFound: false });
-    getPublishedPost(slug, { signal: controller.signal })
-      .then((post) => setState({
-        loading: false,
-        post,
-        error: "",
-        notFound: false,
-      }))
-      .catch((error) => {
-        if (error.name === "AbortError") return;
-        setState({
-          loading: false,
-          post: null,
-          error: error.status === 404
-            ? "Articolul nu a fost găsit."
-            : "Articolul nu a putut fi încărcat.",
-          notFound: error.status === 404,
-        });
-      });
-    return () => controller.abort();
+    const load = async (background = false, signal) => {
+      controller?.abort();
+      const request = new AbortController();
+      controller = request;
+      const abort = () => request.abort();
+      signal?.addEventListener("abort", abort, { once: true });
+      try {
+        const post = await getPublishedPost(slug, { signal: request.signal });
+        if (!active || request.signal.aborted) return false;
+        setState({ loading: false, post, error: "", notFound: false });
+        return true;
+      } catch (error) {
+        if (!active || request.signal.aborted || error.name === "AbortError") return false;
+        if (error.status === 404 || !background) {
+          setState({
+            loading: false,
+            post: null,
+            error: error.status === 404 ? "Articolul nu a fost găsit." : "Articolul nu a putut fi încărcat.",
+            notFound: error.status === 404,
+          });
+        }
+        return error.status === 404;
+      } finally { signal?.removeEventListener("abort", abort); }
+    };
+    load();
+    const stop = watchBlogPublications({ refresh: ({ signal }) => load(true, signal) });
+    return () => { active = false; stop(); controller?.abort(); };
   }, [requestVersion, slug]);
 
   const image = state.post?.cover_media_id

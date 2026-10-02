@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAdminSession } from "./AdminSessionContext";
-import { getAdminQuote, listAdminQuotes, QUOTE_STATUSES, quoteFilters, updateAdminQuote } from "../lib/quotesApi";
+import { getAdminQuote, listAdminQuotes, QUOTE_STATUSES, quoteFilters, retryAdminQuoteNotification, updateAdminQuote } from "../lib/quotesApi";
 
 const wrap = { minWidth: 0, overflowWrap: "anywhere" };
 const rowStyle = { display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" };
@@ -14,10 +14,67 @@ function StatusOptions() {
   return Object.entries(QUOTE_STATUSES).map(([value, label]) => <option key={value} value={value}>{label}</option>);
 }
 
+const notificationLabels = { pending: "În curs", sent: "Trimisă", failed: "Eșuată" };
+const notificationErrors = {
+  not_configured: "Serviciul email nu este configurat.",
+  provider_rejected: "Furnizorul a respins notificarea.",
+  provider_unavailable: "Serviciul email nu a confirmat trimiterea.",
+  delivery_failed: "Trimiterea notificării a eșuat.",
+};
+
+function QuoteNotificationStatus({ id, notification, request, disabled, onChanged, onBusy }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const writing = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const canRetry = notification == null || notification.retryable === true;
+
+  async function refresh(retry) {
+    if (writing.current || disabled || (retry && !canRetry)) return;
+    writing.current = true;
+    setBusy(true); onBusy(true); setError("");
+    try {
+      const detail = retry
+        ? await retryAdminQuoteNotification(request, id)
+        : await getAdminQuote(request, id);
+      if (detail?.id !== id || (detail.notification !== null
+          && (!Object.hasOwn(notificationLabels, detail.notification?.state)
+              || typeof detail.notification.retryable !== "boolean"))) throw new Error("Invalid notification acknowledgement");
+      if (mounted.current) onChanged(detail.notification);
+    } catch {
+      if (mounted.current) setError("Reîncercarea nu a fost confirmată. Actualizează starea înainte de o nouă încercare.");
+    } finally {
+      writing.current = false;
+      if (mounted.current) { setBusy(false); onBusy(false); }
+    }
+  }
+  const timestamp = notification?.sent_at || notification?.failed_at;
+  const validTime = typeof timestamp === "string" && !Number.isNaN(new Date(timestamp).getTime());
+  return <section aria-label="Notificarea cererii" style={{ marginBlock: 20 }}>
+    <p role="status">Notificare email: {notificationLabels[notification?.state] || "Stare indisponibilă"}</p>
+    {validTime && <p>{notification.state === "sent" ? "Trimisă" : "Ultima încercare"}: {formatDate(timestamp)}</p>}
+    {notificationErrors[notification?.error_code] && <p>{notificationErrors[notification.error_code]}</p>}
+    {notification?.recovery_required && <p>Notificarea necesită verificare manuală înainte de retrimitere.</p>}
+    {notification?.state === "pending" && !canRetry && !notification.recovery_required
+      && <p>Trimiterea este în curs. Actualizează starea după încheierea încercării.</p>}
+    <div style={rowStyle}>
+      {canRetry && <button className="admin-button" type="button" disabled={busy || disabled}
+        onClick={() => refresh(true)}>Reîncearcă notificarea</button>}
+      <button className="admin-button" type="button" disabled={busy || disabled}
+        onClick={() => refresh(false)}>Actualizează starea notificării</button>
+    </div>
+    {busy && <p role="status">Se verifică notificarea…</p>}
+    {error && <p role="alert">{error}</p>}
+  </section>;
+}
+
 function QuoteEditor({ quote, request, onSaved, onReload, onBlocked }) {
   const [confirmed, setConfirmed] = useState(quote);
   const [values, setValues] = useState({ status: quote.status, internal_note: quote.internal_note });
   const [saving, setSaving] = useState(false);
+  const [notifying, setNotifying] = useState(false);
+  const [notification, setNotification] = useState(quote.notification ?? null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [conflict, setConflict] = useState(false);
@@ -25,17 +82,17 @@ function QuoteEditor({ quote, request, onSaved, onReload, onBlocked }) {
   const writing = useRef(false);
   const dirty = values.status !== confirmed.status || values.internal_note !== confirmed.internal_note;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { onBlocked(dirty || saving); return () => onBlocked(false); }, [dirty, saving, onBlocked]);
+  useEffect(() => { onBlocked(dirty || saving || notifying); return () => onBlocked(false); }, [dirty, saving, notifying, onBlocked]);
   useEffect(() => {
-    if (!dirty && !saving) return undefined;
+    if (!dirty && !saving && !notifying) return undefined;
     const warn = (event) => { event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty, saving]);
+  }, [dirty, saving, notifying]);
 
   async function save(event) {
     event.preventDefault();
-    if (writing.current || !dirty || conflict) return;
+    if (writing.current || notifying || !dirty || conflict) return;
     writing.current = true;
     setSaving(true); setError(""); setMessage("");
     try {
@@ -45,6 +102,7 @@ function QuoteEditor({ quote, request, onSaved, onReload, onBlocked }) {
       if (saved?.id !== confirmed.id || !Number.isInteger(saved.version) || saved.version <= confirmed.version
           || saved.status !== values.status || saved.internal_note !== values.internal_note) throw new Error("Invalid save acknowledgement");
       setConfirmed(saved);
+      setNotification(saved.notification ?? null);
       setValues({ status: saved.status, internal_note: saved.internal_note });
       setMessage("Modificările au fost salvate.");
       onSaved();
@@ -79,7 +137,9 @@ function QuoteEditor({ quote, request, onSaved, onReload, onBlocked }) {
         <div key={label}><dt>{label}</dt><dd style={{ margin: "0 0 12px", ...wrap }}>{value || "—"}</dd></div>)}
     </dl>
     <p style={{ whiteSpace: "pre-wrap", ...wrap }}>{quote.message || "Fără mesaj suplimentar."}</p>
-    <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+    <QuoteNotificationStatus id={quote.id} notification={notification} request={request}
+      disabled={saving} onChanged={setNotification} onBusy={setNotifying} />
+    <fieldset disabled={saving || notifying} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       <legend className="admin-visually-hidden">Gestionarea cererii</legend>
       <div className="admin-field">
         <label htmlFor="quote-status">Status cerere</label>

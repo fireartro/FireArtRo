@@ -1,6 +1,6 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { CANONICAL_SITE_URL } from "@/data/businessContent";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -87,6 +87,9 @@ export default function GalleryPage() {
   const [imageRatios, setImageRatios] = useState({});
   const [previewFrame, setPreviewFrame] = useState(null);
   const filterRefs = useRef([]);
+  const openerRef = useRef(null);
+  const tabsId = useId();
+  const activeTabId = `${tabsId}-filter-${categories.indexOf(activeFilter)}`;
   const expandedItem = visiblePhotos[expandedIndex];
   const previewRatio = expandedItem
     ? (imageRatios[expandedItem.id] || expandedItem.aspectRatio || 16 / 9)
@@ -174,9 +177,10 @@ export default function GalleryPage() {
     });
   };
 
-  const openPhoto = (index) => {
+  const openPhoto = (index, opener) => {
     const item = visiblePhotos[index];
     if (!item) return;
+    openerRef.current = opener;
     setExpandedIndex(index);
     replaceQuery({ media: item.id });
   };
@@ -238,6 +242,8 @@ export default function GalleryPage() {
                   ref={(node) => { filterRefs.current[index] = node; }}
                   type="button"
                   role="tab"
+                  id={`${tabsId}-filter-${index}`}
+                  aria-controls={`${tabsId}-panel`}
                   aria-selected={activeFilter === category}
                   tabIndex={activeFilter === category ? 0 : -1}
                   className={activeFilter === category ? "is-active" : ""}
@@ -251,6 +257,7 @@ export default function GalleryPage() {
             })}
           </nav>
 
+          <div id={`${tabsId}-panel`} role="tabpanel" aria-labelledby={activeTabId} tabIndex={0}>
           {visiblePhotos.length ? (
             <div className="nr-gallery-mosaic" data-testid="gallery-grid">
               {visiblePhotos.map((item, index) => (
@@ -268,7 +275,7 @@ export default function GalleryPage() {
                     "--gallery-index": index,
                   }}
                 >
-                  <button type="button" onClick={() => openPhoto(index)} aria-label={`Deschide ${item.title}`}>
+                  <button type="button" onClick={(event) => openPhoto(index, event.currentTarget)} aria-label={`Deschide ${item.title}`}>
                     <img
                       src={item.thumbnail || item.src}
                       alt={item.alt}
@@ -289,6 +296,7 @@ export default function GalleryPage() {
               <button type="button" onClick={() => selectFilter("Toate")}>Vezi toate imaginile</button>
             </div>
           )}
+          </div>
         </div>
       </section>
 
@@ -300,6 +308,13 @@ export default function GalleryPage() {
           overlayClassName="nr-gallery-lightbox__overlay"
           aria-label={expandedItem ? `Previzualizare imagine: ${expandedItem.title}` : "Previzualizare imagine"}
           aria-describedby={undefined}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            const opener = openerRef.current;
+            const target = opener?.isConnected ? opener : filterRefs.current[categories.indexOf(activeFilter)];
+            target?.focus();
+            openerRef.current = null;
+          }}
         >
           {expandedItem && (
             <div className="nr-gallery-lightbox__stage">

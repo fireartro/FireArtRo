@@ -1,4 +1,12 @@
-import { canPlayHeroVideo, selectHeroSource } from './heroPlayback';
+import { canPlayHeroVideo, selectHeroSource, shouldAutoplayHeroVideo } from './heroPlayback';
+
+test.each(['slow-2g', '2g', '3g', '4g', ''])('a %s connection buffers the hero instead of disabling it', effectiveType => {
+  expect(shouldAutoplayHeroVideo({ effectiveType })).toBe(true);
+});
+
+test.each([{ reducedMotion: true }, { saveData: true }])('still respects an explicit playback preference: %j', preference => {
+  expect(shouldAutoplayHeroVideo({ ...preference, effectiveType: '3g' })).toBe(false);
+});
 
 test('uses the poster immediately when the browser cannot decode the bundled H264 hero', () => {
   const unsupported = { canPlayType: jest.fn(() => '') };

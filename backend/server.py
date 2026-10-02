@@ -4,18 +4,20 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse, Response
 from starlette.datastructures import MutableHeaders
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
-from pymongo.errors import PyMongoError
+from pymongo.errors import DuplicateKeyError, PyMongoError
 import asyncio
 from contextlib import asynccontextmanager
 import json
+import hashlib
 import os
 import logging
+import re
 import httpx
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import List, Optional
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from blog import (
     BlogService,
@@ -51,6 +53,7 @@ from quote_admin import (
     NOTIFICATION_TO,
     MongoQuoteRateLimiter,
     MongoQuoteRepository,
+    MongoQuoteDeliveryRepository,
     QuoteNotificationService,
     create_quote_admin_router,
 )
@@ -151,7 +154,7 @@ resend_config = _email_config()
 resend_http_client = httpx.AsyncClient()
 resend_client = ResendClient(resend_config, http_client=resend_http_client)
 resend_webhook_verifier = _build_resend_webhook_verifier(resend_config)
-quote_delivery_repository = MongoEmailDeliveryRepository(
+quote_delivery_repository = MongoQuoteDeliveryRepository(
     db.email_deliveries if db is not None else None
 )
 quote_notification_service = QuoteNotificationService(
@@ -305,14 +308,15 @@ class QuoteCreate(BaseModel):
     locality: str = Field(min_length=2, max_length=120)
     event_location: Optional[str] = Field(default="", max_length=180)
     event_type: str = Field(min_length=2, max_length=80)
-    event_date: str = Field(min_length=8, max_length=40)
+    event_date: str = Field(min_length=10, max_length=10)
     services: List[str] = Field(min_length=1, max_length=12)
     package_id: Optional[str] = Field(default="", max_length=100)
-    package_title: Optional[str] = Field(default="", max_length=120)
+    package_title: Optional[str] = Field(default="", max_length=160)
     message: Optional[str] = Field(default="", max_length=3000)
     consent: bool = False
     company_website: Optional[str] = Field(default="", max_length=200)
     turnstile_token: str = Field(default="", max_length=4096)
+    submission_id: uuid.UUID | None = None
 
     @field_validator(
         "first_name",
@@ -325,14 +329,20 @@ class QuoteCreate(BaseModel):
         "package_title",
         "message",
         "company_website",
+        "event_date",
+        mode="before",
     )
     @classmethod
     def normalize_text(cls, value):
-        return " ".join((value or "").strip().split())
+        if value is None:
+            return ""
+        return " ".join(value.strip().split()) if isinstance(value, str) else value
 
-    @field_validator("services")
+    @field_validator("services", mode="before")
     @classmethod
     def normalize_services(cls, values):
+        if not isinstance(values, list) or any(not isinstance(v, str) for v in values):
+            return values
         normalized = [
             " ".join(value.strip().split())
             for value in values
@@ -340,12 +350,22 @@ class QuoteCreate(BaseModel):
         ]
         return list(dict.fromkeys(normalized))
 
-    @field_validator("email")
+    @field_validator("email", mode="before")
     @classmethod
     def validate_email(cls, value):
-        value = (value or "").strip().lower()
-        if value and ("@" not in value or "." not in value.rsplit("@", 1)[-1]):
+        if not isinstance(value, str):
+            return value
+        value = value.strip().lower()
+        if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", value):
             raise ValueError("Adresa de email nu este validă.")
+        return value
+
+    @field_validator("event_date")
+    @classmethod
+    def validate_event_date(cls, value):
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            raise ValueError("Data evenimentului nu este validă.")
+        date.fromisoformat(value)
         return value
 
 
@@ -537,6 +557,26 @@ async def create_quote(input: QuoteCreate, request: Request):
     if input.company_website:
         return QuoteAcknowledgement()
     client_ip = request_ip(request)
+    await quote_rate_limiter.enforce(client_ip)
+    payload = input.model_dump(exclude={"company_website", "turnstile_token", "submission_id"})
+    submission_key = (
+        f"quote-submission/{input.submission_id}" if input.submission_id else None
+    )
+    fingerprint = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+    async def saved_submission():
+        try:
+            document = await db.quotes.find_one({"_id": submission_key})
+        except PyMongoError:
+            raise HTTPException(503, "Cererea nu poate fi confirmată momentan.") from None
+        if document is not None and document.get("submission_fingerprint") != fingerprint:
+            raise HTTPException(409, "Identitatea trimiterii a fost deja folosită pentru alte date.")
+        return document
+
+    if submission_key and await saved_submission() is not None:
+        return QuoteAcknowledgement()
     try:
         await turnstile_verifier.verify(input.turnstile_token, client_ip)
     except TurnstileError as error:
@@ -544,14 +584,31 @@ async def create_quote(input: QuoteCreate, request: Request):
             status_code=error.status_code,
             detail=error.public_message,
         ) from None
-    await quote_rate_limiter.enforce(client_ip)
-    payload = input.model_dump(exclude={"company_website", "turnstile_token"})
     quote = Quote(**payload)
     doc = quote.model_dump()
     doc["internal_note"] = ""
     doc["version"] = 0
-    await db.quotes.insert_one(doc)
-    await quote_notification_service.notify(quote)
+    if submission_key:
+        # Mongo's mandatory unique _id protects retries even before startup
+        # indexes exist. A check-then-insert alone would race across instances.
+        doc["_id"] = submission_key
+        doc["submission_fingerprint"] = fingerprint
+    try:
+        result = await db.quotes.insert_one(doc)
+        if not getattr(result, "acknowledged", True):
+            raise HTTPException(503, "Cererea nu poate fi confirmată momentan.")
+    except DuplicateKeyError:
+        if not submission_key or await saved_submission() is None:
+            raise HTTPException(503, "Cererea nu poate fi confirmată momentan.") from None
+        return QuoteAcknowledgement()
+    except PyMongoError:
+        raise HTTPException(503, "Cererea nu poate fi confirmată momentan.") from None
+    try:
+        await quote_notification_service.notify(quote)
+    except Exception:
+        # The quote is durable; notification work can be recovered in Admin.
+        # No exception text, which can include database/provider credentials.
+        logger.error("Saved quote notification requires recovery")
     return QuoteAcknowledgement()
 
 

@@ -266,3 +266,20 @@ test("shows the public drone label without changing the internal category value"
   expect(container.querySelector('.nr-package-categories [aria-selected="true"]').textContent).toBe("Spectacole de drone");
   expect(container.querySelector('[data-testid="drone-show-quote"]')).not.toBeNull();
 });
+
+test("package category and variant tabs identify their labelled panels, including drone requests", async () => {
+  await renderPackages();
+  for (const tab of container.querySelectorAll('[role="tab"][aria-selected="true"]')) {
+    expect(tab.id).not.toBe("");
+    const panel = document.getElementById(tab.getAttribute("aria-controls"));
+    expect(panel).not.toBeNull();
+    expect(panel.getAttribute("role")).toBe("tabpanel");
+    expect(panel.getAttribute("aria-labelledby")).toBe(tab.id);
+  }
+  const drone = [...container.querySelectorAll('.nr-package-categories button')].find(node => node.textContent.includes("drone"));
+  await click(drone);
+  const panel = document.getElementById(drone.getAttribute("aria-controls"));
+  expect(panel).not.toBeNull();
+  expect(panel.getAttribute("aria-labelledby")).toBe(drone.id);
+  expect(panel.querySelector('[data-testid="drone-show-quote"]')).not.toBeNull();
+});

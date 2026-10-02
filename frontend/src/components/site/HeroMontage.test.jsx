@@ -43,6 +43,71 @@ afterEach(() => {
   else delete document.visibilityState;
   jest.useRealTimers();
   jest.restoreAllMocks();
+  delete document.documentElement.dataset.fireartIntro;
+});
+
+test('buffers the first film behind the intro without consuming it before it can play through', () => {
+  document.documentElement.dataset.fireartIntro = 'loading';
+  activate();
+  const first = container.querySelector('video');
+  expect(first.getAttribute('preload')).toBe('auto');
+  expect(first.hasAttribute('autoplay')).toBe(false);
+  expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+  Object.defineProperty(first, 'readyState', { configurable: true, value: 2 });
+  act(() => first.dispatchEvent(new Event('loadeddata')));
+  expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+  act(() => jest.advanceTimersByTime(20000));
+  expect(HTMLMediaElement.prototype.load).not.toHaveBeenCalled();
+  Object.defineProperty(first, 'readyState', { configurable: true, value: 4 });
+  act(() => first.dispatchEvent(new Event('canplaythrough')));
+  expect(HTMLMediaElement.prototype.play.mock.instances).toContain(first);
+});
+
+test('announces that a supported hero expects video before the delayed player mounts', () => {
+  expect(container.querySelector('.hero-video-stage').dataset.heroPlayback).toBe('video');
+  expect(container.querySelector('video')).toBeNull();
+});
+
+test('mounts the first film on 3g and permits deliberate entry before buffering completes', () => {
+  const previous = Object.getOwnPropertyDescriptor(navigator, 'connection');
+  Object.defineProperty(navigator, 'connection', { configurable: true, value: { effectiveType: '3g' } });
+  document.documentElement.dataset.fireartIntro = 'loading';
+  try {
+    act(() => root.render(<HeroMontage key="slow-connection" />));
+    activate();
+    const video = container.querySelector('video');
+    expect(video.getAttribute('src')).toContain('wide-1.mp4');
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    delete document.documentElement.dataset.fireartIntro;
+    act(() => window.dispatchEvent(new Event('fireart:intro-dismissed')));
+    expect(HTMLMediaElement.prototype.play.mock.instances).toContain(video);
+  } finally {
+    if (previous) Object.defineProperty(navigator, 'connection', previous);
+    else delete navigator.connection;
+  }
+});
+
+test('nudges a suspended metadata-only preload without spending the initial buffer or resetting its source', async () => {
+  document.documentElement.dataset.fireartIntro = 'loading';
+  activate();
+  const video = container.querySelector('video');
+  Object.defineProperty(video, 'readyState', { configurable: true, value: 1 });
+  Object.defineProperty(video, 'networkState', { configurable: true, value: 1 });
+  await act(async () => video.dispatchEvent(new Event('suspend')));
+  expect(HTMLMediaElement.prototype.play.mock.instances).toContain(video);
+  HTMLMediaElement.prototype.pause.mockClear();
+  Object.defineProperty(video, 'readyState', { configurable: true, value: 2 });
+  act(() => video.dispatchEvent(new Event('loadeddata')));
+  act(() => video.dispatchEvent(new Event('playing')));
+  expect(HTMLMediaElement.prototype.pause.mock.instances).toContain(video);
+  expect(video.classList.contains('hero-montage__video--visible')).toBe(false);
+  expect(HTMLMediaElement.prototype.load).not.toHaveBeenCalled();
+  Object.defineProperty(video, 'readyState', { configurable: true, value: 4 });
+  HTMLMediaElement.prototype.play.mockClear();
+  act(() => video.dispatchEvent(new Event('canplaythrough')));
+  act(() => video.dispatchEvent(new Event('playing')));
+  expect(HTMLMediaElement.prototype.play.mock.instances).toContain(video);
+  expect(video.classList.contains('hero-montage__video--visible')).toBe(true);
 });
 
 test('loads only the first film after the poster, and preloads the next at 25 seconds', () => {
@@ -106,8 +171,57 @@ test('recovers when the next film play promise stays pending instead of freezing
   networkRecovered = true;
   await act(async () => jest.advanceTimersByTime(10000));
 
-  expect(HTMLMediaElement.prototype.load.mock.instances).toContain(next);
+  expect(HTMLMediaElement.prototype.load).not.toHaveBeenCalled();
   expect(container.querySelector('video').dataset.filmIndex).toBe('1');
+});
+
+test('preserves a slow next-film request beyond the watchdog and advances only once', async () => {
+  activate();
+  const first = container.querySelector('video');
+  timeUpdate(first, 25);
+  const next = container.querySelector('[data-film-index="1"]');
+  Object.defineProperty(next, 'networkState', { configurable: true, value: 2 });
+  let finishDownload;
+  const downloading = new Promise(resolve => { finishDownload = resolve; });
+  HTMLMediaElement.prototype.play.mockImplementation(function play() {
+    return this === next ? downloading : Promise.resolve();
+  });
+  act(() => first.dispatchEvent(new Event('ended')));
+  await act(async () => jest.advanceTimersByTime(12000));
+  expect(HTMLMediaElement.prototype.load).not.toHaveBeenCalled();
+  expect(HTMLMediaElement.prototype.pause.mock.instances).not.toContain(next);
+  expect(container.querySelector('[data-film-index="0"]')).toBe(first);
+  await act(async () => finishDownload());
+  expect(container.querySelectorAll('video')).toHaveLength(1);
+  expect(container.querySelector('video')).toBe(next);
+  expect(next.dataset.filmIndex).toBe('1');
+});
+
+test.each(['focus', 'online', 'pageshow'])('recovers active playback on %s even when visibility state did not change', async eventName => {
+  activate();
+  const first = container.querySelector('video');
+  first.currentTime = 12;
+  HTMLMediaElement.prototype.play.mockClear();
+  await act(async () => window.dispatchEvent(new Event(eventName)));
+  expect(HTMLMediaElement.prototype.play.mock.instances).toContain(first);
+  expect(HTMLMediaElement.prototype.load).not.toHaveBeenCalled();
+  expect(first.currentTime).toBe(12);
+});
+
+test('pauses all mounted films at pagehide and recovers only the active one on pageshow', async () => {
+  activate();
+  const first = container.querySelector('video');
+  timeUpdate(first, 25);
+  const next = container.querySelector('[data-film-index="1"]');
+  HTMLMediaElement.prototype.pause.mockClear();
+  act(() => window.dispatchEvent(new Event('pagehide')));
+  expect(HTMLMediaElement.prototype.pause.mock.instances).toEqual(expect.arrayContaining([first, next]));
+  HTMLMediaElement.prototype.play.mockClear();
+  await act(async () => window.dispatchEvent(new Event('focus')));
+  expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+  await act(async () => window.dispatchEvent(new Event('pageshow')));
+  expect(HTMLMediaElement.prototype.play.mock.instances).toContain(first);
+  expect(HTMLMediaElement.prototype.play.mock.instances).not.toContain(next);
 });
 
 test('keeps the current film when a preloaded film fails and retries that media element', async () => {

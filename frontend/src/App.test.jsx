@@ -1,13 +1,13 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App';
+import App, { focusRouteContent } from './App';
 import { scrollToHash, scrollToTop } from '@/lib/scrollNavigation';
 
 const mockLoadedPages = [];
 let mockContentStatus = 'ready';
 jest.mock('@/pages/Home', () => {
   mockLoadedPages.push('home');
-  return () => <main>Homepage loaded</main>;
+  return () => <main><nav><a href="/contact">Contact navigation</a></nav><h1>Homepage loaded</h1></main>;
 });
 
 jest.mock('@/pages/ContactPage', () => {
@@ -28,6 +28,25 @@ jest.mock('@/content/ManagedContentProvider', () => ({
   ManagedContentProvider: ({ children }) => children,
   useManagedContentSnapshot: () => ({ status: mockContentStatus }),
 }));
+
+test('skip navigation focuses the route heading beyond the navbar, with a main fallback', () => {
+  const fixture = document.createElement('div');
+  fixture.id = 'main-content';
+  fixture.innerHTML = '<main><nav><a href="/contact">Contact</a></nav><section><h1>Spectacol</h1></section></main>';
+  document.body.appendChild(fixture);
+  const heading = fixture.querySelector('h1');
+  const main = fixture.querySelector('main');
+  heading.scrollIntoView = jest.fn();
+  main.scrollIntoView = jest.fn();
+  try {
+    focusRouteContent();
+    expect(document.activeElement).toBe(heading);
+    expect(heading.getAttribute('tabindex')).toBe('-1');
+    heading.remove();
+    focusRouteContent();
+    expect(document.activeElement).toBe(main);
+  } finally { fixture.remove(); }
+});
 
 test('silently waits for published content while warming only the requested public route', async () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -111,5 +130,28 @@ test('aligns the current hash only after the startup overlay releases the docume
     window.history.replaceState({}, '', '/');
     delete global.IS_REACT_ACT_ENVIRONMENT;
     jest.useRealTimers();
+  }
+});
+
+test('the public skip link sends keyboard focus beyond route navigation', async () => {
+  global.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  window.history.replaceState({}, '', '/');
+  mockContentStatus = 'ready';
+  const originalScroll = Element.prototype.scrollIntoView;
+  Element.prototype.scrollIntoView = jest.fn();
+  try {
+    await act(async () => root.render(<App />));
+    const skip = container.querySelector('.skip-link');
+    act(() => skip.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })));
+    expect(document.activeElement).toBe(container.querySelector('main h1'));
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    if (originalScroll) Element.prototype.scrollIntoView = originalScroll;
+    else delete Element.prototype.scrollIntoView;
+    delete global.IS_REACT_ACT_ENVIRONMENT;
   }
 });
