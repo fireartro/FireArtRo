@@ -1,6 +1,16 @@
 User-agent: *
 Allow: /
-Allow: /api/sitemap.xml
+Allow: /api/sitemap.xml$
+Allow: /api/content$
+Allow: /api/content?*
+Allow: /api/content/revision$
+Allow: /api/content/revision?*
+Allow: /api/blog/posts$
+Allow: /api/blog/posts?*
+Allow: /api/blog/revision$
+Allow: /api/blog/revision?*
+Allow: /api/blog/posts/*
+Allow: /api/blog/media/*
 Disallow: /admin
 Disallow: /api/
 

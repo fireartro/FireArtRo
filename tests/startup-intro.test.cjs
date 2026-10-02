@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 const source = readFileSync(path.resolve(__dirname, '../frontend/public/startup-intro.js'), 'utf8');
 
-function start({ reduced = false, active = true } = {}) {
+function start({ reduced = false, active = true, connection = {} } = {}) {
   let now = 0;
   let nextId = 1;
   const tasks = new Map();
@@ -38,8 +38,9 @@ function start({ reduced = false, active = true } = {}) {
     contains: () => false,
     remove() { this.isConnected = false; }
   };
-  const media = { video: null, poster: { tagName: 'IMG', complete: true, naturalWidth: 1920 } };
-  const hero = { querySelector: selector => selector === 'video' ? media.video : media.poster };
+  const media = { video: null, playback: null, poster: { tagName: 'IMG', complete: true, naturalWidth: 1920 } };
+  const hero = { querySelector: selector => selector === 'video' ? media.video
+    : selector === '[data-hero-playback]' ? (media.playback ? { dataset: { heroPlayback: media.playback } } : null) : media.poster };
   const html = { dataset: active ? { fireartIntro: 'loading' } : {} };
   const document = {
     documentElement: html, hidden: false, activeElement: null,
@@ -49,7 +50,7 @@ function start({ reduced = false, active = true } = {}) {
   const motion = { matches: reduced, addEventListener, removeEventListener };
   const window = { __fireartIntroStarted: 0, innerWidth: 1440, innerHeight: 900, location: { reload() { window.reloaded = true; } }, matchMedia: () => motion, addEventListener, removeEventListener, dispatchEvent: event => events.get(event.type)?.(event) };
   vm.runInNewContext(source, {
-    window, document, navigator: {}, Event, performance: { now: () => now },
+    window, document, navigator: { connection }, Event, performance: { now: () => now },
     setTimeout: (fn, delay) => timer(fn, delay), clearTimeout: id => tasks.delete(id),
     setInterval: (fn, delay) => timer(fn, delay, true), clearInterval: id => tasks.delete(id),
     requestAnimationFrame: () => 0, cancelAnimationFrame: () => {}
@@ -64,7 +65,7 @@ test('waits for the first playable frame, then releases input and all timers', (
   run.advance(1200);
   assert.equal(run.root.inert, true);
   assert.equal(run.html.dataset.fireartIntro, 'loading');
-  run.media.video = { readyState: 2, paused: false };
+  run.media.video = { readyState: 4, paused: false };
   run.advance(100);
   assert.equal(run.html.dataset.fireartIntro, 'loading');
   run.advance(1699);
@@ -86,7 +87,7 @@ test('a slow playable video keeps loading beyond twelve seconds, even with a rea
   run.advance(20000);
   assert.equal(run.html.dataset.fireartIntro, 'loading');
   assert.equal(run.root.inert, true);
-  run.media.video = { readyState: 2, paused: false };
+  run.media.video = { readyState: 4, paused: false };
   run.advance(800);
   assert.equal(run.intro.isConnected, false);
   assert.equal(run.root.inert, false);
@@ -170,4 +171,62 @@ test('a slow poster is not treated as a failed image and can finish after twenty
   run.advance(100);
   assert.equal(run.intro.isConnected, false);
   assert.equal(run.tasks.size, 0);
+});
+
+test('a 3g connection waits for sufficient video buffer, not just its poster or first frame', () => {
+  const run = start({ connection: { effectiveType: '3g' } });
+  run.media.playback = 'video';
+  run.media.video = { readyState: 0, paused: true };
+  run.window.__fireartIntro.routeReady('/');
+  run.advance(20000);
+  assert.equal(run.html.dataset.fireartIntro, 'loading');
+  assert.equal(run.root.inert, true);
+  run.media.video = { readyState: 2, paused: false };
+  run.advance(5000);
+  assert.equal(run.html.dataset.fireartIntro, 'loading');
+  run.media.video = { readyState: 4, paused: false };
+  run.advance(800);
+  assert.equal(run.intro.isConnected, false);
+  assert.equal(run.root.inert, false);
+  assert.equal(run.tasks.size, 0);
+});
+
+test('does not mistake delayed video mounting for a poster-only hero', () => {
+  const run = start();
+  run.media.playback = 'video';
+  run.window.__fireartIntro.routeReady('/');
+  run.advance(20000);
+  assert.equal(run.html.dataset.fireartIntro, 'loading');
+  run.media.video = { readyState: 4, paused: false };
+  run.advance(800);
+  assert.equal(run.intro.isConnected, false);
+});
+
+test('an explicitly poster-only unsupported hero still exits without waiting for a video', () => {
+  const run = start();
+  run.media.playback = 'poster';
+  run.window.__fireartIntro.routeReady('/');
+  run.advance(3680);
+  assert.equal(run.intro.isConnected, false);
+});
+
+test('a posterless custom video still is sufficient when playback is explicitly disabled', () => {
+  const run = start({ connection: { saveData: true } });
+  run.media.playback = 'poster';
+  run.media.video = run.media.poster = { tagName: 'VIDEO', readyState: 2, paused: true };
+  run.window.__fireartIntro.routeReady('/');
+  run.advance(3680);
+  assert.equal(run.intro.isConnected, false);
+  assert.equal(run.root.inert, false);
+});
+
+test('a real video error overrides its expected playback when its poster also failed', () => {
+  const run = start();
+  run.media.playback = 'video';
+  run.media.poster.naturalWidth = 0;
+  run.media.video = { readyState: 0, paused: true, error: { code: 4 } };
+  run.window.__fireartIntro.routeReady('/');
+  run.advance(5000);
+  assert.equal(run.intro.isConnected, false);
+  assert.equal(run.root.inert, false);
 });

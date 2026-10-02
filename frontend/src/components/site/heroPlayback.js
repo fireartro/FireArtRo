@@ -28,10 +28,35 @@ export const HERO_VIDEO_IDLE_TIMEOUT_MS = 1_200;
 export function shouldAutoplayHeroVideo({
   reducedMotion = false,
   saveData = false,
-  effectiveType = '',
 } = {}) {
-  const lowBandwidthConnection = ['slow-2g', '2g', '3g'].includes(effectiveType);
-  return !(reducedMotion || saveData || lowBandwidthConnection);
+  // Connection speed controls how long the intro buffers, not whether the
+  // film exists. Only explicit accessibility/data-saving choices disable it.
+  return !(reducedMotion || saveData);
+}
+
+export function isHeroIntroLoading(windowLike) {
+  return windowLike?.document?.documentElement?.dataset.fireartIntro === 'loading';
+}
+
+export function canStartHeroVideo(video, windowLike) {
+  // Do not consume the small initial buffer behind the loading overlay.
+  // HAVE_ENOUGH_DATA means the browser expects playback through to the end.
+  return !isHeroIntroLoading(windowLike) || video.readyState >= 4;
+}
+
+const primingVideos = new WeakSet();
+
+export function primeHeroVideoBuffer(video, windowLike) {
+  // preload is only a hint (notably on mobile). A suspended metadata-only
+  // request needs play() to ask for data, but must not spend its tiny buffer
+  // behind the intro. Never load()/detach the source to recover this case.
+  if (!isHeroIntroLoading(windowLike) || video.readyState >= 4 || video.error
+    || video.networkState !== 1 || primingVideos.has(video)) return;
+  primingVideos.add(video);
+  Promise.resolve(video.play()).then(() => {
+    if (!canStartHeroVideo(video, windowLike)) video.pause();
+  }).catch(() => { /* loadeddata may deliberately pause this warm-up */ })
+    .finally(() => primingVideos.delete(video));
 }
 
 export function getHeroAutoplayPolicy(windowLike) {
@@ -39,7 +64,6 @@ export function getHeroAutoplayPolicy(windowLike) {
   return shouldAutoplayHeroVideo({
     reducedMotion: windowLike?.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
     saveData: connection?.saveData,
-    effectiveType: connection?.effectiveType,
   });
 }
 

@@ -1,5 +1,6 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Cookie, Settings2, X } from "lucide-react";
 
 import useManagedContent from "@/hooks/useManagedContent";
@@ -42,6 +43,7 @@ export default function CookieConsent() {
   const [customizing, setCustomizing] = useState(false);
   const [choice, setChoice] = useState(defaultChoice);
   const firstButtonRef = useRef(null);
+  const panelRef = useRef(null);
 
   useEffect(() => {
     const stored = readCookieConsent();
@@ -69,13 +71,46 @@ export default function CookieConsent() {
 
   useEffect(() => {
     if (!visible) return;
+    const opener = document.activeElement;
+    const panel = panelRef.current;
+    const layer = panel.parentElement;
+    const priorInert = new Map();
+    const isolateBackground = () => {
+      Array.from(document.body.children).forEach((element) => {
+        if (element === layer || priorInert.has(element)) return;
+        priorInert.set(element, element.getAttribute("inert"));
+        element.setAttribute("inert", "");
+      });
+    };
+    isolateBackground();
+    const observer = new MutationObserver(isolateBackground);
+    observer.observe(document.body, { childList: true });
     firstButtonRef.current?.focus();
     const onKeyDown = (event) => {
       if (event.key === "Escape" && readCookieConsent()) setVisible(false);
+      if (event.key !== "Tab") return;
+      const controls = Array.from(panel.querySelectorAll('a[href], button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])'));
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last) || !panel.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first)?.focus();
+      }
     };
+    const retainFocus = (event) => { if (!panel.contains(event.target)) firstButtonRef.current?.focus(); };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [visible, customizing]);
+    document.addEventListener("focusin", retainFocus);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("focusin", retainFocus);
+      observer.disconnect();
+      priorInert.forEach((value, element) => {
+        if (value === null) element.removeAttribute("inert");
+        else element.setAttribute("inert", value);
+      });
+      if (opener?.isConnected) opener.focus();
+    };
+  }, [visible]);
 
   const save = (nextChoice) => {
     persistConsent(nextChoice, settings.retentionDays || 180);
@@ -86,9 +121,10 @@ export default function CookieConsent() {
 
   if (!visible) return null;
 
-  return (
+  return createPortal(
     <div className="cookie-consent-layer" data-testid="cookie-consent">
       <section
+        ref={panelRef}
         className={`cookie-consent-panel ${customizing ? "is-customizing" : ""}`}
         role="dialog"
         aria-modal="true"
@@ -176,6 +212,6 @@ export default function CookieConsent() {
           )}
         </div>
       </section>
-    </div>
+    </div>, document.body,
   );
 }

@@ -1,5 +1,7 @@
 """Public and administrative Blog domain for FireArtRo."""
 
+import hashlib
+import json
 import re
 import unicodedata
 import uuid
@@ -8,7 +10,7 @@ from typing import Literal, Optional, Protocol
 
 from bson import ObjectId
 from bson.errors import InvalidId
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from gridfs.errors import NoFile
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -115,6 +117,7 @@ class BlogArticleCreate(BlogArticleBase):
 
 class BlogArticleUpdate(BlogArticleBase):
     status: Literal["draft", "published"]
+    version: int = Field(strict=True, ge=1, le=2**53 - 2)
 
 
 class BlogArticleResponse(BlogArticleBase):
@@ -126,6 +129,7 @@ class BlogArticleResponse(BlogArticleBase):
     created_at: str
     updated_at: str
     published_at: Optional[str] = None
+    version: int = 1  # Documents predating optimistic concurrency start at version 1.
 
 
 class BlogSummaryResponse(BaseModel):
@@ -164,10 +168,16 @@ class BlogRepository(Protocol):
     async def insert(self, document):
         raise NotImplementedError
 
-    async def replace(self, article_id, document):
+    async def replace(self, article_id, document, expected_version):
         raise NotImplementedError
 
-    async def delete(self, article_id):
+    async def delete(self, article_id, expected_version):
+        raise NotImplementedError
+
+    async def cover_is_referenced(self, media_id):
+        raise NotImplementedError
+
+    async def public_revision_entries(self):
         raise NotImplementedError
 
 
@@ -212,15 +222,35 @@ class MongoBlogRepository:
         await self.collection.insert_one(dict(document))
         return document
 
-    async def replace(self, article_id, document):
-        result = await self.collection.replace_one({"id": article_id}, dict(document))
+    @staticmethod
+    def _version_query(article_id, expected_version):
+        query = {"id": article_id}
+        if expected_version == 1:
+            query["$or"] = [{"version": 1}, {"version": {"$exists": False}}]
+        else:
+            query["version"] = expected_version
+        return query
+
+    async def replace(self, article_id, document, expected_version):
+        result = await self.collection.replace_one(
+            self._version_query(article_id, expected_version), dict(document)
+        )
         return document if result.matched_count else None
 
-    async def delete(self, article_id):
-        existing = await self.get_by_id(article_id)
-        if existing:
-            await self.collection.delete_one({"id": article_id})
-        return existing
+    async def delete(self, article_id, expected_version):
+        return await self.collection.find_one_and_delete(
+            self._version_query(article_id, expected_version), projection={"_id": 0}
+        )
+
+    async def cover_is_referenced(self, media_id):
+        return await self.collection.count_documents({"cover_media_id": media_id}, limit=1) > 0
+
+    async def public_revision_entries(self):
+        # No drafts or article text enter the anonymous revision contract.
+        cursor = self.collection.find(
+            {"status": "published"}, {"_id": 0, "id": 1, "version": 1, "updated_at": 1}
+        )
+        return await cursor.to_list(length=None)
 
 
 class GridFsBlogMediaStore:
@@ -274,6 +304,34 @@ class BlogService:
         safe_limit = min(max(int(limit), 1), 1000)
         return await self.repository.list_sitemap_entries(safe_limit)
 
+    async def public_revision(self):
+        entries = await self.repository.public_revision_entries()
+        public_state = sorted(
+            (item["id"], item.get("version", 1), item["updated_at"]) for item in entries
+        )
+        return hashlib.sha256(json.dumps(public_state, separators=(",", ":")).encode()).hexdigest()
+
+    async def _validate_cover(self, media_id):
+        if not media_id:
+            return
+        media = await self.media_store.open(media_id)
+        if not media:
+            raise HTTPException(status_code=422, detail="Imaginea de copertă nu mai este disponibilă.")
+        content_type = media.get("content_type")
+        if content_type not in ALLOWED_BLOG_IMAGE_TYPES or not image_signature_matches(content_type, media["data"]):
+            raise HTTPException(status_code=415, detail="Coperta trebuie să fie o imagine JPG, PNG, WebP sau AVIF validă.")
+
+    async def _delete_unreferenced_cover(self, media_id):
+        # Production HTTP writes already hold MediaWriteGuardMiddleware's shared
+        # Mongo lock across validation, CAS, reference lookup and GridFS deletion.
+        # Non-HTTP writers must use the same reference_write_guard.
+        if media_id and not await self.repository.cover_is_referenced(media_id):
+            await self.media_store.delete(media_id)
+
+    @staticmethod
+    def _conflict():
+        return HTTPException(status_code=409, detail="Articolul a fost modificat în altă sesiune. Draftul local a fost păstrat; reîncarcă articolul înainte de a continua.")
+
     async def _unique_slug(self, title):
         base = slugify_ro(title)
         candidate = base
@@ -287,6 +345,7 @@ class BlogService:
         return await self.repository.list_all()
 
     async def create_article(self, payload):
+        await self._validate_cover(payload.cover_media_id)
         now = utc_now()
         document = {
             **payload.model_dump(),
@@ -296,6 +355,7 @@ class BlogService:
             "created_at": now,
             "updated_at": now,
             "published_at": None,
+            "version": 1,
         }
         return await self.repository.insert(document)
 
@@ -303,6 +363,9 @@ class BlogService:
         current = await self.repository.get_by_id(article_id)
         if not current:
             raise HTTPException(status_code=404, detail="Articolul nu a fost găsit.")
+        if current.get("version", 1) != payload.version:
+            raise self._conflict()
+        await self._validate_cover(payload.cover_media_id)
 
         published_at = current.get("published_at")
         if payload.status == "published" and not published_at:
@@ -314,24 +377,41 @@ class BlogService:
             "created_at": current["created_at"],
             "updated_at": utc_now(),
             "published_at": published_at,
+            "version": payload.version + 1,
         }
-        saved = await self.repository.replace(article_id, updated)
+        saved = await self.repository.replace(article_id, updated, payload.version)
+        if not saved:
+            raise self._conflict()
 
         old_cover = current.get("cover_media_id")
         if saved and old_cover and old_cover != updated.get("cover_media_id"):
-            await self.media_store.delete(old_cover)
+            await self._delete_unreferenced_cover(old_cover)
         return saved
 
-    async def delete_article(self, article_id):
-        deleted = await self.repository.delete(article_id)
-        if not deleted:
+    async def delete_article(self, article_id, expected_version):
+        current = await self.repository.get_by_id(article_id)
+        if not current:
             raise HTTPException(status_code=404, detail="Articolul nu a fost găsit.")
+        if current.get("version", 1) != expected_version:
+            raise self._conflict()
+        deleted = await self.repository.delete(article_id, expected_version)
+        if not deleted:
+            raise self._conflict()
         if deleted.get("cover_media_id"):
-            await self.media_store.delete(deleted["cover_media_id"])
+            await self._delete_unreferenced_cover(deleted["cover_media_id"])
 
 
 def create_blog_router(service, admin_dependency=require_admin_session):
     router = APIRouter(prefix="/api")
+
+    @router.get("/blog/revision")
+    async def get_public_revision(response: Response, if_none_match: Optional[str] = Header(default=None)):
+        revision = await service.public_revision()
+        headers = {"ETag": f'"{revision}"', "Cache-Control": "no-store"}
+        if if_none_match == headers["ETag"]:
+            return Response(status_code=304, headers=headers)
+        response.headers.update(headers)
+        return {"revision_id": revision}
 
     @router.get("/blog/posts", response_model=list[BlogSummaryResponse])
     async def list_public_posts(
@@ -382,9 +462,10 @@ def create_blog_router(service, admin_dependency=require_admin_session):
     @router.delete("/admin/blog/posts/{article_id}", status_code=204)
     async def delete_admin_post(
         article_id: uuid.UUID,
+        version: int = Query(ge=1, le=2**53 - 1),
         _=Depends(admin_dependency),
     ):
-        await service.delete_article(str(article_id))
+        await service.delete_article(str(article_id), version)
 
     @router.post("/admin/blog/media", status_code=201)
     async def upload_blog_media(

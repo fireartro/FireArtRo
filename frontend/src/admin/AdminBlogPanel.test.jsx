@@ -23,6 +23,7 @@ const article = {
   cover_media_id: "",
   cover_alt: "",
   status: "draft",
+  version: 1,
   created_at: "2026-09-01T10:00:00+00:00",
   updated_at: "2026-09-01T10:00:00+00:00",
   published_at: null,
@@ -166,7 +167,7 @@ test.each([
   expect(options).toEqual(expect.objectContaining({ method: "PUT", credentials: "same-origin", headers: {
     "Content-Type": "application/json", "X-CSRF-Token": "csrf-blog-session",
   } }));
-  expect(JSON.parse(options.body)).toEqual({ title: article.title, excerpt: article.excerpt, body: article.body, category: article.category, cover_media_id: "", cover_alt: "", status: after });
+  expect(JSON.parse(options.body)).toEqual({ title: article.title, excerpt: article.excerpt, body: article.body, category: article.category, cover_media_id: "", cover_alt: "", status: after, version: 1 });
   await act(async () => finishSave(response({ ...article, status: after })));
   expect(container.textContent).toContain(notice);
   expect(container.querySelector(".admin-blog-list small").textContent).toBe(label);
@@ -229,9 +230,37 @@ test("confirmed deletion uses session CSRF and selects the remaining article", a
   jest.spyOn(window, "confirm").mockReturnValue(true);
   global.fetch.mockResolvedValueOnce({ ok: true, status: 204 });
   await click(button("Șterge articolul"));
-  expect(global.fetch).toHaveBeenLastCalledWith(`/api/admin/blog/posts/${article.id}`, expect.objectContaining({
+  expect(global.fetch).toHaveBeenLastCalledWith(`/api/admin/blog/posts/${article.id}?version=1`, expect.objectContaining({
     method: "DELETE", credentials: "same-origin", headers: { "X-CSRF-Token": "csrf-blog-session" },
   }));
   expect(field("Titlu").value).toBe("Al doilea");
   expect(container.querySelectorAll(".admin-blog-list button")).toHaveLength(1);
+});
+
+test("a deferred save preserves text typed after submission and uses the confirmed version on the next save", async () => {
+  await renderPanel();
+  setValue(field("Conținut"), "Submitted text");
+  let finishSave;
+  global.fetch.mockReturnValueOnce(new Promise((resolve) => { finishSave = resolve; }));
+  await save();
+  setValue(field("Conținut"), "Newer local text");
+  await act(async () => finishSave(response({ ...article, body: "Submitted text", version: 2 })));
+  expect(field("Conținut").value).toBe("Newer local text");
+  expect(container.textContent).toContain("nesalvate");
+  global.fetch.mockResolvedValueOnce(response({ ...article, body: "Newer local text", version: 3 }));
+  await save();
+  expect(JSON.parse(global.fetch.mock.calls[3][1].body)).toEqual(expect.objectContaining({ body: "Newer local text", version: 2 }));
+});
+
+test.each(["save", "delete"])("a stale %s retains the local draft and explains the conflict", async (operation) => {
+  await renderPanel();
+  setValue(field("Conținut"), "My unsaved draft");
+  global.fetch.mockResolvedValueOnce(response({ detail: "Articol modificat în altă sesiune." }, 409));
+  if (operation === "delete") {
+    jest.spyOn(window, "confirm").mockReturnValue(true);
+    await click(button("Șterge articolul"));
+  } else await save();
+  expect(field("Conținut").value).toBe("My unsaved draft");
+  expect(container.querySelectorAll(".admin-blog-list button")).toHaveLength(1);
+  expect(container.textContent).toContain("Draftul local");
 });

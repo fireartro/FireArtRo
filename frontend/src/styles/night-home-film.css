@@ -1435,6 +1435,14 @@
   background: var(--fa-night);
 }
 
+/* Release the vertical clip when pinning is disabled for motion or short desktop. */
+.fa-work[data-motion="static"] .fa-work__sticky { block-size: auto; min-block-size: 0; overflow: visible; }
+.fa-work[data-motion="static"] .fa-work__viewport { height: auto; overflow-x: auto; overflow-y: visible; }
+.fa-work[data-motion="static"] .fa-work__track { height: auto; align-items: center; transform: none !important; }
+.fa-work[data-motion="static"] [data-gallery-lift] { transform: none !important; }
+.fa-work[data-motion="static"] .fa-work__intro,
+.fa-work[data-motion="static"] .fa-work__outro { height: auto; }
+
 .fa-home__atmosphere {
   position: sticky;
   top: 0;

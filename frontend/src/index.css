@@ -4561,7 +4561,11 @@ section[id] {
     background: rgba(5,10,18,.98);
     box-shadow: 0 28px 90px rgba(0,0,0,.58);
     pointer-events: auto;
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
 }
+
+.cookie-consent-layer { pointer-events: auto; }
 
 .cookie-consent-panel > header {
     display: grid;

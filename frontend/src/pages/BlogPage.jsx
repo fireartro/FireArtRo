@@ -8,6 +8,7 @@ import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { CANONICAL_SITE_URL } from "@/data/businessContent";
 import usePageMeta from "@/hooks/usePageMeta";
 import { listPublishedPosts } from "@/lib/blogApi";
+import { watchBlogPublications } from "@/lib/blogPublicationSync";
 import useManagedContent from "@/hooks/useManagedContent";
 
 export default function BlogPage() {
@@ -21,20 +22,33 @@ export default function BlogPage() {
   });
 
   useEffect(() => {
-    const controller = new AbortController();
+    let active = true, controller;
     setState((current) => ({ ...current, loading: true, error: "" }));
-    listPublishedPosts({ signal: controller.signal })
-      .then((posts) => setState({ loading: false, posts, error: "" }))
-      .catch((error) => {
-        if (error.name !== "AbortError") {
+    const load = async (background = false, signal) => {
+      controller?.abort();
+      const request = new AbortController();
+      controller = request;
+      const abort = () => request.abort();
+      signal?.addEventListener("abort", abort, { once: true });
+      try {
+        const posts = await listPublishedPosts({ signal: request.signal });
+        if (!active || request.signal.aborted) return false;
+        setState({ loading: false, posts, error: "" });
+        return true;
+      } catch (error) {
+        if (active && !request.signal.aborted && error.name !== "AbortError" && !background) {
           setState({
             loading: false,
             posts: [],
             error: "Articolele nu au putut fi încărcate.",
           });
         }
-      });
-    return () => controller.abort();
+        return false;
+      } finally { signal?.removeEventListener("abort", abort); }
+    };
+    load();
+    const stop = watchBlogPublications({ refresh: ({ signal }) => load(true, signal) });
+    return () => { active = false; stop(); controller?.abort(); };
   }, [requestVersion]);
 
   const schema = useMemo(() => ({

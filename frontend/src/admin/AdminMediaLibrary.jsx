@@ -18,7 +18,30 @@ export default function AdminMediaLibrary() {
   const [category, setCategory] = useState('Artificii de noapte');
   const [file, setFile] = useState(null);
   const fileRef = useRef(null);
-  const load = useCallback(async () => { setStatus('loading'); setError(''); try { setItems(await listMedia(request)); setStatus('ready'); } catch (failure) { setError(failure.message); setStatus('error'); } }, [request]);
+  const nextOffset = useRef(0);
+  const loadingPage = useRef(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [pageLoading, setPageLoading] = useState(false);
+  const [pageError, setPageError] = useState('');
+  const load = useCallback(async () => {
+    if (loadingPage.current) return;
+    loadingPage.current = true; setStatus('loading'); setError(''); setPageError('');
+    try {
+      const page = await listMedia(request, 0);
+      setItems(page); nextOffset.current = page.length; setHasMore(page.length === 100); setStatus('ready');
+    } catch (failure) { setError(failure.message); setStatus('error'); }
+    finally { loadingPage.current = false; }
+  }, [request]);
+  const loadMore = async () => {
+    if (loadingPage.current || status !== 'ready') return;
+    loadingPage.current = true; setPageLoading(true); setPageError('');
+    try {
+      const page = await listMedia(request, nextOffset.current);
+      setItems(current => [...new Map([...current, ...page].map(item => [item.id, item])).values()]);
+      nextOffset.current += page.length; setHasMore(page.length === 100);
+    } catch (failure) { setPageError(failure.message); }
+    finally { loadingPage.current = false; setPageLoading(false); }
+  };
   useEffect(() => { load(); }, [load]);
   const attach = (item, overrides = {}) => {
     const existing = draft.mediaItems.find(media => media.id === item.id);
@@ -41,7 +64,9 @@ export default function AdminMediaLibrary() {
         setError('Fișierul a fost trimis, dar confirmarea stocării întârzie. Verifică încărcarea din cardul lui înainte să îl adaugi în draft.');
         return;
       }
-      attach(persisted, { title, alt, category }); setItems(current => [persisted, ...current]); setFile(null); setTitle(''); setAlt(''); if (fileRef.current) fileRef.current.value = ''; setStatus('ready');
+      attach(persisted, { title, alt, category });
+      if (!items.some(item => item.id === persisted.id)) nextOffset.current += 1;
+      setItems(current => [persisted, ...current.filter(item => item.id !== persisted.id)]); setFile(null); setTitle(''); setAlt(''); if (fileRef.current) fileRef.current.value = ''; setStatus('ready');
     } catch (failure) { setError(failure.message); setStatus('error'); }
     finally { setPendingUploads(value => value - 1); }
   };
@@ -51,11 +76,13 @@ export default function AdminMediaLibrary() {
       <label className="admin-field">Titlu<input value={title} maxLength={160} required onChange={event => setTitle(event.target.value)} /></label>
       <label className="admin-field admin-field-wide">Text alternativ<textarea value={alt} maxLength={240} required onChange={event => setAlt(event.target.value)} /></label>
       <label className="admin-field">Categorie<select value={category} onChange={event => setCategory(event.target.value)}>{categoryOptions.map(option => <option key={option}>{option}</option>)}</select></label>
-      <button className="admin-button is-primary" disabled={status === 'uploading'}>{status === 'uploading' ? `Se încarcă ${progress}%` : 'Încarcă și adaugă în draft'}</button>
+      <button className="admin-button is-primary" disabled={status === 'uploading' || status === 'loading' || pageLoading}>{status === 'uploading' ? `Se încarcă ${progress}%` : 'Încarcă și adaugă în draft'}</button>
     </form>
     {error && <div role="alert" className="cms-notice is-error">{error}<button className="admin-button" onClick={load}>Reîncarcă</button></div>}
     {status === 'loading' && <p role="status">Se încarcă biblioteca…</p>}
-    <div className="cms-media-grid">{items.map(item => <MediaCard key={item.id} item={item} request={request} attached={draft.mediaItems.some(media => media.id === item.id)} onAttach={() => attach(item)} onDeleted={() => setItems(current => current.filter(value => value.id !== item.id))} onUpdated={next => setItems(current => current.map(value => value.id === next.id ? next : value))} />)}</div>
+    <div className="cms-media-grid">{items.map(item => <MediaCard key={item.id} item={item} request={request} attached={draft.mediaItems.some(media => media.id === item.id)} onAttach={() => attach(item)} onDeleted={() => { nextOffset.current = Math.max(0, nextOffset.current - 1); setItems(current => current.filter(value => value.id !== item.id)); }} onUpdated={next => setItems(current => current.map(value => value.id === next.id ? next : value))} />)}</div>
+    {pageError && <p role="alert" className="cms-notice is-error">{pageError}</p>}
+    {hasMore && <button type="button" className="admin-button" disabled={pageLoading || status !== 'ready'} onClick={loadMore}>{pageLoading ? 'Se încarcă…' : 'Încarcă mai multe'}</button>}
   </section>;
 }
 export function MediaCard({ item, request, attached, onAttach, onDeleted, onUpdated }) {

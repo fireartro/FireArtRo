@@ -178,3 +178,60 @@ test("dirty edits block accidental row changes until discarded", async () => {
   expect(button("Deschide cererea Ion Popescu").disabled).toBe(false);
   expect(container.querySelector("textarea").value).toBe("Notă privată");
 });
+
+test("notification retry uses session and CSRF once and preserves the private unsaved draft", async () => {
+  const retried = deferred();
+  await render({ handle: (path, options) => {
+    if (options.method === "POST") return retried.promise;
+    if (path === "/api/admin/quotes/q1") return response(quote("q1", {
+      notification: { state: "failed", retryable: true, error_code: "provider_unavailable", failed_at: "2026-10-02T10:00:00Z" },
+    }));
+    return undefined;
+  } });
+  await click("Deschide cererea Ana Popescu");
+  expect(container.textContent).toContain("Notificare email: Eșuată");
+  await change('textarea[name="internal-note"]', "Ciornă păstrată");
+  await click("Reîncearcă notificarea");
+  await click("Reîncearcă notificarea");
+  const posts = global.fetch.mock.calls.filter(([, options]) => options.method === "POST");
+  expect(posts).toHaveLength(1);
+  expect(posts[0][0]).toBe("/api/admin/quotes/q1/notification/retry");
+  expect(posts[0][1].credentials).toBe("same-origin");
+  expect(posts[0][1].headers["X-CSRF-Token"]).toBe("csrf-test");
+  await act(async () => retried.resolve(response(quote("q1", { notification: { state: "sent", retryable: false, sent_at: "2026-10-02T12:00:00Z" } }))));
+  expect(container.textContent).toContain("Notificare email: Trimisă");
+  expect(button("Reîncearcă notificarea")).toBeUndefined();
+  expect(container.querySelector("textarea").value).toBe("Ciornă păstrată");
+  expect(container.textContent).not.toContain("Modificările au fost salvate.");
+});
+
+test.each([
+  [{ state: "sent", retryable: false }, "Trimisă", false],
+  [{ state: "pending", retryable: false }, "În curs", false],
+  [{ state: "pending", retryable: true }, "În curs", true],
+  [{ state: "pending", retryable: false, recovery_required: true }, "verificare manuală", false],
+  [null, "Stare indisponibilă", true],
+])("notification controls honor server recovery eligibility: %j", async (notification, label, canRetry) => {
+  await render({ handle: (path) => path === "/api/admin/quotes/q1" ? response(quote("q1", { notification })) : undefined });
+  await click("Deschide cererea Ana Popescu");
+  expect(container.textContent).toContain(label);
+  expect(Boolean(button("Reîncearcă notificarea"))).toBe(canRetry);
+});
+
+test("notification retry failure and malformed acknowledgements never announce delivery", async () => {
+  let malformed = false;
+  await render({ handle: (path, options) => {
+    if (options.method === "POST") return malformed ? response({ id: "other", notification: { state: "sent" } })
+      : response({ detail: "private provider detail must not appear" }, 409);
+    if (path === "/api/admin/quotes/q1") return response(quote("q1", { notification: { state: "failed", retryable: true, error_code: "private provider detail must not appear" } }));
+    return undefined;
+  } });
+  await click("Deschide cererea Ana Popescu");
+  await click("Reîncearcă notificarea");
+  expect(container.textContent).toContain("Reîncercarea nu a fost confirmată");
+  expect(container.textContent).not.toContain("private provider detail must not appear");
+  malformed = true;
+  await click("Reîncearcă notificarea");
+  expect(container.textContent).toContain("Reîncercarea nu a fost confirmată");
+  expect(container.textContent).toContain("Notificare email: Eșuată");
+});

@@ -2,6 +2,7 @@ import {
   blogMediaUrl,
   createAdminPost,
   deleteAdminPost,
+  fetchBlogRevision,
   getPublishedPost,
   listAdminPosts,
   listPublishedPosts,
@@ -53,7 +54,7 @@ test("public preview requests exactly limit three and returns API data", async (
   await expect(listPublishedPosts({ limit: 3 })).resolves.toEqual([summary]);
   expect(global.fetch).toHaveBeenCalledWith(
     "/api/blog/posts?limit=3",
-    { signal: undefined },
+    { signal: undefined, credentials: "omit", cache: "no-store" },
   );
 });
 
@@ -132,8 +133,8 @@ test("article update encodes the id and deletion handles an empty 204 through th
     body: '{"status":"published"}',
     headers: { "Content-Type": "application/json", "X-CSRF-Token": "csrf-blog-session" },
   }));
-  await expect(deleteAdminPost(sessionRequest, "post/1")).resolves.toBeNull();
-  expect(global.fetch).toHaveBeenNthCalledWith(2, "/api/admin/blog/posts/post%2F1", expect.objectContaining({
+  await expect(deleteAdminPost(sessionRequest, "post/1", 3)).resolves.toBeNull();
+  expect(global.fetch).toHaveBeenNthCalledWith(2, "/api/admin/blog/posts/post%2F1?version=3", expect.objectContaining({
     method: "DELETE",
     credentials: "same-origin",
     headers: { "X-CSRF-Token": "csrf-blog-session" },
@@ -173,7 +174,7 @@ test("public detail and media URLs keep the configured backend while Admin stays
   const controller = new AbortController();
 
   await configuredApi.getPublishedPost("știri/noi", { signal: controller.signal });
-  expect(global.fetch).toHaveBeenLastCalledWith("https://public-api.example/api/blog/posts/%C8%99tiri%2Fnoi", { signal: controller.signal });
+  expect(global.fetch).toHaveBeenLastCalledWith("https://public-api.example/api/blog/posts/%C8%99tiri%2Fnoi", { signal: controller.signal, credentials: "omit", cache: "no-store" });
   expect(configuredApi.blogMediaUrl("image/1")).toBe("https://public-api.example/api/blog/media/image%2F1");
   await configuredApi.listAdminPosts(sessionRequest);
   expect(global.fetch.mock.calls[1][0]).toBe("/api/admin/blog/posts");
@@ -210,4 +211,24 @@ test("body splitting preserves text and separates blank-line paragraphs", () => 
     ["Paragraf unu.", "Linia doi."],
     ["<script>alert(1)</script>"],
   ]);
+});
+
+test("revision reads are anonymous and validate metadata before invalidating public views", async () => {
+  const revision = "a".repeat(64);
+  global.fetch = jest.fn().mockResolvedValue(jsonResponse({ revision_id: revision }));
+  await expect(fetchBlogRevision({ revisionId: revision })).resolves.toEqual({ revision_id: revision });
+  expect(global.fetch).toHaveBeenCalledWith("/api/blog/revision", expect.objectContaining({ credentials: "omit", cache: "no-store", headers: { "If-None-Match": `"${revision}"` } }));
+  global.fetch.mockResolvedValue({ status: 304 });
+  await expect(fetchBlogRevision({ revisionId: revision })).resolves.toBeNull();
+  global.fetch.mockResolvedValue(jsonResponse({ body: "private draft", revision_id: "invalid" }));
+  await expect(fetchBlogRevision()).rejects.toHaveProperty("name", "BlogApiError");
+});
+
+test("configured cross-origin revision reads avoid headers forbidden by the existing CORS contract", async () => {
+  process.env.REACT_APP_BACKEND_URL = "https://public-api.example/";
+  let api;
+  jest.isolateModules(() => { api = require("./blogApi"); });
+  global.fetch = jest.fn().mockResolvedValue(jsonResponse({ revision_id: "a".repeat(64) }));
+  await api.fetchBlogRevision({ revisionId: "b".repeat(64) });
+  expect(global.fetch).toHaveBeenCalledWith("https://public-api.example/api/blog/revision", expect.objectContaining({ credentials: "omit", headers: {} }));
 });

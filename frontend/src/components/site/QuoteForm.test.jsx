@@ -67,6 +67,7 @@ async function submit() {
 }
 
 beforeEach(async () => {
+  Object.defineProperty(window, "crypto", { configurable: true, value: require("crypto").webcrypto });
   previousSiteKey = process.env.REACT_APP_TURNSTILE_SITE_KEY;
   process.env.REACT_APP_TURNSTILE_SITE_KEY = "public-site-key";
   global.fetch = jest.fn().mockResolvedValue({
@@ -121,4 +122,86 @@ test("resets a consumed token after a failed submission", async () => {
   await submit();
   expect(global.fetch).toHaveBeenCalledTimes(1);
   expect(container.textContent).toMatch(/finalizează verificarea anti-abuz/i);
+});
+
+test("reading privacy opens a labelled separate tab and preserves the contact draft", () => {
+  completeRequiredFields();
+  const policy = container.querySelector('a[href="/confidentialitate"]');
+  expect(policy.target).toBe("_blank");
+  expect(policy.rel).toContain("noopener");
+  expect(policy.getAttribute("aria-label")).toMatch(/filă nouă/i);
+  expect(container.querySelector("#quote-email").value).toBe("client@example.com");
+});
+
+test("rejects a past event date before sending a verified quote", async () => {
+  completeRequiredFields();
+  setValue(container.querySelector("#quote-date"), "2000-01-01");
+  act(() => container.querySelector('[data-testid="turnstile-double"] button').click());
+  await submit();
+  expect(global.fetch).not.toHaveBeenCalled();
+  expect(container.querySelector("#quote-date").getAttribute("aria-invalid")).toBe("true");
+});
+
+test("uses the local calendar date for the date input minimum", async () => {
+  jest.useFakeTimers("modern");
+  jest.setSystemTime(new Date("2026-10-02T23:30:00Z"));
+  const year = jest.spyOn(Date.prototype, "getFullYear").mockReturnValue(2026);
+  const month = jest.spyOn(Date.prototype, "getMonth").mockReturnValue(9);
+  const day = jest.spyOn(Date.prototype, "getDate").mockReturnValue(3);
+  try {
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    await act(async () => root.render(<QuoteForm />));
+    expect(container.querySelector("#quote-date").min).toBe("2026-10-03");
+  } finally {
+    year.mockRestore(); month.mockRestore(); day.mockRestore();
+    jest.useRealTimers();
+  }
+});
+
+test("Mix prefill selects a real displayed service and keeps package identity", () => {
+  act(() => window.dispatchEvent(new CustomEvent("prefill-package", {
+    detail: { id: "mix", title: "Mix", category: "Efecte speciale" },
+  })));
+  const service = container.querySelector("#quote-service");
+  expect(service.value).toBe("Alte efecte pirotehnice");
+  expect(service.selectedOptions[0].textContent).toBe("Alte efecte pirotehnice");
+  expect(container.querySelector(".nr-contact-optional summary").textContent).toContain("Mix");
+});
+
+test("rejects a service that is no longer in the displayed CMS options", async () => {
+  completeRequiredFields();
+  const service = container.querySelector("#quote-service");
+  service.add(new Option("Serviciu eliminat", "Serviciu eliminat"));
+  setValue(service, "Serviciu eliminat");
+  act(() => container.querySelector('[data-testid="turnstile-double"] button').click());
+  await submit();
+  expect(global.fetch).not.toHaveBeenCalled();
+  expect(service.getAttribute("aria-invalid")).toBe("true");
+});
+
+test("retries a lost response with the same UUID after anti-abuse re-verification", async () => {
+  global.fetch.mockRejectedValueOnce(new TypeError("lost response"));
+  completeRequiredFields();
+  act(() => container.querySelector('[data-testid="turnstile-double"] button').click());
+  await submit();
+  const first = JSON.parse(global.fetch.mock.calls[0][1].body);
+  expect(first.submission_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  act(() => container.querySelector('[data-testid="turnstile-double"] button').click());
+  await submit();
+  expect(JSON.parse(global.fetch.mock.calls[1][1].body).submission_id).toBe(first.submission_id);
+  expect(container.querySelector('[data-testid="quote-success"]')).not.toBeNull();
+});
+
+test("customer edits after a failed request rotate the submission UUID", async () => {
+  global.fetch.mockRejectedValueOnce(new TypeError("lost response"));
+  completeRequiredFields();
+  act(() => container.querySelector('[data-testid="turnstile-double"] button').click());
+  await submit();
+  const first = JSON.parse(global.fetch.mock.calls[0][1].body).submission_id;
+  expect(first).toBeDefined();
+  setValue(container.querySelector("#quote-locality"), "Oradea");
+  act(() => container.querySelector('[data-testid="turnstile-double"] button').click());
+  await submit();
+  expect(JSON.parse(global.fetch.mock.calls[1][1].body).submission_id).not.toBe(first);
 });

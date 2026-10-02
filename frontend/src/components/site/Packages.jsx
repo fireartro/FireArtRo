@@ -1,5 +1,5 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import PackageVideoPlayer from "./PackageVideoPlayer";
@@ -70,6 +70,7 @@ export const Packages = ({ items }) => {
   const categoryRefs = useRef([]);
   const timersRef = useRef([]);
   const reduceMotion = useReducedMotion();
+  const tabsId = useId();
 
   const variants = useMemo(
     () => packages.filter((item) => item.category === category),
@@ -208,6 +209,8 @@ export const Packages = ({ items }) => {
               ref={(node) => { categoryRefs.current[index] = node; }}
               type="button"
               role="tab"
+              id={`${tabsId}-category-${index}`}
+              aria-controls={`${tabsId}-category-panel`}
               aria-selected={category === item}
               tabIndex={category === item ? 0 : -1}
               className={category === item ? "is-active" : ""}
@@ -219,6 +222,7 @@ export const Packages = ({ items }) => {
           ))}
         </nav>
 
+        <div id={`${tabsId}-category-panel`} role="tabpanel" aria-labelledby={`${tabsId}-category-${categories.indexOf(category)}`} tabIndex={0}>
         {hasPackageVariants && (
           <>
             <div
@@ -233,6 +237,8 @@ export const Packages = ({ items }) => {
                   ref={(node) => { variantRefs.current[index] = node; }}
                   type="button"
                   role="tab"
+                  id={`${tabsId}-variant-${index}`}
+                  aria-controls={`${tabsId}-variant-panel`}
                   data-variant-tile
                   aria-selected={item.id === selectedId}
                   tabIndex={item.id === selectedId ? 0 : -1}
@@ -252,6 +258,10 @@ export const Packages = ({ items }) => {
 
             <article
               className="nr-package-stage"
+              id={`${tabsId}-variant-panel`}
+              role="tabpanel"
+              aria-labelledby={`${tabsId}-variant-${variants.findIndex((item) => item.id === displayedId)}`}
+              tabIndex={0}
               data-testid="package-stage"
               data-transition-state={transitionState}
               aria-live="polite"
@@ -318,8 +328,7 @@ export const Packages = ({ items }) => {
             </div>
           </section>
         )}
-
-
+        </div>
       </div>
     </section>
   );

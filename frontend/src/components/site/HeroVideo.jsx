@@ -3,7 +3,10 @@ import HeroKineticTitles from "./HeroKineticTitles";
 import { HERO_MEDIA, HERO_POSTER } from "@/data/content";
 import {
   canPlayHeroVideo,
+  canStartHeroVideo,
   getHeroAutoplayPolicy,
+  isHeroIntroLoading,
+  primeHeroVideoBuffer,
   scheduleHeroVideoPlayback,
   selectHeroSource,
 } from "./heroPlayback";
@@ -50,6 +53,8 @@ export const HeroVideo = ({ mediaOverride }) => {
     && !videoFailed
     && (Boolean(mediaOverride) || bundledVideoSupported || source === media.av1Src)
     && autoplayEligible;
+  const expectsVideo = isVideoMedia && !videoFailed && autoplayEligible
+    && (!codecReady || Boolean(mediaOverride) || bundledVideoSupported || source === media.av1Src);
   const usePoster = !canMountVideo || activatedSource !== source;
   const fallbackImage = mediaOverride && mediaOverride.type !== "video"
     ? (mediaOverride.type === "youtube" ? poster : source)
@@ -141,6 +146,7 @@ export const HeroVideo = ({ mediaOverride }) => {
 
     const attemptPlayback = (force = false) => {
       if (disposed || lifecycleHidden || !mediaVisible || (!force && document.visibilityState === "hidden")) return;
+      if (!canStartHeroVideo(video, window)) { primeHeroVideoBuffer(video, window); return; }
       const promise = video.play();
       promise?.catch(() => {
         if (disposed || lifecycleHidden || !mediaVisible) return;
@@ -240,12 +246,22 @@ export const HeroVideo = ({ mediaOverride }) => {
       setVideoFailed(true);
     };
     const onLoadedMetadata = () => attemptPlayback();
-    const onLoadedData = () => attemptPlayback();
+    const onLoadedData = () => {
+      if (!canStartHeroVideo(video, window)) video.pause();
+      else attemptPlayback();
+    };
     const onCanPlay = () => attemptPlayback();
     const onPlaying = () => {
+      if (lifecycleHidden || !mediaVisible || !canStartHeroVideo(video, window)) {
+        video.pause();
+        return;
+      }
       clearRetry();
     };
     const onStalled = () => recoverPlayback();
+    const onSuspend = () => {
+      if (!disposed && !lifecycleHidden && mediaVisible && document.visibilityState !== 'hidden') primeHeroVideoBuffer(video, window);
+    };
 
     if (typeof IntersectionObserver !== "undefined") {
       visibilityObserver = new IntersectionObserver(() => syncSceneVisibility(), { threshold: [0, 0.01] });
@@ -255,14 +271,17 @@ export const HeroVideo = ({ mediaOverride }) => {
     video.addEventListener("loadedmetadata", onLoadedMetadata);
     video.addEventListener("loadeddata", onLoadedData);
     video.addEventListener("canplay", onCanPlay);
+    video.addEventListener("canplaythrough", onCanPlay);
     video.addEventListener("playing", onPlaying);
     video.addEventListener("stalled", onStalled);
+    video.addEventListener("suspend", onSuspend);
     video.addEventListener("error", onError);
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("pagehide", onPageHide);
     window.addEventListener("pageshow", onPageShow);
     window.addEventListener("focus", onFocus);
     window.addEventListener("online", onOnline);
+    window.addEventListener("fireart:intro-dismissed", onFocus);
 
     syncSceneVisibility();
     scheduleLifecycleRecovery();
@@ -277,19 +296,22 @@ export const HeroVideo = ({ mediaOverride }) => {
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
       video.removeEventListener("loadeddata", onLoadedData);
       video.removeEventListener("canplay", onCanPlay);
+      video.removeEventListener("canplaythrough", onCanPlay);
       video.removeEventListener("playing", onPlaying);
       video.removeEventListener("stalled", onStalled);
+      video.removeEventListener("suspend", onSuspend);
       video.removeEventListener("error", onError);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("pagehide", onPageHide);
       window.removeEventListener("pageshow", onPageShow);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("online", onOnline);
+      window.removeEventListener("fireart:intro-dismissed", onFocus);
     };
   }, [source, usePoster, media.src, mediaOverride]);
 
   return (
-    <div className="hero-video-stage absolute inset-0 z-0 overflow-hidden">
+    <div data-hero-playback={expectsVideo ? 'video' : 'poster'} className="hero-video-stage absolute inset-0 z-0 overflow-hidden">
       {customVideoStill ? (
         <video
           key={`still-${source}`}
@@ -325,11 +347,11 @@ export const HeroVideo = ({ mediaOverride }) => {
           ref={videoRef}
           src={source}
           poster={videoPoster}
-          autoPlay
+          autoPlay={!isHeroIntroLoading(window)}
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
           className="hero-media-surface hero-media-video absolute inset-0 h-full w-full object-cover"
           style={{ objectPosition, objectFit: "cover" }}
           data-media-variant={mediaVariant}

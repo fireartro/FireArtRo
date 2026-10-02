@@ -2,18 +2,32 @@ import { useEffect, useState } from "react";
 import BlogCard from "@/components/blog/BlogCard";
 import NightButton from "@/components/night/NightButton";
 import { listPublishedPosts } from "@/lib/blogApi";
+import { watchBlogPublications } from "@/lib/blogPublicationSync";
 
 export default function HomeBlog() {
   const [posts, setPosts] = useState(null);
 
   useEffect(() => {
-    const controller = new AbortController();
-    listPublishedPosts({ limit: 3, signal: controller.signal })
-      .then((items) => setPosts(items.slice(0, 3)))
-      .catch((error) => {
-        if (error.name !== "AbortError") setPosts([]);
-      });
-    return () => controller.abort();
+    let active = true, controller;
+    const load = async (background = false, signal) => {
+      controller?.abort();
+      const request = new AbortController();
+      controller = request;
+      const abort = () => request.abort();
+      signal?.addEventListener("abort", abort, { once: true });
+      try {
+        const items = await listPublishedPosts({ limit: 3, signal: request.signal });
+        if (!active || request.signal.aborted) return false;
+        setPosts(items.slice(0, 3));
+        return true;
+      } catch (error) {
+        if (active && !request.signal.aborted && error.name !== "AbortError" && !background) setPosts([]);
+        return false;
+      } finally { signal?.removeEventListener("abort", abort); }
+    };
+    load();
+    const stop = watchBlogPublications({ refresh: ({ signal }) => load(true, signal) });
+    return () => { active = false; stop(); controller?.abort(); };
   }, []);
 
   if (!posts?.length) return null;

@@ -38,11 +38,24 @@ async function jsonRequest(path, options = {}) {
 
 export function listPublishedPosts({ limit, signal } = {}) {
   const query = Number.isInteger(limit) ? `?limit=${limit}` : "";
-  return jsonRequest(`/blog/posts${query}`, { signal });
+  return jsonRequest(`/blog/posts${query}`, { signal, credentials: "omit", cache: "no-store" });
 }
 
 export function getPublishedPost(slug, { signal } = {}) {
-  return jsonRequest(`/blog/posts/${encodeURIComponent(slug)}`, { signal });
+  return jsonRequest(`/blog/posts/${encodeURIComponent(slug)}`, { signal, credentials: "omit", cache: "no-store" });
+}
+
+export async function fetchBlogRevision({ signal, revisionId } = {}) {
+  const response = await fetch(`${API}/blog/revision`, {
+    signal, credentials: "omit", cache: "no-store",
+    // The existing cross-origin policy permits Content-Type/CSRF only. A small
+    // unconditional public revision response works without a custom-header preflight.
+    headers: revisionId && !BACKEND_URL ? { "If-None-Match": `"${revisionId}"` } : {},
+  });
+  if (response.status === 304) return null;
+  const payload = await readJson(response);
+  if (!/^[a-f0-9]{64}$/.test(payload?.revision_id)) throw new BlogApiError("Revizia Blogului nu este validă.");
+  return payload;
 }
 
 // Protected operations share the Admin session's same-origin cookie/CSRF wrapper.
@@ -64,8 +77,8 @@ export function updateAdminPost(request, id, payload) {
   });
 }
 
-export function deleteAdminPost(request, id) {
-  return request(`/api/admin/blog/posts/${encodeURIComponent(id)}`, {
+export function deleteAdminPost(request, id, version) {
+  return request(`/api/admin/blog/posts/${encodeURIComponent(id)}?version=${encodeURIComponent(version)}`, {
     method: "DELETE",
   });
 }

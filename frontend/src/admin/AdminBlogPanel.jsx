@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Plus, Save, Trash2 } from "lucide-react";
 import { useAdminSession } from "@/admin/AdminSessionContext";
 import { prepareAdminImage } from "@/admin/imageUtils";
@@ -10,6 +10,7 @@ import {
   updateAdminPost,
   uploadAdminCover,
 } from "@/lib/blogApi";
+import { announceBlogChange } from "@/lib/blogPublicationSync";
 
 const EMPTY_ARTICLE = {
   title: "",
@@ -34,6 +35,9 @@ const errorMessage = (error) => {
   if (error?.status === 401) {
     return "Sesiunea Admin a expirat. Autentifică-te din nou.";
   }
+  if (error?.status === 409) {
+    return "Articolul a fost modificat în altă sesiune. Draftul local a fost păstrat; reîncarcă articolul înainte de a continua.";
+  }
   return error?.message || "Operațiunea nu a putut fi finalizată.";
 };
 
@@ -47,6 +51,7 @@ export default function AdminBlogPanel() {
   const [message, setMessage] = useState("");
   const [tone, setTone] = useState("neutral");
   const [busy, setBusy] = useState(false);
+  const generation = useRef(0);
 
   const setNotice = (nextMessage, nextTone = "neutral") => {
     setMessage(nextMessage);
@@ -97,6 +102,7 @@ export default function AdminBlogPanel() {
   };
 
   const updateDraft = (key, value) => {
+    generation.current += 1;
     setDraft((current) => ({ ...current, [key]: value }));
   };
 
@@ -120,7 +126,8 @@ export default function AdminBlogPanel() {
 
   const saveArticle = async (event) => {
     event.preventDefault();
-    if (!draft) return;
+    if (!draft || busy) return;
+    const savingGeneration = generation.current;
     setBusy(true);
     setNotice("");
     try {
@@ -128,6 +135,7 @@ export default function AdminBlogPanel() {
         ? await updateAdminPost(request, draft.id, {
             ...articlePayload(draft),
             status: draft.status,
+            version: draft.version ?? 1,
           })
         : await createAdminPost(request, articlePayload(draft));
 
@@ -138,8 +146,10 @@ export default function AdminBlogPanel() {
           : [saved, ...current];
       });
       setSelectedId(saved.id);
-      setDraft(saved);
-      setNotice(saved.status === "published" ? "Articol publicat." : "Draft salvat.", "success");
+      const editedDuringSave = generation.current !== savingGeneration;
+      setDraft((current) => editedDuringSave ? { ...saved, ...articlePayload(current), status: current.status } : saved);
+      setNotice(editedDuringSave ? "Salvare confirmată. Modificările noi sunt nesalvate." : saved.status === "published" ? "Articol publicat." : "Draft salvat.", editedDuringSave ? "neutral" : "success");
+      announceBlogChange();
     } catch (error) {
       setNotice(errorMessage(error), "error");
     } finally {
@@ -148,16 +158,17 @@ export default function AdminBlogPanel() {
   };
 
   const removeArticle = async () => {
-    if (!draft?.id || !window.confirm("Ștergi definitiv acest articol?")) return;
+    if (busy || !draft?.id || !window.confirm("Ștergi definitiv acest articol?")) return;
     setBusy(true);
     setNotice("");
     try {
-      await deleteAdminPost(request, draft.id);
+      await deleteAdminPost(request, draft.id, draft.version ?? 1);
       const remaining = posts.filter((article) => article.id !== draft.id);
       setPosts(remaining);
       setSelectedId(remaining[0]?.id || "");
       setDraft(remaining[0] || null);
       setNotice("Articolul a fost șters.", "success");
+      announceBlogChange();
     } catch (error) {
       setNotice(errorMessage(error), "error");
     } finally {

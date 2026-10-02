@@ -82,13 +82,18 @@
         const video = hero?.querySelector('video');
         const poster = hero?.querySelector('.hero-media-surface');
         const imageReady = poster?.tagName === 'IMG' && poster.complete && poster.naturalWidth > 0;
+        const playback = hero?.querySelector('[data-hero-playback]')?.dataset.heroPlayback;
         const connection = navigator.connection;
-        const posterOnly = motion.matches || connection?.saveData || /^(slow-2g|2g|3g)$/.test(connection?.effectiveType || '');
+        const posterOnly = motion.matches || connection?.saveData || playback === 'poster';
+        const expectsVideo = playback === 'video' && !posterOnly;
         const elapsed = performance.now() - routeStarted;
-        const videoReady = video && video.readyState >= 2 && !video.paused;
-        const posterFallback = imageReady && (posterOnly || (!video && elapsed > 3200) || video?.error || (video?.readyState >= 2 && elapsed > 3200));
-        const mediaFailed = poster?.complete && !imageReady && (!video || video.error) && elapsed > 3200;
-        if (videoReady || posterFallback || mediaFailed) {
+        // A decoded first frame (HAVE_CURRENT_DATA) is not enough on slow
+        // networks. Wait for HAVE_ENOUGH_DATA; never replace this with a timer.
+        const videoReady = video && video.readyState >= 4 && !video.paused;
+        const stillReady = posterOnly && poster?.tagName === 'VIDEO' && poster.readyState >= 2;
+        const posterFallback = imageReady && (posterOnly || (!expectsVideo && !video && elapsed > 3200) || video?.error || (video?.readyState >= 4 && elapsed > 3200));
+        const mediaFailed = poster?.complete && !imageReady && (video?.error || (!expectsVideo && !video)) && elapsed > 3200;
+        if (videoReady || stillReady || posterFallback || mediaFailed) {
             intro.dataset.mediaReady = 'true';
             finish();
         }

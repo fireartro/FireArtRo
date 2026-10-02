@@ -12,17 +12,18 @@ import html
 import hmac
 import math
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import uuid
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from auth import require_admin_session
-from email_inbox import DeliveryState, MongoEmailDeliveryRepository
+from email_inbox import DeliveryState, DeliveryErrorCode, EmailDelivery, MongoEmailDeliveryRepository
 from resend_email import ResendError
 
 QuoteStatus = Literal["new", "contacted", "qualified", "closed", "spam"]
@@ -30,6 +31,9 @@ QUOTE_WRITE_MAX_BYTES = 32 * 1024
 UNAVAILABLE = "Cererile nu sunt disponibile momentan."
 NOTIFICATION_FROM = "FireArtRo <contact@fireart.ro>"
 NOTIFICATION_TO = "fireartro@gmail.com"
+NOTIFICATION_LEASE = timedelta(minutes=2)
+# Resend retains keys for 24 hours; leave room for clock skew/send duration.
+NOTIFICATION_RETRY_WINDOW = timedelta(hours=23)
 
 
 def _error(status, message, **headers):
@@ -54,9 +58,11 @@ class QuoteSummary(BaseModel):
 
 class QuoteNotification(BaseModel):
     state: DeliveryState
-    error_code: str | None = None
+    error_code: DeliveryErrorCode | None = None
     sent_at: datetime | None = None
     failed_at: datetime | None = None
+    retryable: bool = False
+    recovery_required: bool = False
 
 
 class QuoteDetail(QuoteSummary):
@@ -158,7 +164,7 @@ class MongoQuoteRepository:
                     )
                 )
                 detail = detail.model_copy(
-                    update={"notification": _safe_notification(delivery)}
+                    update={"notification": _safe_notification(delivery, self._notification_now())}
                 )
             return detail
         except (PyMongoError, ValidationError):
@@ -196,26 +202,128 @@ class MongoQuoteRepository:
                     )
                 )
                 detail = detail.model_copy(
-                    update={"notification": _safe_notification(delivery)}
+                    update={"notification": _safe_notification(delivery, self._notification_now())}
                 )
             return detail
         except (PyMongoError, ValidationError):
             raise _error(503, UNAVAILABLE) from None
 
 
-def _safe_notification(delivery: Any) -> QuoteNotification | None:
+    def _notification_now(self):
+        clock = getattr(self.delivery_repository, "clock", None)
+        return clock() if callable(clock) else datetime.now(timezone.utc)
+
+
+def _utc(value):
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+
+
+def _notification_policy(delivery, now):
+    if delivery.state == "sent":
+        return False, False
+    now = _utc(now)
+    first = getattr(delivery, "first_attempt_at", None) or getattr(delivery, "updated_at", None)
+    recovery_required = bool(
+        first and now - _utc(first) >= NOTIFICATION_RETRY_WINDOW
+        and getattr(delivery, "error_code", None) != "not_configured"
+    )
+    if recovery_required:
+        return False, True
+    if delivery.state == "failed":
+        return True, False
+    expiry = getattr(delivery, "lease_expires_at", None)
+    if expiry is None:
+        updated = getattr(delivery, "updated_at", None)
+        return bool(updated and now - _utc(updated) >= NOTIFICATION_LEASE), False
+    return _utc(expiry) <= now, False
+
+
+def _safe_notification(delivery: Any, now=None) -> QuoteNotification | None:
     if delivery is None:
         return None
     state = getattr(delivery, "state", None)
     error_code = getattr(delivery, "error_code", None)
     sent_at = getattr(delivery, "sent_at", None)
     updated_at = getattr(delivery, "updated_at", None)
+    retryable, recovery_required = _notification_policy(delivery, now or datetime.now(timezone.utc))
+    if error_code not in {None, "not_configured", "provider_rejected", "provider_unavailable", "delivery_failed"}:
+        error_code = "delivery_failed"
     return QuoteNotification(
         state=state,
         error_code=error_code,
         sent_at=sent_at,
         failed_at=updated_at if state == "failed" else None,
+        retryable=retryable,
+        recovery_required=recovery_required,
     )
+
+
+class QuoteDelivery(EmailDelivery):
+    lease_token: str | None = None
+    lease_expires_at: datetime | None = None
+    first_attempt_at: datetime | None = None
+
+    @field_validator("lease_expires_at", "first_attempt_at")
+    @classmethod
+    def aware_timestamp(cls, value):
+        return _utc(value) if value is not None else None
+
+
+QUOTE_DELIVERY_FIELDS = {"_id": 0, **dict.fromkeys(QuoteDelivery.model_fields, 1)}
+
+
+class MongoQuoteDeliveryRepository(MongoEmailDeliveryRepository):
+    """Quote-only leases; inherited inbound/reply methods remain compatible."""
+
+    async def get_current_quote_notification(self, quote_id):
+        document = await self.collection.find_one(
+            {"kind": "quote_notification", "related_quote_id": quote_id},
+            QUOTE_DELIVERY_FIELDS, max_time_ms=2000,
+        )
+        return QuoteDelivery.model_validate(document) if document else None
+
+    async def claim_notification(self, delivery_id, *, allow_unstarted=False):
+        document = await self.collection.find_one(
+            {"id": delivery_id, "kind": "quote_notification"},
+            QUOTE_DELIVERY_FIELDS, max_time_ms=2000,
+        )
+        if document is None:
+            return None
+        delivery = QuoteDelivery.model_validate(document)
+        now = _utc(self.clock())
+        retryable, recovery_required = _notification_policy(delivery, now)
+        unstarted = allow_unstarted and delivery.state == "pending" and delivery.lease_token is None
+        if recovery_required or (not retryable and not unstarted):
+            return None
+        # CAS the fields which determined eligibility; competing claims and
+        # completions change them and cannot both win.
+        query = {"id": delivery_id, "kind": "quote_notification", "state": delivery.state,
+                 "updated_at": document["updated_at"], "lease_token": document.get("lease_token")}
+        first_attempt = delivery.first_attempt_at
+        if first_attempt is None:
+            first_attempt = now if unstarted or delivery.error_code == "not_configured" else delivery.updated_at
+        claimed = await self.collection.find_one_and_update(
+            query,
+            {"$set": {"state": "pending", "error_code": None,
+                      "lease_token": str(uuid.uuid4()), "lease_expires_at": now + NOTIFICATION_LEASE,
+                      "first_attempt_at": first_attempt, "updated_at": now}},
+            return_document=ReturnDocument.AFTER, projection=QUOTE_DELIVERY_FIELDS, maxTimeMS=2000,
+        )
+        return QuoteDelivery.model_validate(claimed) if claimed else None
+
+    async def complete_notification(self, delivery_id, lease_token, *, resend_email_id=None, error_code=None):
+        now = _utc(self.clock())
+        changes = {"state": "failed" if error_code else "sent", "error_code": error_code,
+                   "resend_email_id": resend_email_id, "sent_at": None if error_code else now,
+                   "updated_at": now}
+        if error_code == "not_configured":
+            changes["first_attempt_at"] = None  # transport made no provider request
+        document = await self.collection.find_one_and_update(
+            {"id": delivery_id, "kind": "quote_notification", "state": "pending", "lease_token": lease_token},
+            {"$set": changes, "$unset": {"lease_token": "", "lease_expires_at": ""}},
+            return_document=ReturnDocument.AFTER, projection=QUOTE_DELIVERY_FIELDS, maxTimeMS=2000,
+        )
+        return QuoteDelivery.model_validate(document) if document else None
 
 
 class QuoteNotificationService:
@@ -273,48 +381,26 @@ class QuoteNotificationService:
         subject = f"Solicitare ofertă nouă — {first_name} {last_name}".strip()
         return subject, text, html_body
 
-    async def _reset_failed(self, delivery):
-        resetter = getattr(self.delivery_repository, "reset_failed", None)
-        if callable(resetter):
-            return await resetter(delivery.id)
-
-        collection = getattr(self.delivery_repository, "collection", None)
-        if collection is None:
-            return None
-        clock = getattr(self.delivery_repository, "clock", None)
-        now = clock() if callable(clock) else datetime.now(timezone.utc)
-        await collection.find_one_and_update(
-            {"id": delivery.id, "state": "failed"},
-            {
-                "$set": {
-                    "state": "pending",
-                    "error_code": None,
-                    "sent_at": None,
-                    "updated_at": now,
-                }
-            },
-            return_document=ReturnDocument.AFTER,
-        )
-        return await self.current(delivery.related_quote_id)
-
     async def _deliver(self, quote, *, retry: bool):
         if self.delivery_repository is None or self.resend_client is None:
             return None
         quote_id = self._quote_value(quote, "id")
-        delivery = await self.delivery_repository.create_or_get(
+        existing = await self.current(quote_id)
+        if existing is not None and not retry:
+            return existing
+        delivery = existing or await self.delivery_repository.create_or_get(
             kind="quote_notification",
             idempotency_key=f"quote-notification/{quote_id}",
             recipient=NOTIFICATION_TO,
             related_quote_id=quote_id,
         )
         if delivery.state == "sent":
-            return delivery
-        if delivery.state == "failed":
-            if not retry:
-                return delivery
-            delivery = await self._reset_failed(delivery)
-            if delivery is None or delivery.state != "pending":
-                return delivery
+            raise _error(409, "Notificarea a fost deja trimisă.")
+        delivery = await self.delivery_repository.claim_notification(
+            delivery.id, allow_unstarted=existing is None,
+        )
+        if delivery is None:
+            raise _error(409, "Notificarea este în curs sau necesită verificare manuală înainte de retrimitere.")
 
         subject, text, html_body = self._message(quote)
         try:
@@ -327,11 +413,11 @@ class QuoteNotificationService:
                 reply_to=self._quote_value(quote, "email"),
             )
         except ResendError as error:
-            return await self.delivery_repository.mark_failed(
-                delivery.id, error_code=error.code
+            return await self.delivery_repository.complete_notification(
+                delivery.id, delivery.lease_token, error_code=error.code
             )
-        return await self.delivery_repository.mark_sent(
-            delivery.id, resend_email_id=provider_id
+        return await self.delivery_repository.complete_notification(
+            delivery.id, delivery.lease_token, resend_email_id=provider_id
         )
 
     async def notify(self, quote):
@@ -401,9 +487,10 @@ def create_quote_admin_router(repository, notification_service=None):
         if existing is not None:
             if existing.state == "sent":
                 raise _error(409, "Notificarea a fost deja trimisă.")
-            if existing.state != "failed":
-                raise _error(409, "Notificarea este deja în curs de trimitere.")
-        await notification_service.retry(detail)
+        try:
+            await notification_service.retry(detail)
+        except PyMongoError:
+            raise _error(503, UNAVAILABLE) from None
         return response((await repository.get(quote_id)).model_dump(mode="json"))
 
     return router

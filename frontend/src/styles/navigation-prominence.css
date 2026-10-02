@@ -1,4 +1,7 @@
 /* Targeted sizing: preserve the existing navbar geometry and hamburger. */
+.mobile-nav-sheet > .mobile-nav-column { height: 100%; min-height: 0; overflow: hidden; }
+.mobile-nav-sheet .mobile-nav-head { flex-shrink: 0; }
+.mobile-nav-sheet .mobile-nav-links { min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; }
 .site-navbar .site-navbar-brand img { transform: scale(1.265); transform-origin: center; }
 @media (min-width: 1024px) {
   body:has(main[data-design="night-runway"]) .site-navbar .site-navbar-links > a {

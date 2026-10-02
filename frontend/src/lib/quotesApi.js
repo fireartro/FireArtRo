@@ -29,3 +29,9 @@ export function updateAdminQuote(request, quote, values) {
     body: JSON.stringify({ version: quote.version, status: values.status, internal_note: values.internal_note }),
   });
 }
+
+export function retryAdminQuoteNotification(request, id) {
+  return request(`/api/admin/quotes/${encodeURIComponent(id)}/notification/retry`, {
+    method: "POST",
+  });
+}

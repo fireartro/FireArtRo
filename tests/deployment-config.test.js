@@ -6,6 +6,39 @@ import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+async function mediaCachePolicy(asset) {
+  const config = JSON.parse(await readFile(path.join(projectRoot, 'vercel.json'), 'utf8'));
+  const url = new URL(asset, 'https://fireart.ro');
+  let policy;
+  for (const rule of config.headers.filter(({ source }) => source.startsWith('/media/'))) {
+    const matcher = new RegExp(`^${rule.source.replace(':asset*', '(.*)')}$`);
+    if (!matcher.test(url.pathname)) continue;
+    if (rule.has?.some(condition => condition.type !== 'query'
+      || !url.searchParams.has(condition.key)
+      || !new RegExp(`^${condition.value}$`).test(url.searchParams.get(condition.key)))) continue;
+    policy = rule.headers.find(({ key }) => key.toLowerCase() === 'cache-control')?.value || policy;
+  }
+  return policy;
+}
+
+test('versioned hero films and posters receive the existing immutable media policy', async () => {
+  for (const asset of [
+    '/media/hero-film-wide-1.mp4?v=20260926-r6',
+    '/media/hero-film-portrait-3.mp4?v=20260926-r6',
+    '/media/hero-film-wide.webp?v=20260926-r6',
+    '/media/hero-film-portrait.webp?v=20260926-r6',
+    '/media/fireart-hero-wide.mp4?v=synthetic',
+  ]) assert.equal(await mediaCachePolicy(asset), 'public, max-age=31536000, immutable', asset);
+});
+
+test('unversioned and unrelated mutable media remain revalidatable', async () => {
+  for (const asset of [
+    '/media/hero-film-wide-1.mp4', '/media/hero-film-portrait.webp',
+    '/media/hero-film-wide.webp?v=', '/media/hero-film-wide.webp?preview=1',
+    '/media/fireart-hero-wide.mp4', '/media/gallery-photo.webp?v=synthetic',
+  ]) assert.equal(await mediaCachePolicy(asset), 'public, max-age=86400, stale-while-revalidate=604800', asset);
+});
+
 async function filesUnder(relativeDirectory) {
   const directory = path.join(projectRoot, relativeDirectory);
   const entries = await readdir(directory, { withFileTypes: true });

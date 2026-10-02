@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useReducedMotion } from "framer-motion";
@@ -11,6 +11,8 @@ import { createSettlingTicker } from "@/lib/settlingTicker";
 import { selectHomeGallery } from "@/lib/homeMediaSelection";
 
 gsap.registerPlugin(ScrollTrigger);
+const SHORT_DESKTOP_QUERY = "(min-width: 1200px) and (max-height: 640px) and (hover: hover) and (pointer: fine)";
+const GALLERY_IMAGE_SIZES = "auto, (max-width: 899px) 100vw, (min-width: 1600px) 78vw, min(64vw, 1344px)";
 
 export default function HomeGallery() {
   const homePage = useManagedContent("homePage", CMS_DEFAULTS.homePage);
@@ -19,10 +21,20 @@ export default function HomeGallery() {
   const galleryItems = useMemo(() => selectHomeGallery(homePage.promoSlides, mediaItems), [homePage.promoSlides, mediaItems]);
   const sectionRef = useRef(null);
   const reduceMotion = useReducedMotion();
+  const [shortDesktop, setShortDesktop] = useState(() => window.matchMedia?.(SHORT_DESKTOP_QUERY).matches || false);
+  const staticScene = reduceMotion || shortDesktop;
+  useEffect(() => {
+    const query = window.matchMedia?.(SHORT_DESKTOP_QUERY);
+    if (!query) return undefined;
+    const update = (event) => setShortDesktop(event?.matches ?? query.matches);
+    update();
+    query.addEventListener?.("change", update);
+    return () => query.removeEventListener?.("change", update);
+  }, []);
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
-    if (!section || reduceMotion) return undefined;
+    if (!section || staticScene) return undefined;
 
     let cleanupMotion = () => {};
 
@@ -246,7 +258,7 @@ export default function HomeGallery() {
       cleanupMotion();
       context.revert();
     };
-  }, [galleryItems, reduceMotion]);
+  }, [galleryItems, staticScene]);
 
   return (
     <section
@@ -255,7 +267,7 @@ export default function HomeGallery() {
       className="fa-work"
       data-home-scene="gallery"
       data-testid="home-gallery"
-      data-motion={reduceMotion ? "static" : "scroll"}
+      data-motion={staticScene ? "static" : "scroll"}
       aria-labelledby="fa-work-title"
     >
       <div className="fa-work__sticky">
@@ -289,7 +301,7 @@ export default function HomeGallery() {
                       </a>
                     ) : (
                       <Link to={item.ctaHref} aria-label={item.ctaLabel} title={item.shortText}>
-                        <img {...homeImageProps(item.media.src)} alt={item.media.alt} loading="lazy" decoding="async" />
+                        <img {...homeImageProps(item.media.src)} sizes={GALLERY_IMAGE_SIZES} alt={item.media.alt} loading="lazy" decoding="async" />
                       </Link>
                     )}
                   </figure>
