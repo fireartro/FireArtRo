@@ -40,10 +40,21 @@ const persistConsent = (choice, retentionDays) => {
 export default function CookieConsent() {
   const settings = useManagedContent("cookieSettings", CMS_DEFAULTS.cookieSettings);
   const [visible, setVisible] = useState(false);
+  const [introActive, setIntroActive] = useState(() => Boolean(document.documentElement.dataset.fireartIntro));
   const [customizing, setCustomizing] = useState(false);
   const [choice, setChoice] = useState(defaultChoice);
   const firstButtonRef = useRef(null);
   const panelRef = useRef(null);
+  const dialogOpen = visible && !introActive;
+
+  useEffect(() => {
+    // Never overlap the startup and cookie modal locks. Restoring an inert
+    // attribute captured during the intro would leave the finished site inert.
+    const syncIntro = () => setIntroActive(Boolean(document.documentElement.dataset.fireartIntro));
+    window.addEventListener("fireart:intro-dismissed", syncIntro);
+    syncIntro(); // The intro can finish between the first render and this effect.
+    return () => window.removeEventListener("fireart:intro-dismissed", syncIntro);
+  }, []);
 
   useEffect(() => {
     const stored = readCookieConsent();
@@ -70,7 +81,7 @@ export default function CookieConsent() {
   }, []);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!dialogOpen) return;
     const opener = document.activeElement;
     const panel = panelRef.current;
     const layer = panel.parentElement;
@@ -110,7 +121,7 @@ export default function CookieConsent() {
       });
       if (opener?.isConnected) opener.focus();
     };
-  }, [visible]);
+  }, [dialogOpen]);
 
   const save = (nextChoice) => {
     persistConsent(nextChoice, settings.retentionDays || 180);
@@ -119,7 +130,7 @@ export default function CookieConsent() {
     setCustomizing(false);
   };
 
-  if (!visible) return null;
+  if (!dialogOpen) return null;
 
   return createPortal(
     <div className="cookie-consent-layer" data-testid="cookie-consent">
