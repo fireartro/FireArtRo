@@ -1,4 +1,4 @@
-import { act } from "react";
+import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import CookieConsent, { COOKIE_CONSENT_STORAGE_KEY, OPEN_COOKIE_SETTINGS_EVENT } from "./CookieConsent";
 
@@ -21,6 +21,69 @@ beforeEach(async () => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove(); opener.remove(); prior.remove(); localStorage.clear();
+  delete document.documentElement.dataset.fireartIntro;
+});
+
+test("waits for the intro lock before opening cookies and leaves the page interactive after saving", async () => {
+  await act(async () => root.unmount());
+  root = createRoot(container);
+  container.id = "root";
+  container.setAttribute("inert", "");
+  document.documentElement.dataset.fireartIntro = "loading";
+  localStorage.clear();
+  await act(async () => root.render(<CookieConsent />));
+
+  expect(dialog()).toBeNull();
+  expect(container.hasAttribute("inert")).toBe(true);
+
+  await act(async () => {
+    container.removeAttribute("inert");
+    delete document.documentElement.dataset.fireartIntro;
+    window.dispatchEvent(new Event("fireart:intro-dismissed"));
+  });
+  expect(dialog()).not.toBeNull();
+  expect(container.hasAttribute("inert")).toBe(true);
+  const save = [...dialog().querySelectorAll("button")].find(node => node.textContent === "Doar necesare");
+  await act(async () => save.click());
+  expect(dialog()).toBeNull();
+  expect(container.hasAttribute("inert")).toBe(false);
+});
+
+test("keeps an open-settings request pending until a slow intro finishes", async () => {
+  await act(async () => root.unmount());
+  root = createRoot(container);
+  document.documentElement.dataset.fireartIntro = "loading";
+  await act(async () => root.render(<CookieConsent />));
+  await act(async () => window.dispatchEvent(new Event(OPEN_COOKIE_SETTINGS_EVENT)));
+  expect(dialog()).toBeNull();
+  await act(async () => {
+    delete document.documentElement.dataset.fireartIntro;
+    window.dispatchEvent(new Event("fireart:intro-dismissed"));
+  });
+  expect(dialog()).not.toBeNull();
+  expect(dialog().querySelector('input:not(:disabled)').checked).toBe(true);
+});
+
+test("opens cookies when the intro finishes between rendering and effect subscription", async () => {
+  await act(async () => root.unmount());
+  root = createRoot(container);
+  container.id = "root";
+  container.setAttribute("inert", "");
+  document.documentElement.dataset.fireartIntro = "loading";
+  localStorage.clear();
+  function IntroFinishesDuringCommit() {
+    useLayoutEffect(() => {
+      container.removeAttribute("inert");
+      delete document.documentElement.dataset.fireartIntro;
+      window.dispatchEvent(new Event("fireart:intro-dismissed"));
+    }, []);
+    return <CookieConsent />;
+  }
+  await act(async () => root.render(<IntroFinishesDuringCommit />));
+  expect(dialog()).not.toBeNull();
+  const save = [...dialog().querySelectorAll("button")].find(node => node.textContent === "Doar necesare");
+  await act(async () => save.click());
+  expect(container.hasAttribute("inert")).toBe(false);
 });
 test("traps Tab and Shift+Tab within the cookie dialog", () => {
   const controls = [...dialog().querySelectorAll('a[href], button, input:not(:disabled)')];
