@@ -1,0 +1,51 @@
+from pathlib import Path
+import json, subprocess, shutil, concurrent.futures
+import os
+R=Path(os.environ.get('FIREART_HERO_WORKDIR',Path(__file__).resolve().parents[2]/'output/hero-rebuild')).resolve()
+repo=Path(__file__).resolve().parents[2]
+inv=json.loads((R/'inventory.json').read_text())
+videos={v['id']:v for v in inv['videos']}
+drones={d['id']:d for d in json.loads((R/'drones.json').read_text())}
+
+# Cut windows were inspected around ignition, peak and decay. Each effect is
+# used once. Desktop daylight uses two continuous, separate camera events.
+# Portrait substitutions are explicit editorial choices, never a blind centre crop.
+shots=json.loads((Path(__file__).parent/'edit.json').read_text())['shots']
+
+def run(args):
+    p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    if p.returncode: raise RuntimeError(p.stderr.decode(errors='replace')[-4000:])
+
+for profile in ['landscape','portrait']:
+    (R/profile/'assets').mkdir(exist_ok=True)
+    (R/profile/'compositions').mkdir(exist_ok=True)
+
+def prepare(job):
+    shot,profile=job
+    spec=shot['wide' if profile=='landscape' else 'portrait']
+    if spec.get('omit'):return
+    src=spec['src']; assets=R/profile/'assets'
+    duration=spec.get('duration',shot['duration'])
+    if src.startswith('D'):
+        p=Path(drones[src]['path']); dest=assets/(shot['id']+'.webp');shutil.copy2(p,dest)
+        return
+    v=videos[src]; dest=assets/(shot['id']+'.mp4')
+    stamp=dest.with_suffix('.json')
+    key=json.dumps([spec,duration])
+    if dest.exists() and stamp.exists() and stamp.read_text()==key: return
+    at=spec['at'];rate=spec['rate']
+    assert at+duration*rate<=v['duration']+.01,(shot,profile)
+    # Lossless framing follows in HyperFrames; source orientation is normalised here.
+    vf=f'setpts=(PTS-STARTPTS)/{rate},'
+    vf+=('minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1' if spec.get('interpolate') else 'fps=30')
+    vf+=',setsar=1'
+    # Native 8K portrait is normalised to the 4K portrait canvas before authoring.
+    if max(v['stream']['width'],v['stream']['height'])>3840:
+        vf+=',scale=2160:3840:force_original_aspect_ratio=decrease:flags=lanczos'
+    run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(at),'-i',v['path'],'-vf',vf,'-frames:v',str(round(duration*30)),'-an','-c:v','h264_nvenc','-preset','p5','-rc','vbr','-cq','17','-b:v','0','-pix_fmt','yuv420p','-g','30','-map_metadata','-1','-movflags','+faststart',str(dest)])
+    stamp.write_text(key)
+    print(profile,shot['id'],flush=True)
+
+(R/'edit.json').write_text(json.dumps({'fps':30,'duration':90,'chapters':[0,30,60,90],'shots':shots},indent=2),encoding='utf-8')
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool: list(pool.map(prepare,[(s,p) for p in ['landscape','portrait'] for s in shots]))
+print('PREPARED',flush=True)

@@ -1,5 +1,5 @@
-// The bundled variants are H264 High Profile, up to Level 4.0. Unsupported
-// browsers should show the existing poster, not download the movie first.
+// Check the HD H264 High Profile fallback before attaching media. The montage
+// separately recovers from an unsupported UHD source by selecting that HD file.
 export function canPlayHeroVideo(video) {
   return Boolean(video.canPlayType('video/mp4; codecs="avc1.640028"'));
 }
@@ -71,6 +71,7 @@ export function scheduleHeroVideoPlayback(callback, windowLike) {
   let frameId;
   let cancelIdle;
   const scheduleIdle = () => {
+    if (isHeroIntroLoading(windowLike)) { callback(); return; }
     if (typeof windowLike.requestIdleCallback === 'function') {
       const idleId = windowLike.requestIdleCallback(callback, { timeout: HERO_VIDEO_IDLE_TIMEOUT_MS });
       cancelIdle = () => windowLike.cancelIdleCallback?.(idleId);

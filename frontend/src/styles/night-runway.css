@@ -210,8 +210,8 @@ body:has(main[data-design="night-runway"]) .mobile-nav-sheet {
 
 @media (max-width: 767px) {
   body:has(main[data-design="night-runway"]) .site-navbar-brand img {
-    height: 2.75rem;
-    max-width: min(9.5rem, 43vw);
+    height: 3.025rem;
+    max-width: min(10.45rem, 47.3vw);
   }
 }
 
@@ -568,4 +568,12 @@ body:has(main[data-design="night-runway"]) .site-navbar-layout {
   .nr-button__flare {
     transition-duration: 1ms !important;
   }
+}
+
+/* Readable laptop scale at common Retina CSS viewports, independent of OS. */
+@media (min-width: 1024px) and (max-width: 1599px) and (min-height: 650px) {
+  html:has(main[data-design="night-runway"]) { font-size: 18px; }
+  body:has(main[data-design="night-runway"]) .site-navbar-links > a { font-size: .875rem; }
+  body:has(main[data-design="night-runway"]) .site-navbar-brand img { height: 2.8rem; }
+  body:has(main[data-design="night-runway"]) .desktop-social-dock .social-dock-icon { width: 1.4rem; height: 1.4rem; }
 }

@@ -34,7 +34,7 @@ function start({ reduced = false, active = true, connection = {} } = {}) {
   const button = { hidden: true, addEventListener, removeEventListener };
   const intro = {
     dataset: {}, isConnected: true,
-    querySelector: selector => selector === 'canvas' ? { getContext: () => null } : button,
+    querySelector: selector => selector === 'button' ? button : null,
     contains: () => false,
     remove() { this.isConnected = false; }
   };
@@ -58,26 +58,17 @@ function start({ reduced = false, active = true, connection = {} } = {}) {
   return { window, intro, root, media, html, button, tasks, events, advance };
 }
 
-test('waits for the first playable frame, then releases input and all timers', () => {
-  const run = start();
-  run.window.__fireartIntro.contentReady();
-  run.window.__fireartIntro.routeReady('/');
-  run.advance(1200);
-  assert.equal(run.root.inert, true);
-  assert.equal(run.html.dataset.fireartIntro, 'loading');
-  run.media.video = { readyState: 4, paused: false };
-  run.advance(100);
-  assert.equal(run.html.dataset.fireartIntro, 'loading');
-  run.advance(1699);
-  assert.equal(run.root.inert, true);
-  run.advance(1);
-  assert.equal(run.html.dataset.fireartIntro, 'leaving');
-  assert.equal(run.root.inert, true);
-  run.advance(700);
-  assert.equal(run.root.inert, false);
-  assert.equal(run.intro.isConnected, false);
-  assert.equal(run.tasks.size, 0);
-  assert.equal(run.events.size, 0);
+test('ready first video releases all input by 1.5 seconds', () => {
+ const run=start();run.media.video={readyState:4,paused:false};
+ run.window.__fireartIntro.routeReady('/');run.advance(1500);
+ assert.equal(run.intro.isConnected,false);assert.equal(run.root.inert,false);assert.equal(run.tasks.size,0);
+});
+
+test('a video ready at 1.4 seconds still releases by the 1.5 second deadline', () => {
+ const run=start();run.media.video={readyState:0,paused:true};
+ run.window.__fireartIntro.routeReady('/');run.advance(1400);
+ run.media.video.readyState=4;run.events.get('canplaythrough')();run.advance(100);
+ assert.equal(run.intro.isConnected,false);assert.equal(run.root.inert,false);
 });
 
 test('a slow playable video keeps loading beyond twelve seconds, even with a ready poster', () => {
@@ -102,15 +93,9 @@ test('failed poster and failed video cannot trap a visitor', () => {
   assert.equal(run.root.inert, false);
 });
 
-test('reduced motion keeps the three-second minimum without animating the exit', () => {
-  const run = start({ reduced: true });
-  run.window.__fireartIntro.routeReady('/');
-  run.advance(2999);
-  assert.equal(run.root.inert, true);
-  run.advance(1);
-  assert.equal(run.intro.isConnected, false);
-  assert.equal(run.root.inert, false);
-  assert.equal(run.tasks.size, 0);
+test('reduced motion dismisses without an artificial wait', () => {
+ const run=start({reduced:true});run.window.__fireartIntro.routeReady('/');run.advance(100);
+ assert.equal(run.intro.isConnected,false);assert.equal(run.root.inert,false);
 });
 
 test('Admin and failed publication dismiss the overlay immediately', () => {
@@ -138,6 +123,7 @@ test('a slow app stays covered after twelve seconds and offers a deliberate retr
 
 test('skip is available only after the route mounts and releases focus blocking', () => {
   const run = start();
+  run.media.playback = 'video';
   assert.equal(run.button.hidden, true);
   run.window.__fireartIntro.routeReady('/');
   assert.equal(run.button.hidden, true);
@@ -148,14 +134,14 @@ test('skip is available only after the route mounts and releases focus blocking'
   assert.equal(run.intro.isConnected, false);
 });
 
-test('an already-ready interior page still remains covered for three seconds', () => {
+test('an already-ready interior page still remains covered for a brief reveal', () => {
   const run = start();
   run.window.__fireartIntro.routeReady('/galerie');
-  run.advance(2999);
+  run.advance(1299);
   assert.equal(run.html.dataset.fireartIntro, 'loading');
   run.advance(1);
   assert.equal(run.html.dataset.fireartIntro, 'leaving');
-  run.advance(680);
+  run.advance(200);
   assert.equal(run.intro.isConnected, false);
 });
 
@@ -206,7 +192,7 @@ test('an explicitly poster-only unsupported hero still exits without waiting for
   const run = start();
   run.media.playback = 'poster';
   run.window.__fireartIntro.routeReady('/');
-  run.advance(3680);
+  run.advance(1500);
   assert.equal(run.intro.isConnected, false);
 });
 
@@ -215,7 +201,7 @@ test('a posterless custom video still is sufficient when playback is explicitly 
   run.media.playback = 'poster';
   run.media.video = run.media.poster = { tagName: 'VIDEO', readyState: 2, paused: true };
   run.window.__fireartIntro.routeReady('/');
-  run.advance(3680);
+  run.advance(1500);
   assert.equal(run.intro.isConnected, false);
   assert.equal(run.root.inert, false);
 });

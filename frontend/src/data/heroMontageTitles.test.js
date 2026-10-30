@@ -1,18 +1,31 @@
-import titles from './heroMontageTitles.json';
+import films from './heroMontageTitles.json';
+import { getHeroFilmCue } from '../components/site/heroFilmClock';
 
-test('each film has distinct, readable Romanian copy timed inside its 30-second chapter', () => {
-  expect(titles).toHaveLength(3);
-  const allTexts = [];
-  titles.forEach((chapter, index) => {
-    expect(chapter.duration).toBe(30);
-    expect(chapter.cues.length).toBeGreaterThanOrEqual(4);
-    chapter.cues.forEach(cue => {
+test('all three chapters have bounded, readable, non-overlapping Romanian captions', () => {
+  expect(films).toHaveLength(3);
+  for (const film of films) {
+    expect(film.duration).toBe(30);
+    expect(new Set(film.cues.map(cue => cue.id)).size).toBe(film.cues.length);
+    for (let i = 0; i < film.cues.length; i += 1) {
+      const cue = film.cues[i];
       expect(cue.start).toBeGreaterThanOrEqual(0);
       expect(cue.end).toBeLessThanOrEqual(30);
-      expect(cue.end).toBeGreaterThan(cue.start);
-      expect(cue.lines.every(line => line.length <= 25)).toBe(true);
-      allTexts.push(`${index}:${cue.lines.join(' ')}`);
-    });
-  });
-  expect(new Set(allTexts).size).toBe(allTexts.length);
+      expect(cue.end - cue.start).toBeGreaterThanOrEqual(2.5);
+      if (i) expect(cue.start).toBeGreaterThanOrEqual(film.cues[i - 1].end);
+      expect(cue.lines).toHaveLength(2);
+    }
+  }
+});
+
+test('the color caption accompanies daylight ignition and points accompany the drone formation', () => {
+  expect(getHeroFilmCue(2, films[1]).id).toBe('color');
+  expect(getHeroFilmCue(9, films[0]).id).toBe('points');
+  expect(films[0].cues.some(cue => cue.id === 'color')).toBe(false);
+  expect(getHeroFilmCue(28, films[2]).id).toBe('finale');
+});
+
+test('a seek selects captions from the media clock and leaves quiet gaps intact', () => {
+  expect(getHeroFilmCue(10.95, films[0])).toBeNull();
+  expect(getHeroFilmCue(32, films[1]).id).toBe('color');
+  expect(getHeroFilmCue(2, films[1]).lines).toEqual(['CULOAREA', 'INTRĂ ÎN SCENĂ.']);
 });

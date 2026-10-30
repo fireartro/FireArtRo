@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import HeroMontage from './HeroMontage';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-let container, root, originalWidth, originalHeight, originalVisibility;
+let container, root, originalWidth, originalHeight, originalVisibility, originalDpr;
 const resize = (width, height) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: height });
@@ -24,6 +24,8 @@ beforeEach(() => {
   originalWidth = window.innerWidth;
   originalHeight = window.innerHeight;
   originalVisibility = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+  originalDpr = window.devicePixelRatio;
+  Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 1 });
   resize(1200, 800);
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -39,6 +41,7 @@ afterEach(() => {
   container.remove();
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalWidth });
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight });
+  Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: originalDpr });
   if (originalVisibility) Object.defineProperty(document, 'visibilityState', originalVisibility);
   else delete document.visibilityState;
   jest.useRealTimers();
@@ -293,4 +296,59 @@ test('does not restart a video on loadeddata after the page becomes hidden', () 
   HTMLMediaElement.prototype.play.mockClear();
   act(() => video.dispatchEvent(new Event('loadeddata')));
   expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+});
+
+test('resumes the exact current frame on rotation even between timeupdate events', () => {
+  activate();
+  const video = container.querySelector('video');
+  timeUpdate(video, 12);
+  video.currentTime = 12.17;
+  resize(390, 844);
+  activate();
+  const portrait = container.querySelector('video');
+  act(() => portrait.dispatchEvent(new Event('loadedmetadata')));
+  expect(portrait.getAttribute('src')).toContain('portrait-1.mp4');
+  expect(portrait.currentTime).toBe(12.17);
+});
+
+test('rotation immediately after a chapter handoff keeps the new chapter', async () => {
+  activate();
+  const first = container.querySelector('video');
+  timeUpdate(first, 25);
+  await act(async () => first.dispatchEvent(new Event('ended')));
+  const second = container.querySelector('video');
+  second.currentTime = 0.08;
+  resize(390, 844);
+  activate();
+  const portrait = container.querySelector('video');
+  act(() => portrait.dispatchEvent(new Event('loadedmetadata')));
+  expect(portrait.dataset.filmIndex).toBe('1');
+  expect(portrait.currentTime).toBe(0.08);
+});
+
+test('falls back from UHD to HD at the current frame and does not keep retrying UHD', async () => {
+  resize(3840, 2160);
+  activate();
+  const uhd = container.querySelector('video');
+  expect(uhd.getAttribute('src')).toContain('wide-1-uhd.mp4');
+  uhd.currentTime = 14.27;
+  await act(async () => uhd.dispatchEvent(new Event('error')));
+  activate();
+  const hd = container.querySelector('video');
+  act(() => hd.dispatchEvent(new Event('loadedmetadata')));
+  expect(hd.getAttribute('src')).toContain('wide-1.mp4');
+  expect(hd.currentTime).toBe(14.27);
+  resize(390, 844);
+  activate();
+  expect(container.querySelector('video').dataset.mediaQuality).toBe('hd');
+});
+
+test('does not remount the player when phone browser chrome changes only its height', () => {
+  resize(430, 932);
+  activate();
+  const video = container.querySelector('video');
+  video.currentTime = 11;
+  resize(430, 840);
+  expect(container.querySelector('video')).toBe(video);
+  expect(video.currentTime).toBe(11);
 });

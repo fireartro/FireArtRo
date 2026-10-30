@@ -3,8 +3,11 @@ import HeroKineticTitles from './HeroKineticTitles';
 import montageTitles from '@/data/heroMontageTitles.json';
 import { canPlayHeroVideo, canStartHeroVideo, getHeroAutoplayPolicy, isHeroIntroLoading, primeHeroVideoBuffer, scheduleHeroVideoPlayback } from './heroPlayback';
 import { getNextFilmIndex, selectMontageFormat, shouldPreloadNextFilm } from './heroMontagePlayback';
+import { selectHeroDelivery } from './heroDelivery';
+import { watchHeroFrames } from './heroFrameWatch';
+import '../../styles/hero-montage.css';
 
-const mediaVersion = '20260926-r6';
+const mediaVersion = '20261030-unique-r3';
 const films = {
   wide: [1, 2, 3].map(index => `/media/hero-film-wide-${index}.mp4?v=${mediaVersion}`),
   portrait: [1, 2, 3].map(index => `/media/hero-film-portrait-${index}.mp4?v=${mediaVersion}`),
@@ -17,7 +20,7 @@ const readFormat = () => typeof window === 'undefined'
   ? 'wide'
   : selectMontageFormat(window.innerWidth, window.innerHeight);
 
-function HeroMontagePlayer({ format }) {
+function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayheadRef, onDeliveryError, onDecoderStall }) {
   const stageRef = useRef(null);
   const videoRefs = useRef([null, null]);
   const activeVideoRef = useRef(null);
@@ -29,14 +32,14 @@ function HeroMontagePlayer({ format }) {
   const activeSlotRef = useRef(0);
   const retryTimers = useRef([null, null]);
   const retryAttempts = useRef([0, 0]);
-  const resumeAt = useRef([null, null]);
+  const resumeAt = useRef([playheadRef.current.time > 0 ? playheadRef.current.time : null, null]);
   const mounted = useRef(true);
   const playbackAllowed = useRef(true);
   const lifecycleHidden = useRef(false);
   const recoverRef = useRef(null);
   const [posterReady, setPosterReady] = useState(false);
   const [activated, setActivated] = useState(false);
-  const [slotIndices, setSlotIndices] = useState([0, null]);
+  const [slotIndices, setSlotIndices] = useState(() => [playheadRef.current.index, null]);
   const [activeSlot, setActiveSlot] = useState(0);
   const [playingSlot, setPlayingSlot] = useState(null);
   const [pageVisible, setPageVisible] = useState(() => typeof document === 'undefined' || document.visibilityState !== 'hidden');
@@ -48,7 +51,16 @@ function HeroMontagePlayer({ format }) {
   activeSlotRef.current = activeSlot;
   playbackAllowed.current = visible && enabled && !lifecycleHidden.current;
   const currentFilmIndex = slotIndices[activeSlot];
-  const currentSource = films[format][currentFilmIndex];
+  const filmSource = index => delivery === 'uhd'
+    ? films[format][index].replace('.mp4?', '-uhd.mp4?') : films[format][index];
+  const currentSource = filmSource(currentFilmIndex);
+  // Read the media element immediately before a format/quality change. A
+  // timeupdate event can lag the displayed frame by a quarter of a second.
+  capturePlayheadRef.current = () => {
+    const video = videoRefs.current[activeSlotRef.current];
+    if (!video || !Number.isFinite(video.currentTime)) return;
+    playheadRef.current = { index: Number(video.dataset.filmIndex), time: video.currentTime };
+  };
 
   useEffect(() => {
     mounted.current = true;
@@ -138,6 +150,13 @@ function HeroMontagePlayer({ format }) {
     return () => window.removeEventListener('fireart:intro-dismissed', startPlayback);
   }, [activated, activeSlot, visible, enabled]);
 
+  useEffect(() => {
+    const video = videoRefs.current[activeSlot];
+    if (!activated || !visible || !enabled || !video) return undefined;
+    return watchHeroFrames(video, onDecoderStall, () => playbackAllowed.current
+      && !pendingSwitch.current && !isHeroIntroLoading(window));
+  }, [activated, activeSlot, visible, enabled, onDecoderStall]);
+
   const retryVideo = useCallback((slot, reload = true) => {
     const video = videoRefs.current[slot];
     if (!video || retryTimers.current[slot] !== null) return;
@@ -204,6 +223,7 @@ function HeroMontagePlayer({ format }) {
       resumeAt.current[activeSlot] = null;
       resumeAt.current[nextSlot] = null;
       pendingSwitch.current = false;
+      playheadRef.current = { index: Number(nextVideo.dataset.filmIndex), time: nextVideo.currentTime };
       setActiveSlot(nextSlot);
       setPlayingSlot(nextSlot);
       setSlotIndices(previous => previous.map((index, slot) => slot === activeSlot ? null : index));
@@ -211,7 +231,7 @@ function HeroMontagePlayer({ format }) {
       if (!finishAttempt()) return;
       if (mounted.current && playbackAllowed.current) retryVideo(nextSlot, false);
     });
-  }, [activeSlot, clearRetry, retryVideo]);
+  }, [activeSlot, clearRetry, retryVideo, playheadRef]);
   switchRef.current = trySwitch;
 
   recoverRef.current = () => {
@@ -246,10 +266,11 @@ function HeroMontagePlayer({ format }) {
   }, [activeSlot, format]);
 
   const onTimeUpdate = useCallback(event => {
-    if (!visible || !activated) return;
     const video = event.currentTarget;
+    playheadRef.current = { index: currentFilmIndex, time: video.currentTime };
+    if (!visible || !activated) return;
     if (shouldPreloadNextFilm(video.currentTime, video.duration || 30, true)) requestNext();
-  }, [activated, requestNext, visible]);
+  }, [activated, requestNext, visible, currentFilmIndex, playheadRef]);
 
   const onEnded = useCallback(() => {
     requestNext();
@@ -293,7 +314,7 @@ function HeroMontagePlayer({ format }) {
           <video
             key={`${format}-${slot}-${index}`}
             ref={element => { videoRefs.current[slot] = element; if (slot === activeSlot) activeVideoRef.current = element; }}
-            src={films[format][index]}
+            src={filmSource(index)}
             autoPlay={slot === activeSlot && visible && !isHeroIntroLoading(window)}
             muted
             playsInline
@@ -320,8 +341,9 @@ function HeroMontagePlayer({ format }) {
             }}
             onTimeUpdate={slot === activeSlot ? onTimeUpdate : undefined}
             onEnded={slot === activeSlot ? onEnded : undefined}
-            onError={() => retryVideo(slot)}
+            onError={() => delivery === 'uhd' ? onDeliveryError() : retryVideo(slot)}
             data-media-variant={format}
+            data-media-quality={delivery}
             data-film-index={index}
             className={`hero-media-surface hero-media-video hero-montage__video absolute inset-0 h-full w-full object-cover${slot === activeSlot && playingSlot === slot ? ' hero-montage__video--visible' : ''}`}
           />
@@ -338,7 +360,17 @@ function HeroMontagePlayer({ format }) {
 }
 
 export default function HeroMontage() {
+  const [decoderGeneration, setDecoderGeneration] = useState(0);
   const [format, setFormat] = useState(readFormat);
+  const playheadRef = useRef({ index: 0, time: 0 });
+  const capturePlayheadRef = useRef(null);
+  const recoverDecoder = useCallback(() => {
+    capturePlayheadRef.current?.();
+    setDecoderGeneration(value => value + 1);
+  }, []);
+  const [forceHD, setForceHD] = useState(false);
+  const [delivery, setDelivery] = useState(() => typeof window === 'undefined' ? 'hd'
+    : selectHeroDelivery(window.innerWidth, window.innerHeight, window.devicePixelRatio, navigator.connection));
   useEffect(() => {
     let lastWidth = window.innerWidth;
     const update = () => {
@@ -346,15 +378,26 @@ export default function HeroMontage() {
       // Address-bar and keyboard height changes should not restart a phone film.
       if (width === lastWidth && width <= 900) return;
       lastWidth = width;
+      capturePlayheadRef.current?.();
       setFormat(readFormat());
+      setDelivery(selectHeroDelivery(width, window.innerHeight, window.devicePixelRatio, navigator.connection));
     };
     window.addEventListener('resize', update, { passive: true });
-    const rotate = () => setFormat(readFormat());
+    const rotate = () => {
+      capturePlayheadRef.current?.();
+      setFormat(readFormat());
+      setDelivery(selectHeroDelivery(window.innerWidth, window.innerHeight, window.devicePixelRatio, navigator.connection));
+    };
     window.addEventListener('orientationchange', rotate, { passive: true });
     return () => {
       window.removeEventListener('resize', update);
       window.removeEventListener('orientationchange', rotate);
     };
   }, []);
-  return <HeroMontagePlayer key={format} format={format} />;
+  const quality = forceHD ? 'hd' : delivery;
+  return <HeroMontagePlayer key={`${format}-${quality}-${decoderGeneration}`} format={format} delivery={quality} onDecoderStall={recoverDecoder}
+    playheadRef={playheadRef} capturePlayheadRef={capturePlayheadRef} onDeliveryError={() => {
+      capturePlayheadRef.current?.();
+      setForceHD(true);
+    }} />;
 }

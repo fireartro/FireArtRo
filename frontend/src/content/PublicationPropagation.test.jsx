@@ -31,11 +31,15 @@ const render=()=>act(async()=>roots.forEach(root=>root.render(<MemoryRouter><Man
 test('two public consumers receive a published change without remounting their playing films',async()=>{
   await render();await act(async()=>containers.forEach(el=>el.querySelector('img').dispatchEvent(new Event('load'))));await tick(2000);
   const films=containers.map(el=>el.querySelector('video'));expect(films.every(Boolean)).toBe(true);
+  // JSDOM does not decode media. Advance the simulated playing films so the
+  // real decoder watchdog does not correctly identify them as frozen.
   films.forEach(video=>{video.currentTime=12;});
+  const playback=setInterval(()=>films.forEach(video=>{video.currentTime+=.25;}),250);
   content.siteDetails.name='Publicare confirmată';revision='r2';await tick(5000);
-  containers.forEach((el,i)=>{expect(el.querySelector('p[data-revision]').dataset.revision).toBe('r2');expect(el.textContent).toContain('Publicare confirmată');expect(el.querySelector('video')).toBe(films[i]);expect(films[i].currentTime).toBe(12);});
+  containers.forEach((el,i)=>{expect(el.querySelector('p[data-revision]').dataset.revision).toBe('r2');expect(el.textContent).toContain('Publicare confirmată');expect(el.querySelector('video')).toBe(films[i]);expect(films[i].currentTime).toBe(17);});
   const fullFetches=global.fetch.mock.calls.filter(([url])=>url==='/api/content').length;
   await tick(5000);expect(global.fetch.mock.calls.filter(([url])=>url==='/api/content')).toHaveLength(fullFetches);
+  clearInterval(playback);
 });
 test('a stalled full-content refresh keeps the last publication and later recovers',async()=>{
   await render();revision='r2';content.siteDetails.name='Recovered';failContent=true;

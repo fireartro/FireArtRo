@@ -1,0 +1,28 @@
+{
+  "videos": {
+    "V01": "GX010064.MP4",
+    "V02": "GX010065.MP4",
+    "V03": "IMG_0478.mov",
+    "V04": "IMG_5268.mov",
+    "V05": "IMG_6186.mov",
+    "V06": "IMG_7977.mov",
+    "V09": "IMG_8997.mov",
+    "V13": "IMG_6961.mov",
+    "V14": "IMG_8051.mov",
+    "V17": "20260516_202549.mp4",
+    "V18": "IMG_4843.mov"
+  },
+  "drones": {
+    "D05": "frontend/public/media/gallery/fireartro-drone-show-adam-show-img-7638-3.webp",
+    "D06": "frontend/public/media/gallery/fireartro-drone-show-adam-show-img-7640.webp",
+    "D09": "frontend/public/media/gallery/fireartro-drone-show-art-is-alive-artisalive3.webp",
+    "D19": "frontend/public/media/gallery/fireartro-drone-show-baia-mare-img-5485-2.webp",
+    "D21": "frontend/public/media/gallery/fireartro-drone-show-baia-mare-img-5524-2.webp",
+    "D22": "frontend/public/media/gallery/fireartro-drone-show-baia-mare-img-5525-2.webp",
+    "D23": "frontend/public/media/gallery/fireartro-drone-show-baia-mare-img-5527-2.webp",
+    "D115": "frontend/public/media/gallery/fireartro-drone-show-sifi-img-3733.webp",
+    "D117": "frontend/public/media/gallery/fireartro-drone-show-sifi-img-3736.webp",
+    "D120": "frontend/public/media/gallery/fireartro-drone-show-sifi-img-3740.webp",
+    "D127": "frontend/public/media/gallery/fireartro-drone-show-suceava-revelion-img-7306.webp"
+  }
+}

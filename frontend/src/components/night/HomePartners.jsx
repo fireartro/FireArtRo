@@ -3,8 +3,8 @@ import { useReducedMotion } from "framer-motion";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { isOriginalPartnerSeed, resolveDisplayPartners } from "@/data/partnerCatalog";
 import useManagedContent from "@/hooks/useManagedContent";
-import PartnerCloud from "./PartnerCloud";
-import "@/styles/night-partners.css";
+import PartnerScrollScene from "./PartnerScrollScene";
+import "@/styles/partner-scroll.css";
 
 export default function HomePartners() {
   const homePage = useManagedContent("homePage", CMS_DEFAULTS.homePage);
@@ -17,6 +17,6 @@ export default function HomePartners() {
   const title = untouchedSeed && copy.title === CMS_DEFAULTS.homePage.partners.title ? "Împreună, dincolo de spectacol." : copy.title;
   if (!partners.length) return null;
   return <section className="fa-partners fa-partners-gallery" id="parteneri" data-home-scene="partners" data-testid="home-partners" aria-labelledby="fa-partners-title">
-    <PartnerCloud partners={partners} copy={copy} title={title} reduceMotion={reduceMotion} />
+    <PartnerScrollScene partners={partners} copy={copy} title={title} reduceMotion={reduceMotion} />
   </section>;
 }

@@ -1,0 +1,19 @@
+/* Dedicated landscape/portrait edits fill the hero at every viewport size. */
+#acasa .hero-montage .hero-media-surface {
+  object-fit: cover;
+  object-position: center;
+}
+/* Wider viewports crop height. Keep the sky formations inside the frame,
+   leaving the crop in the foreground on tablets and ultrawide monitors. */
+@media (orientation: portrait) and (min-aspect-ratio: 9/16), (min-aspect-ratio: 16/9) {
+  #acasa .hero-montage .hero-media-surface {
+    object-position: 50% 0%;
+  }
+}
+#acasa .hero-montage .hero-montage__video {
+  opacity: 0;
+  transition: none;
+}
+/* The next decoded frame replaces the previous slot in one commit. Fading it
+   from zero would reveal the opening poster again at every chapter boundary. */
+#acasa .hero-montage .hero-montage__video--visible { opacity: 1; }

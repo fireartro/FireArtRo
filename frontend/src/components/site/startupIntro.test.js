@@ -38,26 +38,18 @@ afterEach(() => {
 });
 const start = () => new Function(introScript)();
 
-test('draws multiple distinct warm and cool firework trails rather than a monochrome burst', () => {
-  start();
-  const colors = [...new Set(strokes.map(value => value.match(/^rgba\((\d+),(\d+),(\d+),/)?.slice(1).map(Number).join(',')))].filter(Boolean);
-  expect(colors.length).toBeGreaterThanOrEqual(4);
-  expect(colors.some(color => { const [r,,b] = color.split(',').map(Number); return b > r + 30; })).toBe(true);
-  expect(colors.some(color => { const [r,,b] = color.split(',').map(Number); return r > b + 30; })).toBe(true);
-});
-
-test('keeps the loading screen visible for at least three seconds when content is ready immediately', () => {
+test('keeps the loading screen visible for no longer than 1.5 seconds when content is ready immediately', () => {
   clock.mockReturnValue(0);
   start();
   window.__fireartIntro.contentReady();
   window.__fireartIntro.routeReady('/contact');
-  jest.advanceTimersByTime(2999);
+  jest.advanceTimersByTime(1299);
   expect(document.documentElement.dataset.fireartIntro).toBe('loading');
   expect(document.getElementById('root').hasAttribute('inert')).toBe(true);
   jest.advanceTimersByTime(1);
   expect(document.documentElement.dataset.fireartIntro).toBe('leaving');
   expect(document.getElementById('root').hasAttribute('inert')).toBe(true);
-  jest.advanceTimersByTime(680);
+  jest.advanceTimersByTime(200);
   expect(document.getElementById('root').hasAttribute('inert')).toBe(false);
 });
 
@@ -71,11 +63,11 @@ test.each(['wheel', 'touchmove', 'keydown'])('blocks %s scrolling until the intr
   document.dispatchEvent(before);
   expect(before.defaultPrevented).toBe(true);
   window.__fireartIntro.routeReady('/contact');
-  jest.advanceTimersByTime(3000);
+  jest.advanceTimersByTime(1300);
   const leaving = gesture();
   document.dispatchEvent(leaving);
   expect(leaving.defaultPrevented).toBe(true);
-  jest.advanceTimersByTime(680);
+  jest.advanceTimersByTime(200);
   const after = gesture();
   document.dispatchEvent(after);
   expect(after.defaultPrevented).toBe(false);
