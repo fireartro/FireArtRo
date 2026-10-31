@@ -38,6 +38,23 @@ afterEach(() => {
 });
 const start = () => new Function(introScript)();
 
+test('keeps loading footage looping and restarts a decoder whose time stops advancing', () => {
+  document.querySelector('#fireart-intro canvas').outerHTML = '<video muted></video>';
+  const footage=document.querySelector('#fireart-intro video');
+  Object.defineProperty(footage,'readyState',{value:2});
+  const play=jest.spyOn(HTMLMediaElement.prototype,'play').mockResolvedValue();
+  const pause=jest.spyOn(HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});
+  clock.mockReturnValue(0);
+  start();
+  expect(footage.loop).toBe(true);
+  clock.mockReturnValue(350);
+  jest.advanceTimersByTime(350);
+  clock.mockReturnValue(1800);
+  jest.advanceTimersByTime(350);
+  expect(pause).toHaveBeenCalled();
+  expect(play).toHaveBeenCalledTimes(2);
+});
+
 test('keeps the loading screen visible for no longer than 1.5 seconds when content is ready immediately', () => {
   clock.mockReturnValue(0);
   start();

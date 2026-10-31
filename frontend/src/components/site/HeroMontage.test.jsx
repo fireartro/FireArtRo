@@ -49,7 +49,7 @@ afterEach(() => {
   delete document.documentElement.dataset.fireartIntro;
 });
 
-test('buffers the first film behind the intro without consuming it before it can play through', () => {
+test('buffers the first film and starts with future frames without a canplaythrough promise', () => {
   document.documentElement.dataset.fireartIntro = 'loading';
   activate();
   const first = container.querySelector('video');
@@ -61,8 +61,8 @@ test('buffers the first film behind the intro without consuming it before it can
   expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
   act(() => jest.advanceTimersByTime(20000));
   expect(HTMLMediaElement.prototype.load).not.toHaveBeenCalled();
-  Object.defineProperty(first, 'readyState', { configurable: true, value: 4 });
-  act(() => first.dispatchEvent(new Event('canplaythrough')));
+  Object.defineProperty(first, 'readyState', { configurable: true, value: 3 });
+  act(() => first.dispatchEvent(new Event('loadeddata')));
   expect(HTMLMediaElement.prototype.play.mock.instances).toContain(first);
 });
 

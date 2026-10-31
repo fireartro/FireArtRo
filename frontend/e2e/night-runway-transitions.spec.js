@@ -53,7 +53,8 @@ test.describe("FireArt scroll-directed motion", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
 
     const partners = page.getByTestId("home-partners");
-    await expect(partners.getByTestId("partner-scroll")).toHaveAttribute("data-layout", "orbit");
+    await partners.scrollIntoViewIfNeeded();
+    await expect(partners.getByTestId("partner-scroll")).toHaveAttribute("data-layout", "ribbons");
     await expect(partners.locator("a.fa-partner__body")).toHaveCount(26);
   });
 

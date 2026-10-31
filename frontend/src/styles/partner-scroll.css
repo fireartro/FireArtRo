@@ -17,38 +17,36 @@
 @media(max-width:1199px) { .fa-partner-scroll__marks { grid-template-columns:repeat(4,minmax(0,1fr)); } }
 @media(max-width:599px) { .fa-partner-scroll__marks { grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }.fa-partner-scroll__stage { padding:65px 20px; } }
 
-.fa-partner-scroll[data-layout='orbit'] { height:320svh; }
-[data-layout='orbit'] .fa-partner-scroll__stage {
+.fa-partner-scroll[data-layout^='ribbon'] { height:320svh; }
+[data-layout^='ribbon'] .fa-partner-scroll__stage {
   position:sticky;top:0;height:100svh;overflow:hidden;
   display:grid;grid-template-rows:auto minmax(0,1fr);
   padding:clamp(88px,13svh,180px) clamp(12px,5vw,100px) clamp(24px,5svh,64px);
 }
-[data-layout='orbit'] .fa-partner-scroll__copy { margin:0 auto; }
-[data-layout='orbit'] .fa-partner-scroll__marks {
-  position:relative;display:block;isolation:isolate;pointer-events:none;
+[data-layout^='ribbon'] .fa-partner-scroll__copy { margin:0 auto; }
+.fa-partner-ribbon__canvas { display:none; }
+[data-layout^='ribbon'] .fa-partner-ribbon__canvas { display:block;position:relative;min-height:0; }
+.fa-partner-ribbon__canvas canvas { display:block;position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y; }
+[data-layout='ribbons'] .fa-partner-scroll__marks {
+  position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);margin:0;padding:0;
 }
-[data-layout='orbit'] .fa-partner {
-  display:block;position:absolute;width:var(--card-width);height:var(--card-height);
-  left:calc(50% - var(--card-width) / 2);top:calc(50% - var(--card-height) / 2);
-  pointer-events:auto;
+[data-layout='ribbons'] .fa-partner-scroll__marks:focus-within {
+  position:absolute;z-index:5;left:50%;bottom:72px;transform:translateX(-50%);width:min(280px,70vw);height:auto;overflow:visible;clip-path:none;display:block;
 }
-.fa-partner-scroll[data-layout='orbit'] .fa-partner__body { min-height:0;padding:5%;gap:4%;box-shadow:0 3px 8px #0004; }
-.fa-partner-scroll[data-layout='orbit'] .fa-partner__mark { width:100%;flex:1;min-height:0;height:auto;padding:4% 6%;border-radius:12px; }
-.fa-partner-scroll[data-layout='orbit'] .fa-partner__name { font-size:clamp(9px, .85vw, 13px);line-height:1.13;min-height:2.26em; }
+[data-layout='ribbons'] .fa-partner { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }
+[data-layout='ribbons'] .fa-partner:focus-within { position:relative;width:auto;height:auto;overflow:visible;clip-path:none; }
 @media(max-width:700px) {
-  [data-layout='orbit'] .fa-partner-scroll__stage { padding:clamp(76px,12svh,118px) 5px max(68px,env(safe-area-inset-bottom)); }
-  [data-layout='orbit'] .fa-partner-scroll__copy { padding:0 14px; }
-  [data-layout='orbit'] .fa-partner-scroll__copy h2 { font-size:clamp(25px,7.3vw,43px); }
-  .fa-partner-scroll[data-layout='orbit'] .fa-partner__body { border-radius:16px; }
-  .fa-partner-scroll[data-layout='orbit'] .fa-partner__mark { border-radius:9px; }
+  [data-layout^='ribbon'] .fa-partner-scroll__stage { padding:clamp(76px,12svh,118px) 5px max(68px,env(safe-area-inset-bottom)); }
+  [data-layout^='ribbon'] .fa-partner-scroll__copy { padding:0 14px; }
+  [data-layout^='ribbon'] .fa-partner-scroll__copy h2 { font-size:clamp(25px,7.3vw,43px); }
 }
 @media(max-height:600px) {
-  [data-layout='orbit'] .fa-partner-scroll__stage { padding-top:70px;padding-bottom:12px; }
-  [data-layout='orbit'] .fa-partner-scroll__copy h2 { font-size:clamp(21px,5svh,30px);margin:4px auto; }
-  [data-layout='orbit'] .fa-partner-scroll__copy > p { font-size:10px;line-height:1.25;margin:4px 0; }
+  [data-layout^='ribbon'] .fa-partner-scroll__stage { padding-top:70px;padding-bottom:12px; }
+  [data-layout^='ribbon'] .fa-partner-scroll__copy h2 { font-size:clamp(21px,5svh,30px);margin:4px auto; }
+  [data-layout^='ribbon'] .fa-partner-scroll__copy > p { font-size:10px;line-height:1.25;margin:4px 0; }
 }
 /* The site's social links occupy the bottom edge on phones and in short
    landscape windows. Keep the entire near-side orbit above their hit area. */
 @media(max-width:767px), (orientation:landscape) and (max-height:30rem) {
-  [data-layout='orbit'] .fa-partner-scroll__stage { padding-bottom:calc(64px + env(safe-area-inset-bottom, 0px)); }
+  [data-layout^='ribbon'] .fa-partner-scroll__stage { padding-bottom:calc(64px + env(safe-area-inset-bottom, 0px)); }
 }

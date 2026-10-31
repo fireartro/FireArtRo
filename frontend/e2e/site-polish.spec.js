@@ -9,6 +9,7 @@ async function enter(page) {
  await page.goto('/',{waitUntil:'domcontentloaded'});
  await expect(page.locator('#fireart-intro')).toHaveCount(0,{timeout:30000});
  const consent=page.getByRole('button',{name:'Doar necesare',exact:true});
+ await expect(consent).toBeVisible();
  if(await consent.isVisible())await consent.click();
  await expect.poll(()=>active(page).evaluate(v=>!v.paused&&v.readyState>=2&&v.currentTime>0)).toBe(true);
 }
@@ -18,7 +19,7 @@ test('startup releases within 1.5 seconds when its first video is ready',async({
    window.addEventListener('fireart:intro-dismissed',()=>{window.introTiming.end=performance.now();});
    const timer=setInterval(()=>{
      const v=document.querySelector('#acasa video');
-     if(v?.readyState>=4&&!window.introTiming.ready)window.introTiming.ready=performance.now();
+     if(v?.readyState>=3&&!window.introTiming.ready)window.introTiming.ready=performance.now();
      if(window.introTiming.end)clearInterval(timer);
    },20);
  });
@@ -75,135 +76,130 @@ test('MacBook CSS viewports keep the same substantial scale in both browser engi
  expect(metrics.root).toBe(18);expect(metrics.nav).toBeGreaterThanOrEqual(15.75);expect(metrics.overflow).toBeLessThanOrEqual(0);
 });
 
-async function enterOrbit(page, progress) {
- const node = page.locator('.fa-partner-scroll');
- await expect(node).toHaveAttribute('data-layout', 'orbit');
- await expect(async () => {
-   await node.evaluate(async (section, part) => {
-     const top=scrollY + section.getBoundingClientRect().top + part * (section.offsetHeight - section.firstElementChild.offsetHeight);
-     window.scrollTo({top, behavior:'instant'});
-     // WebKit delivers native scroll and animation sampling on separate ticks.
-     await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));
-   }, progress);
-   const error=await node.evaluate((section,part)=>section.getBoundingClientRect().top + part * (section.offsetHeight - section.firstElementChild.offsetHeight),progress);
-   expect(Math.abs(error)).toBeLessThan(2);
-   await expect.poll(() => node.locator('li').first().evaluate(el => el.getAnimations()[0]?.playState)).toBe('running');
-   expect(Math.abs(await node.locator('.fa-partner-scroll__stage').evaluate(stage => stage.getBoundingClientRect().top))).toBeLessThan(2);
- }).toPass({timeout:7000});
+
+async function enterRibbons(page, progress=.3) {
+ const node=page.getByTestId('partner-scroll');
+ await node.scrollIntoViewIfNeeded();
+ await expect(node).toHaveAttribute('data-layout','ribbons');
+ await node.evaluate(async (section,part)=>{
+   window.scrollTo({top:scrollY+section.getBoundingClientRect().top+part*(section.offsetHeight-section.firstElementChild.offsetHeight),behavior:'instant'});
+   await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));
+ },progress);
  return node;
 }
 
-// A valid crossing has two logo surfaces at the same pixel. The browser must
-// paint and hit-test the nearer partner first, regardless of DOM order.
-async function orbitSnapshot(node) {
- return node.evaluate(section => {
-   const cards = [...section.querySelectorAll('li')];
-   const boxes = cards.map(card => card.getBoundingClientRect());
-   const depth = cards.map(card => new DOMMatrix(getComputedStyle(card).transform).a);
-   const inFront = new Set();
-   let crossings = 0, wrongSurface = 0, hit;
-   const heading = section.querySelector('header').getBoundingClientRect();
-   const docks = [...document.querySelectorAll('.desktop-social-dock,.mobile-social-dock')].map(d => d.getBoundingClientRect()).filter(r=>r.width);
-   const intersects = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-   boxes.forEach((a,i) => {
-     const center = document.elementFromPoint(a.x + a.width / 2, a.y + a.height / 2)?.closest('li');
-     if (center === cards[i]) inFront.add(i);
-     boxes.slice(i+1).forEach(b => {
-       const left=Math.max(a.left,b.left), right=Math.min(a.right,b.right);
-       const top=Math.max(a.top,b.top), bottom=Math.min(a.bottom,b.bottom);
-       if (right-left<10 || bottom-top<10) return;
-       const x=(left+right)/2, y=(top+bottom)/2;
-       const stack = [...new Set(document.elementsFromPoint(x,y).map(el=>el.closest('.fa-partner')).filter(Boolean))];
-       if(stack.length<2) return;
-       crossings++;
-       const first=cards.indexOf(stack[0]);
-       if(stack.slice(1).some(card=>depth[cards.indexOf(card)] > depth[first]+.009)) wrongSurface++;
-       const front=boxes[first];
-       const margin=Math.min(x-front.left,front.right-x,y-front.top,front.bottom-y);
-       if (!hit || margin>hit.margin) hit={x,y,margin,href:cards[first].querySelector('a').href};
-     });
-   });
-   return {
-     count:cards.length, inFront:[...inFront], crossings, wrongSurface, hit,
-     clipped:boxes.flatMap((b,i)=>b.left < -1 || b.right > innerWidth+1 || b.top < heading.bottom-1 || b.bottom > innerHeight+1 || docks.some(d=>intersects(d,b))
-       ? [{partner:cards[i].dataset.partnerId,rect:b.toJSON(),heading:heading.bottom,docks:docks.map(d=>d.toJSON())}] : []),
-     overflow:Math.max(0,document.documentElement.scrollWidth-document.documentElement.clientWidth),
-     broken:[...section.querySelectorAll('img')].filter(img=>!img.complete || !img.naturalWidth).map(img=>img.src),
-   };
- });
-}
-
-test('partner orbits have real front-to-back crossings and working links', async ({page}, info) => {
+test('two curved partner ribbons animate, accept taps and recover after a tab return',async({page},info)=>{
  await enter(page);
- const node = await enterOrbit(page, .30);
- await expect(node.locator('a.fa-partner__body')).toHaveCount(26);
+ const node=await enterRibbons(page);
+ const canvas=node.locator('canvas');
+ const frame=async()=>require('crypto').createHash('sha256').update(await canvas.screenshot()).digest('hex');
+ const before=await frame();
+ await expect.poll(frame).not.toBe(before);
+ await expect(node.locator('.fa-partner__body')).toHaveCount(26);
  await expect(node.locator('button')).toHaveCount(0);
- const first = node.locator('li').first();
- const x = () => first.evaluate(card=>card.getBoundingClientRect().x);
- const start=await x();
- await expect.poll(x).not.toBe(start);
- const seen = new Set();
- for(const part of [.02,.10,.18,.26,.34,.42,.50,.58,.66,.74,.82,.90,.98]) {
-   await enterOrbit(page, part);
-   await expect.poll(async()=> (await orbitSnapshot(node)).broken).toEqual([]);
-   const view=await orbitSnapshot(node);
-   expect(view.clipped).toEqual([]);
-   expect(view.overflow).toBe(0);
-   expect(view.wrongSurface).toBe(0);
-   expect(view.inFront.length).toBeGreaterThan(7);
-   view.inFront.forEach(i=>seen.add(i));
- }
- expect(seen.size).toBe(26);
- await page.screenshot({path:info.outputPath('partner-orbits.png')});
- await page.context().route('**/*', route=>route.request().isNavigationRequest() ? route.fulfill({body:'Partner destination'}) : route.continue());
- const view=await orbitSnapshot(node);
- expect(view.crossings).toBeGreaterThan(0);
- // Leave the animation running while exercising a real tap/click at a crossing.
- const popup=page.waitForEvent('popup');
- if(info.project.use.hasTouch) await page.touchscreen.tap(view.hit.x,view.hit.y);
- else await page.mouse.click(view.hit.x,view.hit.y);
- await expect(await popup).toHaveURL(view.hit.href);
-});
-
-test('partner orbits fit short desktop windows, phones and landscape rotation',async({page})=>{
- await enter(page);
- for(const [width,height] of [[320,568],[390,844],[844,390],[1024,600],[1366,500],[1536,736]]) {
-   await page.setViewportSize({width,height});
-   const node=await enterOrbit(page,.42);
-   const view=await orbitSnapshot(node);
-   expect(view.clipped, `viewport ${width}x${height}`).toEqual([]);
-   expect(view.overflow).toBe(0);
-   expect(view.wrongSurface).toBe(0);
- }
-});
-
-test('a finger swipe turns the partner orbits on Android',async({page},info)=>{
- test.skip(info.project.name !== 'mobile-chromium', 'CDP touch gestures run on Android Chromium.');
- await enter(page);
- const node = await enterOrbit(page,.25);
- const time = () => node.locator('li').first().evaluate(el=>el.getAnimations()[0].currentTime);
- const before = await time();
- const initialScroll = await page.evaluate(()=>scrollY);
- const client = await page.context().newCDPSession(page);
- try {
-   await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:160,y:500}]});
-   for (const y of [475,450,425,400,375,350]) {
-     await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:160,y}]});
-     await page.waitForTimeout(28);
+ await page.screenshot({path:info.outputPath('x-partner-ribbons.png')});
+ await page.context().route('**/*',route=>route.request().isNavigationRequest()?route.fulfill({body:'Partner destination'}):route.continue());
+ await page.waitForTimeout(700);
+ // Resolve an actual mesh through the canvas's normal raycast pointer path.
+ const hit=await canvas.evaluate(c=>{
+   const rect=c.getBoundingClientRect();
+   for(let y=rect.height*.2;y<rect.height*.85;y+=24)for(let x=rect.width*.12;x<rect.width*.88;x+=24) {
+     c.dispatchEvent(new PointerEvent('pointermove',{clientX:rect.x+x,clientY:rect.y+y,pointerType:'mouse'}));
+     const name=c.title;
+     const safe=name && [[-12,-12],[12,-12],[-12,12],[12,12]].every(([dx,dy])=>{
+       c.dispatchEvent(new PointerEvent('pointermove',{clientX:rect.x+x+dx,clientY:rect.y+y+dy,pointerType:'mouse'}));
+       return c.title===name;
+     });
+     if(safe) {
+       const link=[...document.querySelectorAll('.fa-partner__body')].find(a=>a.getAttribute('aria-label')==='Deschide '+c.title);
+       return {x:rect.x+x,y:rect.y+y,href:link.href};
+     }
    }
-   await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-   await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(initialScroll+75);
-   await expect.poll(time).toBeGreaterThan(before+2200);
- } finally {
-   await client.detach();
+ });
+ expect(hit).toBeTruthy();
+ await canvas.evaluate(c=>{
+   window.partnerClickTrace=[];
+   ['pointerdown','pointerup','pointercancel','pointerleave'].forEach(type=>c.addEventListener(type,event=>
+     window.partnerClickTrace.push({type,primary:event.isPrimary,button:event.button,title:c.title,scroll:scrollY})));
+   const open=window.open;
+   window.open=(...args)=>{window.partnerClickTrace.push({opened:args[0]});return open(...args);};
+ });
+ const popup=page.context().waitForEvent('page');
+ if(info.project.use.hasTouch)await page.touchscreen.tap(hit.x,hit.y);
+ else await page.mouse.click(hit.x,hit.y);
+ await expect.poll(()=>page.evaluate(()=>window.partnerClickTrace),{timeout:3000})
+   .toEqual(expect.arrayContaining([expect.objectContaining({opened:hit.href})]));
+ const opened=await popup;
+ await expect(opened).toHaveURL(hit.href);
+ await opened.close();
+ await page.bringToFront();
+ await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
+ const returned=await frame();
+ await expect.poll(frame).not.toBe(returned);
+});
+
+test('partner ribbons fit phones, landscape rotation and shorter desktops',async({page})=>{
+ await enter(page);
+ for(const [width,height] of [[320,568],[390,844],[844,390],[1024,600],[1512,982]]) {
+   await page.setViewportSize({width,height});
+   const node=await enterRibbons(page);
+   const state=await node.evaluate(n=>{
+     const stage=n.firstElementChild.getBoundingClientRect(),heading=n.querySelector('header').getBoundingClientRect();
+     const canvas=n.querySelector('canvas').getBoundingClientRect();
+     return {overflow:Math.max(0,document.documentElement.scrollWidth-document.documentElement.clientWidth),
+       clipped:canvas.top<heading.bottom-1||canvas.left<0||canvas.right>innerWidth||canvas.bottom>innerHeight,
+       pinned:Math.abs(stage.top)<2,height:canvas.height};
+   });
+   expect(state.overflow).toBe(0);expect(state.clipped).toBe(false);expect(state.pinned).toBe(true);
+   expect(state.height).toBeGreaterThan(90);
  }
+});
+
+test('keyboard links and the WebGL failure fallback remain usable',async({page})=>{
+ await enter(page);
+ const node=await enterRibbons(page);
+ const first=node.locator('.fa-partner__body').first();
+ await first.focus();
+ await expect(first).toBeFocused();
+ const bounds=await first.boundingBox();
+ expect(bounds.width).toBeGreaterThan(60);
+ await node.locator('canvas').evaluate(c=>c.dispatchEvent(new Event('webglcontextlost',{cancelable:true})));
+ await expect(node).toHaveAttribute('data-layout','grid');
+ await expect(node.locator('canvas')).toHaveCount(0);
+ await expect(node.locator('.fa-partner__body').first()).toBeVisible();
 });
 
 test('partners stay accessible as a grid with reduced motion',async({page})=>{
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto('/',{waitUntil:'domcontentloaded'});
- const grid=page.locator('.fa-partner-scroll');
+ const grid=page.getByTestId('partner-scroll');
  await expect(grid).toHaveAttribute('data-layout','grid');
  await expect(grid.locator('a.fa-partner__body')).toHaveCount(26);
- expect(await grid.locator('ul').evaluate(ul=>ul.getAnimations({subtree:true}).length)).toBe(0);
+ await expect(grid.locator('canvas')).toHaveCount(0);
+});
+
+test('loading automatically opens when the browser never signals canplaythrough',async({page})=>{
+ await page.addInitScript(()=>{
+   const ready=Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype,'readyState');
+   Object.defineProperty(HTMLMediaElement.prototype,'readyState',{configurable:true,get(){return Math.min(3,ready.get.call(this));}});
+ });
+ await enter(page);
+ await expect(page.locator('#root')).not.toHaveAttribute('inert');
+});
+
+test('a stalled first film cannot trap the visitor and the loading footage keeps looping',async({page})=>{
+ await page.route('**/media/hero-film-*.mp4*',route=>new Promise(resolve=>setTimeout(()=>resolve(route.abort()),12000)));
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ const footage=page.locator('#fireart-intro video');
+ await expect(footage).toHaveJSProperty('loop',true);
+ await expect.poll(()=>footage.evaluate(v=>v.currentTime)).toBeGreaterThan(.3);
+ const duration=await footage.evaluate(v=>{
+   v.currentTime=v.duration-.35;
+   v.play().catch(()=>{});
+   return v.duration;
+ });
+ await expect.poll(()=>footage.evaluate(v=>v.currentTime),{timeout:4500}).toBeLessThan(duration-.5);
+ await expect(page.locator('#fireart-intro')).toHaveCount(0,{timeout:11000});
+ await page.getByRole('button',{name:'Doar necesare',exact:true}).click();
+ expect(await page.locator('#root').evaluate(root=>root.inert)).toBe(false);
 });

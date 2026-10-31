@@ -40,8 +40,9 @@ export function isHeroIntroLoading(windowLike) {
 
 export function canStartHeroVideo(video, windowLike) {
   // Do not consume the small initial buffer behind the loading overlay.
-  // HAVE_ENOUGH_DATA means the browser expects playback through to the end.
-  return !isHeroIntroLoading(windowLike) || video.readyState >= 4;
+  // HAVE_FUTURE_DATA is sufficient to advance, including browsers which
+  // deliberately buffer in segments and never promise canplaythrough.
+  return !isHeroIntroLoading(windowLike) || video.readyState >= 3;
 }
 
 const primingVideos = new WeakSet();
@@ -50,7 +51,7 @@ export function primeHeroVideoBuffer(video, windowLike) {
   // preload is only a hint (notably on mobile). A suspended metadata-only
   // request needs play() to ask for data, but must not spend its tiny buffer
   // behind the intro. Never load()/detach the source to recover this case.
-  if (!isHeroIntroLoading(windowLike) || video.readyState >= 4 || video.error
+  if (!isHeroIntroLoading(windowLike) || video.readyState >= 3 || video.error
     || video.networkState !== 1 || primingVideos.has(video)) return;
   primingVideos.add(video);
   Promise.resolve(video.play()).then(() => {

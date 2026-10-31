@@ -5,7 +5,13 @@
     if (!intro || !html.dataset.fireartIntro) { intro?.remove(); return; }
     const root = document.getElementById('root');
     const footage = intro.querySelector('video');
-    if (footage && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) footage.play().catch(() => {});
+    const playFootage = () => {
+        if (!footage || document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        footage.loop = true;
+        footage.muted = true;
+        footage.play().catch(() => {});
+    };
+    playFootage();
     const skip = intro.querySelector('button');
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const started = window.__fireartIntroStarted ?? performance.now();
@@ -18,6 +24,20 @@
     let exitTimer;
     let removeTimer;
     let skipTimer;
+    let stalledTimer;
+    let footageTime = -1;
+    let footageMoved = performance.now();
+    const footageTimer = footage ? setInterval(() => {
+        if (document.hidden || motion.matches) return;
+        if (footage.currentTime !== footageTime) {
+            footageTime = footage.currentTime;
+            footageMoved = performance.now();
+        } else if (footage.readyState >= 2 && performance.now() - footageMoved > 1200) {
+            footage.pause();
+            playFootage();
+            footageMoved = performance.now();
+        }
+    }, 350) : null;
     root?.setAttribute('inert', '');
     clearInterval(window.__fireartIntroSafety);
     // CSS overflow alone does not stop touch overscroll on WebKit. Keep the
@@ -40,12 +60,15 @@
         if (closed) return;
         closed = true;
         clearInterval(mediaTimer);
+        clearInterval(footageTimer);
         clearTimeout(exitTimer);
         clearTimeout(removeTimer);
         clearTimeout(skipTimer);
+        clearTimeout(stalledTimer);
         clearTimeout(safetyTimer);
         footage?.pause();
-        document.removeEventListener('canplaythrough', checkMedia, true);
+        ['loadeddata', 'canplay', 'canplaythrough', 'error'].forEach(type => document.removeEventListener(type, checkMedia, true));
+        footage?.removeEventListener('canplay', playFootage);
         window.removeEventListener('pageshow', onPageShow);
         document.removeEventListener('visibilitychange', onVisibility);
         motion.removeEventListener?.('change', onMotion);
@@ -85,9 +108,9 @@
         const posterOnly = motion.matches || connection?.saveData || playback === 'poster';
         const expectsVideo = playback === 'video' && !posterOnly;
         const elapsed = performance.now() - routeStarted;
-        // A decoded first frame (HAVE_CURRENT_DATA) is not enough on slow
-        // networks. Wait for HAVE_ENOUGH_DATA; never replace this with a timer.
-        const videoReady = video && video.readyState >= 4 && !video.error;
+        // HAVE_FUTURE_DATA means playback can advance. Mobile browsers can
+        // buffer a healthy stream without ever promising canplaythrough.
+        const videoReady = video && video.readyState >= 3 && !video.error;
         const stillReady = posterOnly && poster?.tagName === 'VIDEO' && poster.readyState >= 2;
         const posterFallback = imageReady && (posterOnly || (!expectsVideo && !video && elapsed > 1500) || video?.error || (video?.readyState >= 4 && elapsed > 1500));
         const mediaFailed = poster?.complete && !imageReady && (video?.error || (!expectsVideo && !video)) && elapsed > 1500;
@@ -114,6 +137,9 @@
             homepage = path === '/';
             intro.dataset.routeReady = 'true';
             clearTimeout(safetyTimer);
+            // A failed/blocked media request must never keep the page inert.
+            // The hero retains its poster and continues its own recovery.
+            stalledTimer = setTimeout(() => finish(), 8000);
             skip.textContent = 'Intră pe site ↗';
             skip.hidden = true;
             skipTimer = setTimeout(() => { if (!closed) skip.hidden = false; }, Math.max(0, minimumDuration - (performance.now() - started)));
@@ -125,9 +151,10 @@
     skip.addEventListener('click', onSkip);
     window.addEventListener('pageshow', onPageShow);
 
-    function onVisibility() { if (!document.hidden) checkMedia(); }
+    function onVisibility() { if (!document.hidden) { playFootage(); checkMedia(); } }
     function onMotion() { checkMedia(); }
     document.addEventListener('visibilitychange', onVisibility);
-    document.addEventListener('canplaythrough', checkMedia, true);
+    ['loadeddata', 'canplay', 'canplaythrough', 'error'].forEach(type => document.addEventListener(type, checkMedia, true));
+    footage?.addEventListener('canplay', playFootage);
     motion.addEventListener?.('change', onMotion);
 })();

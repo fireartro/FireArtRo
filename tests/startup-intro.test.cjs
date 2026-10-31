@@ -71,15 +71,11 @@ test('a video ready at 1.4 seconds still releases by the 1.5 second deadline', (
  assert.equal(run.intro.isConnected,false);assert.equal(run.root.inert,false);
 });
 
-test('a slow playable video keeps loading beyond twelve seconds, even with a ready poster', () => {
+test('a stalled hero automatically releases the poster and input after eight seconds', () => {
   const run = start();
   run.media.video = { readyState: 0, paused: true };
   run.window.__fireartIntro.routeReady('/');
-  run.advance(20000);
-  assert.equal(run.html.dataset.fireartIntro, 'loading');
-  assert.equal(run.root.inert, true);
-  run.media.video = { readyState: 4, paused: false };
-  run.advance(800);
+  run.advance(8200);
   assert.equal(run.intro.isConnected, false);
   assert.equal(run.root.inert, false);
 });
@@ -145,12 +141,12 @@ test('an already-ready interior page still remains covered for a brief reveal', 
   assert.equal(run.intro.isConnected, false);
 });
 
-test('a slow poster is not treated as a failed image and can finish after twenty seconds', () => {
+test('a slow poster keeps its loading window and can finish before the stall deadline', () => {
   const run = start({ reduced: true });
   run.media.poster.complete = false;
   run.media.poster.naturalWidth = 0;
   run.window.__fireartIntro.routeReady('/');
-  run.advance(20000);
+  run.advance(5000);
   assert.equal(run.root.inert, true);
   run.media.poster.complete = true;
   run.media.poster.naturalWidth = 1920;
@@ -159,18 +155,18 @@ test('a slow poster is not treated as a failed image and can finish after twenty
   assert.equal(run.tasks.size, 0);
 });
 
-test('a 3g connection waits for sufficient video buffer, not just its poster or first frame', () => {
+test('a 3g connection accepts future frames without waiting for canplaythrough', () => {
   const run = start({ connection: { effectiveType: '3g' } });
   run.media.playback = 'video';
   run.media.video = { readyState: 0, paused: true };
   run.window.__fireartIntro.routeReady('/');
-  run.advance(20000);
+  run.advance(2000);
   assert.equal(run.html.dataset.fireartIntro, 'loading');
   assert.equal(run.root.inert, true);
   run.media.video = { readyState: 2, paused: false };
-  run.advance(5000);
+  run.advance(1000);
   assert.equal(run.html.dataset.fireartIntro, 'loading');
-  run.media.video = { readyState: 4, paused: false };
+  run.media.video = { readyState: 3, paused: false };
   run.advance(800);
   assert.equal(run.intro.isConnected, false);
   assert.equal(run.root.inert, false);
@@ -181,7 +177,7 @@ test('does not mistake delayed video mounting for a poster-only hero', () => {
   const run = start();
   run.media.playback = 'video';
   run.window.__fireartIntro.routeReady('/');
-  run.advance(20000);
+  run.advance(3000);
   assert.equal(run.html.dataset.fireartIntro, 'loading');
   run.media.video = { readyState: 4, paused: false };
   run.advance(800);
