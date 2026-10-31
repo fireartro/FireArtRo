@@ -79,7 +79,7 @@ test('MacBook CSS viewports keep the same substantial scale in both browser engi
 
 async function enterRibbons(page, progress=.3) {
  const node=page.getByTestId('partner-scroll');
- await node.scrollIntoViewIfNeeded();
+ if (await node.getAttribute('data-layout') !== 'ribbons') await node.scrollIntoViewIfNeeded();
  await expect(node).toHaveAttribute('data-layout','ribbons');
  await node.evaluate(async (section,part)=>{
    window.scrollTo({top:scrollY+section.getBoundingClientRect().top+part*(section.offsetHeight-section.firstElementChild.offsetHeight),behavior:'instant'});
@@ -88,54 +88,63 @@ async function enterRibbons(page, progress=.3) {
  return node;
 }
 
-test('two curved partner ribbons animate, accept taps and recover after a tab return',async({page},info)=>{
+test('two curved partner ribbons follow scroll, accept taps and recover after a tab return',async({page},info)=>{
  await enter(page);
  const node=await enterRibbons(page);
  const canvas=node.locator('canvas');
  const frame=async()=>require('crypto').createHash('sha256').update(await canvas.screenshot()).digest('hex');
  const before=await frame();
+ await enterRibbons(page,.42);
  await expect.poll(frame).not.toBe(before);
  await expect(node.locator('.fa-partner__body')).toHaveCount(26);
  await expect(node.locator('button')).toHaveCount(0);
  await page.screenshot({path:info.outputPath('x-partner-ribbons.png')});
- await page.context().route('**/*',route=>route.request().isNavigationRequest()?route.fulfill({body:'Partner destination'}):route.continue());
- await page.waitForTimeout(700);
- // Resolve an actual mesh through the canvas's normal raycast pointer path.
- const hit=await canvas.evaluate(c=>{
+ // Find the interior of a visible card, clear of overlays and adjacent cards.
+ const findTarget=()=>canvas.evaluate(c=>{
    const rect=c.getBoundingClientRect();
-   for(let y=rect.height*.2;y<rect.height*.85;y+=24)for(let x=rect.width*.12;x<rect.width*.88;x+=24) {
-     c.dispatchEvent(new PointerEvent('pointermove',{clientX:rect.x+x,clientY:rect.y+y,pointerType:'mouse'}));
-     const name=c.title;
-     const safe=name && [[-12,-12],[12,-12],[-12,12],[12,12]].every(([dx,dy])=>{
-       c.dispatchEvent(new PointerEvent('pointermove',{clientX:rect.x+x+dx,clientY:rect.y+y+dy,pointerType:'mouse'}));
-       return c.title===name;
-     });
-     if(safe) {
-       const link=[...document.querySelectorAll('.fa-partner__body')].find(a=>a.getAttribute('aria-label')==='Deschide '+c.title);
-       return {x:rect.x+x,y:rect.y+y,href:link.href};
+   function nameAt(x,y) {
+     if(document.elementFromPoint(x,y)!==c) return '';
+     c.dispatchEvent(new PointerEvent('pointermove',{clientX:x,clientY:y,pointerType:'mouse'}));
+     return c.title;
+   }
+   for(let y=rect.top+rect.height*.22;y<rect.top+rect.height*.85;y+=18) {
+     for(let x=rect.left+rect.width*.12;x<rect.left+rect.width*.88;x+=18) {
+       const name=nameAt(x,y);
+       if(name && [[-7,-7],[7,-7],[-7,7],[7,7]].every(([dx,dy])=>nameAt(x+dx,y+dy)===name)) {
+         const link=Array.from(document.querySelectorAll('.fa-partner__body')).find(a=>a.getAttribute('aria-label')==='Deschide '+name);
+         return {x,y,name,href:link.href};
+       }
      }
    }
+   return null;
  });
- expect(hit).toBeTruthy();
- await canvas.evaluate(c=>{
-   window.partnerClickTrace=[];
-   ['pointerdown','pointerup','pointercancel','pointerleave'].forEach(type=>c.addEventListener(type,event=>
-     window.partnerClickTrace.push({type,primary:event.isPrimary,button:event.button,title:c.title,scroll:scrollY})));
-   const open=window.open;
-   window.open=(...args)=>{window.partnerClickTrace.push({opened:args[0]});return open(...args);};
- });
+ // A settled sample must survive a second hit test before touching it.
+ let hit;
+ await expect.poll(async()=>{
+   const previous=hit;
+   hit=await findTarget();
+   return Boolean(hit && previous && hit.name===previous.name && hit.x===previous.x && hit.y===previous.y);
+ }).toBe(true);
+ const destination=new URL(hit.href);
+ await page.context().route(url=>url.origin===destination.origin,route=>route.fulfill({body:'Partner destination'}));
  const popup=page.context().waitForEvent('page');
  if(info.project.use.hasTouch)await page.touchscreen.tap(hit.x,hit.y);
  else await page.mouse.click(hit.x,hit.y);
- await expect.poll(()=>page.evaluate(()=>window.partnerClickTrace),{timeout:3000})
-   .toEqual(expect.arrayContaining([expect.objectContaining({opened:hit.href})]));
  const opened=await popup;
  await expect(opened).toHaveURL(hit.href);
  await opened.close();
  await page.bringToFront();
  await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
- const returned=await frame();
- await expect.poll(frame).not.toBe(returned);
+ const targetName=()=>canvas.evaluate((c,{x,y})=>{
+   c.dispatchEvent(new PointerEvent('pointermove',{clientX:x,clientY:y,pointerType:'mouse'}));
+   return c.title;
+ },hit);
+ // Returning to the same scroll offset must put the original partner back
+ // under the pointer, including after backing up through the helix.
+ await enterRibbons(page,.62);
+ await expect.poll(targetName).not.toBe(hit.name);
+ await enterRibbons(page,.42);
+ await expect.poll(targetName).toBe(hit.name);
 });
 
 test('partner ribbons fit phones, landscape rotation and shorter desktops',async({page})=>{
@@ -144,13 +153,16 @@ test('partner ribbons fit phones, landscape rotation and shorter desktops',async
    await page.setViewportSize({width,height});
    const node=await enterRibbons(page);
    const state=await node.evaluate(n=>{
-     const stage=n.firstElementChild.getBoundingClientRect(),heading=n.querySelector('header').getBoundingClientRect();
+     const stage=n.firstElementChild.getBoundingClientRect();
+     const heading=n.querySelector('header').getBoundingClientRect();
      const canvas=n.querySelector('canvas').getBoundingClientRect();
      return {overflow:Math.max(0,document.documentElement.scrollWidth-document.documentElement.clientWidth),
-       clipped:canvas.top<heading.bottom-1||canvas.left<0||canvas.right>innerWidth||canvas.bottom>innerHeight,
+       clipped:canvas.top < -1||canvas.left<0||canvas.right>innerWidth||canvas.bottom>innerHeight,
+       coversHeading:canvas.left < heading.right-1 && canvas.right > heading.left+1 &&
+         canvas.top < heading.bottom-1 && canvas.bottom > heading.top+1,
        pinned:Math.abs(stage.top)<2,height:canvas.height};
    });
-   expect(state.overflow).toBe(0);expect(state.clipped).toBe(false);expect(state.pinned).toBe(true);
+   expect(state.overflow).toBe(0);expect(state.clipped).toBe(false);expect(state.coversHeading).toBe(false);expect(state.pinned).toBe(true);
    expect(state.height).toBeGreaterThan(90);
  }
 });

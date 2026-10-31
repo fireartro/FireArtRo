@@ -1,42 +1,91 @@
-export function ribbonLayout(width, height) {
-  const cardWidth = Math.min(208, Math.max(98, width * .155), height * .48);
+import { sampleWeblyHelix } from './weblyHelixMath';
+
+export const CARD_LENGTH = 5.8;
+export const CARD_PITCH = 6.04;
+export const CARD_HEIGHT = 2.12;
+const TURN = 3 * Math.PI;
+const coreSteps = 288;
+const tailSteps = 40;
+
+function corePoint(angle, radiusX) {
+  const point = sampleWeblyHelix(angle);
   return {
-    cardWidth, cardHeight:cardWidth * .62, pitch:cardWidth + 16,
-    radius:Math.max(90, width * .37),
-    depth:Math.min(width * .34, height * .45),
-    rise:height * .16,
-    tilt:width < 600 ? .68 : .47,
+    ...point,
+    x: point.x * radiusX / 12,
+    y: (point.y + 5.5) * 0.82,
+    z: point.z * 0.64,
   };
 }
 
-export function ribbonPeriod(count, layout) {
-  return Math.max(Math.ceil(count / 2) * layout.pitch,
-    layout.radius * Math.PI * 2 + layout.pitch * 8);
+// A tangent lead at each end carries the train all the way past the viewport.
+// Bending out in X quadratically preserves the vertical-axis helix at the join.
+function tailPoint(end, u, extent, radiusX, direction) {
+  return {
+    ...end,
+    x: end.x - direction * (extent - radiusX) * u * u,
+    y: end.y + direction * 1.25 * u,
+    z: end.z - 4.4 * Math.sin(u * Math.PI / 2),
+    upX: end.upX * (1 - u),
+    upY: end.upY + (1 - end.upY) * u,
+    upZ: end.upZ * (1 - u),
+  };
 }
 
-// Webly's helix frame, turned into two opposing diagonal ribbons. Each logo's
-// vertices lie on the curved surface, including the part behind the sphere.
-export function writeRibbonVertex(target, distance, row, lane, phase, layout) {
-  const angle=distance / layout.radius;
-  const sine=Math.sin(angle), cosine=Math.cos(angle);
-  const tilt=lane===0 ? layout.tilt : -layout.tilt;
-  let upX=-layout.rise * cosine;
-  let upY=layout.radius * cosine * cosine + layout.depth * sine * sine;
-  let upZ=layout.rise * sine;
-  let length=Math.hypot(upX,upY,upZ);
-  upX/=length;upY=upY/length+.6;upZ/=length;
-  length=Math.hypot(upX,upY,upZ);
-  const x=layout.radius*sine + row*upX/length;
-  const y=layout.rise*angle + row*upY/length;
-  target.x=x*Math.cos(tilt)-y*Math.sin(tilt);
-  target.y=x*Math.sin(tilt)+y*Math.cos(tilt);
-  target.z=layout.depth*cosine + row*upZ/length + (lane===0 ? 14 : -14)
-    + Math.sin(angle*2+phase*.08)*layout.depth*.035;
+export function createPartnerPath(radiusX, extent) {
+  const samples = [];
+  const first = corePoint(0, radiusX);
+  const last = corePoint(TURN, radiusX);
+  for (let i = tailSteps; i > 0; i--) {
+    samples.push(tailPoint(first, i / tailSteps, extent, radiusX, -1));
+  }
+  for (let i = 0; i <= coreSteps; i++) {
+    samples.push(corePoint(TURN * i / coreSteps, radiusX));
+  }
+  for (let i = 1; i <= tailSteps; i++) {
+    samples.push(tailPoint(last, i / tailSteps, extent, radiusX, 1));
+  }
+  let length = 0;
+  samples.forEach((p, i) => {
+    const prev = samples[i - 1];
+    if (prev) length += Math.hypot(p.x - prev.x, p.y - prev.y, p.z - prev.z);
+    p.distance = length;
+  });
+
+  // Re-sample at a constant arc spacing. This keeps logos the same physical
+  // width on the straight approaches and around the near/far bends.
+  const steps = Math.ceil(length * 10);
+  const frames = new Float32Array((steps + 1) * 6);
+  const fields = ['x', 'y', 'z', 'upX', 'upY', 'upZ'];
+  let segment = 1;
+  for (let i = 0; i <= steps; i++) {
+    const d = i * length / steps;
+    while (segment < samples.length - 1 && samples[segment].distance < d) segment++;
+    const a = samples[segment - 1];
+    const b = samples[segment];
+    const mix = (d - a.distance) / (b.distance - a.distance);
+    fields.forEach((key, j) => { frames[i * 6 + j] = a[key] + (b[key] - a[key]) * mix; });
+  }
+  return { frames, steps, length };
 }
 
-export function ribbonDistance(index, count, travel, layout) {
-  const period=ribbonPeriod(count,layout);
-  const slot=Math.floor(index/2);
-  const offset=index%2===0 ? travel : -travel+layout.pitch*.5;
-  return ((slot*layout.pitch+offset+period/2)%period+period)%period-period/2;
+export function writePartnerPoint(target, path, distance, verticalOffset, lane) {
+  const at = Math.min(path.steps, Math.max(0, distance * path.steps / path.length));
+  const index = Math.min(Math.floor(at), path.steps - 1);
+  const a = index * 6;
+  const mix = at - index;
+  const f = path.frames;
+  const sign = lane === 0 ? -1 : 1;
+  // Rotate the second train half a revolution in 3D, so the near side
+  // switches at every crossing. Both trains share the very same vertical axis.
+  for (let axis = 0; axis < 3; axis++) {
+    const j = a + axis;
+    const center = f[j] + (f[j + 6] - f[j]) * mix;
+    const up = f[j + 3] + (f[j + 9] - f[j + 3]) * mix;
+    target[axis] = (center + up * verticalOffset) * (axis === 1 ? 1 : sign);
+  }
+}
+
+export function leadingDistance(progress, pathLength, count) {
+  const trainLength = (Math.ceil(count / 2) - 1) * CARD_PITCH + CARD_LENGTH;
+  return progress * (pathLength + trainLength);
 }
