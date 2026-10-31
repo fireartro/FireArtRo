@@ -47,16 +47,14 @@ test.describe("FireArt scroll-directed motion", () => {
     expect(packageHeight).toBeLessThan(viewportHeight * 3);
   });
 
-  test("uses one warmed WebGL canvas only for the partner orbit", async ({ page }) => {
+  test("uses the current linked partner catalog for the scroll orbit", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/", { waitUntil: "domcontentloaded" });
 
     const partners = page.getByTestId("home-partners");
-    await expect(partners.locator("canvas")).toHaveCount(1);
-    await expect(partners).toHaveAttribute("data-gpu", /warming|ready/);
-    await expect(page.locator("canvas")).toHaveCount(1);
-    await expect(partners.locator("[data-partner-name]")).toHaveCount(12);
+    await expect(partners.getByTestId("partner-scroll")).toHaveAttribute("data-layout", "orbit");
+    await expect(partners.locator("a.fa-partner__body")).toHaveCount(26);
   });
 
   test("renders readable static fallbacks for reduced motion", async ({ page }) => {
@@ -77,7 +75,8 @@ test.describe("FireArt scroll-directed motion", () => {
       expect(settled.transform).toBe("none");
     }
     await expect(page.getByTestId("home-partners").locator("canvas")).toHaveCount(0);
-    await expect(page.getByTestId("home-partners").locator("[data-partner-name]")).toHaveCount(12);
+    await expect(page.getByTestId("partner-scroll")).toHaveAttribute("data-layout", "grid");
+    await expect(page.getByTestId("home-partners").locator("[data-partner-name]")).toHaveCount(26);
   });
 
   test("keeps route transitions in a neutral cinematic black", async ({ page }) => {

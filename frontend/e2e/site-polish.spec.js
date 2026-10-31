@@ -58,7 +58,7 @@ test('a decoder that stops presenting frames is replaced without restarting the 
  const firstPicture=await picture(page);
  await expect.poll(()=>picture(page)).not.toBe(firstPicture);
 });
-test('mobile logo and current partners remain readable without collisions',async({page},info)=>{
+test('mobile logo is ten percent larger',async({page},info)=>{
  await page.setViewportSize({width:390,height:844});await enter(page);
  const ratio=await page.locator('.site-navbar-brand img:visible').evaluate(v=>{
    const current=v.getBoundingClientRect().height;
@@ -68,20 +68,6 @@ test('mobile logo and current partners remain readable without collisions',async
    return current/previous;
  });
  expect(ratio).toBeCloseTo(1.1,2);
- for(const viewport of [{width:390,height:844},{width:1512,height:982},{width:1440,height:900},{width:1024,height:768}]){
-  await page.setViewportSize(viewport);
-  await page.locator('#parteneri').scrollIntoViewIfNeeded();
-  await page.waitForTimeout(250);
-  const state=await page.locator('#parteneri').evaluate(section=>{
-   const cards=[...section.querySelectorAll('.fa-partner__body')];
-   const boxes=cards.filter(c=>getComputedStyle(c).visibility!=='hidden').map(c=>c.getBoundingClientRect());
-   const hits=[];
-   boxes.forEach((a,i)=>boxes.forEach((b,j)=>{if(j>i&&Math.min(a.right,b.right)-Math.max(a.left,b.left)>1&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>1)hits.push([i,j]);}));
-   return {count:cards.length,hits,broken:[...section.querySelectorAll('img')].filter(i=>i.complete&&!i.naturalWidth).map(i=>i.src),overflow:Math.max(0,document.documentElement.scrollWidth-document.documentElement.clientWidth)};
-  });
-  expect(state).toEqual({count:26,hits:[],broken:[],overflow:0});
-  await page.screenshot({path:info.outputPath(`partners-${viewport.width}.png`)});
- }
 });
 test('MacBook CSS viewports keep the same substantial scale in both browser engines',async({page})=>{
  await page.setViewportSize({width:1512,height:982});await enter(page);
@@ -89,78 +75,135 @@ test('MacBook CSS viewports keep the same substantial scale in both browser engi
  expect(metrics.root).toBe(18);expect(metrics.nav).toBeGreaterThanOrEqual(15.75);expect(metrics.overflow).toBeLessThanOrEqual(0);
 });
 
-test('all 26 partners orbit continuously without controls, hidden cards or intersections',async({page},info)=>{
- await page.setViewportSize({width:1512,height:982});await enter(page);
- let previous;
- for(const progress of [.2,.5,.8]){
-  await page.locator('.fa-partner-scroll').evaluate((node,p)=>window.scrollTo({top:scrollY+node.getBoundingClientRect().top+p*(node.offsetHeight-innerHeight),behavior:'instant'}),progress);
-  await page.waitForTimeout(250);
-  const state=await page.locator('.fa-partner-scroll').evaluate(node=>{
-   const cards=[...node.querySelectorAll('.fa-partner')].filter(c=>getComputedStyle(c).visibility==='visible');
-   const title=node.querySelector('header').getBoundingClientRect();
-   const boxes=cards.map(c=>c.getBoundingClientRect());
-   const overlaps=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
-   return {count:cards.length,positions:cards.map(c=>c.style.transform).join('|'),hits:boxes.some((a,i)=>overlaps(a,title)||boxes.slice(i+1).some(b=>overlaps(a,b))),outside:boxes.some(a=>a.left<0||a.right>innerWidth||a.top<0||a.bottom>innerHeight)};
-  });
-  expect(state.count).toBe(26);expect(state.hits).toBe(false);expect(state.outside).toBe(false);
-  if(previous)expect(state.positions).not.toBe(previous);previous=state.positions;
-  await page.screenshot({path:info.outputPath(`orbit-${progress}.png`)});
+async function enterOrbit(page, progress) {
+ const node = page.locator('.fa-partner-scroll');
+ await expect(node).toHaveAttribute('data-layout', 'orbit');
+ await expect(async () => {
+   await node.evaluate(async (section, part) => {
+     const top=scrollY + section.getBoundingClientRect().top + part * (section.offsetHeight - section.firstElementChild.offsetHeight);
+     window.scrollTo({top, behavior:'instant'});
+     // WebKit delivers native scroll and animation sampling on separate ticks.
+     await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));
+   }, progress);
+   const error=await node.evaluate((section,part)=>section.getBoundingClientRect().top + part * (section.offsetHeight - section.firstElementChild.offsetHeight),progress);
+   expect(Math.abs(error)).toBeLessThan(2);
+   await expect.poll(() => node.locator('li').first().evaluate(el => el.getAnimations()[0]?.playState)).toBe('running');
+   expect(Math.abs(await node.locator('.fa-partner-scroll__stage').evaluate(stage => stage.getBoundingClientRect().top))).toBeLessThan(2);
+ }).toPass({timeout:7000});
+ return node;
+}
+
+// A valid crossing has two logo surfaces at the same pixel. The browser must
+// paint and hit-test the nearer partner first, regardless of DOM order.
+async function orbitSnapshot(node) {
+ return node.evaluate(section => {
+   const cards = [...section.querySelectorAll('li')];
+   const boxes = cards.map(card => card.getBoundingClientRect());
+   const depth = cards.map(card => new DOMMatrix(getComputedStyle(card).transform).a);
+   const inFront = new Set();
+   let crossings = 0, wrongSurface = 0, hit;
+   const heading = section.querySelector('header').getBoundingClientRect();
+   const docks = [...document.querySelectorAll('.desktop-social-dock,.mobile-social-dock')].map(d => d.getBoundingClientRect()).filter(r=>r.width);
+   const intersects = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+   boxes.forEach((a,i) => {
+     const center = document.elementFromPoint(a.x + a.width / 2, a.y + a.height / 2)?.closest('li');
+     if (center === cards[i]) inFront.add(i);
+     boxes.slice(i+1).forEach(b => {
+       const left=Math.max(a.left,b.left), right=Math.min(a.right,b.right);
+       const top=Math.max(a.top,b.top), bottom=Math.min(a.bottom,b.bottom);
+       if (right-left<10 || bottom-top<10) return;
+       const x=(left+right)/2, y=(top+bottom)/2;
+       const stack = [...new Set(document.elementsFromPoint(x,y).map(el=>el.closest('.fa-partner')).filter(Boolean))];
+       if(stack.length<2) return;
+       crossings++;
+       const first=cards.indexOf(stack[0]);
+       if(stack.slice(1).some(card=>depth[cards.indexOf(card)] > depth[first]+.009)) wrongSurface++;
+       const front=boxes[first];
+       const margin=Math.min(x-front.left,front.right-x,y-front.top,front.bottom-y);
+       if (!hit || margin>hit.margin) hit={x,y,margin,href:cards[first].querySelector('a').href};
+     });
+   });
+   return {
+     count:cards.length, inFront:[...inFront], crossings, wrongSurface, hit,
+     clipped:boxes.flatMap((b,i)=>b.left < -1 || b.right > innerWidth+1 || b.top < heading.bottom-1 || b.bottom > innerHeight+1 || docks.some(d=>intersects(d,b))
+       ? [{partner:cards[i].dataset.partnerId,rect:b.toJSON(),heading:heading.bottom,docks:docks.map(d=>d.toJSON())}] : []),
+     overflow:Math.max(0,document.documentElement.scrollWidth-document.documentElement.clientWidth),
+     broken:[...section.querySelectorAll('img')].filter(img=>!img.complete || !img.naturalWidth).map(img=>img.src),
+   };
+ });
+}
+
+test('partner orbits have real front-to-back crossings and working links', async ({page}, info) => {
+ await enter(page);
+ const node = await enterOrbit(page, .30);
+ await expect(node.locator('a.fa-partner__body')).toHaveCount(26);
+ await expect(node.locator('button')).toHaveCount(0);
+ const first = node.locator('li').first();
+ const x = () => first.evaluate(card=>card.getBoundingClientRect().x);
+ const start=await x();
+ await expect.poll(x).not.toBe(start);
+ const seen = new Set();
+ for(const part of [.02,.10,.18,.26,.34,.42,.50,.58,.66,.74,.82,.90,.98]) {
+   await enterOrbit(page, part);
+   await expect.poll(async()=> (await orbitSnapshot(node)).broken).toEqual([]);
+   const view=await orbitSnapshot(node);
+   expect(view.clipped).toEqual([]);
+   expect(view.overflow).toBe(0);
+   expect(view.wrongSurface).toBe(0);
+   expect(view.inFront.length).toBeGreaterThan(7);
+   view.inFront.forEach(i=>seen.add(i));
  }
- await expect(page.locator('.fa-partner-scroll button')).toHaveCount(0);
- await expect(page.locator('.fa-partner-scroll')).toHaveAttribute('data-layout','orbit');
- await expect(page.locator('.fa-partner__body:visible')).toHaveCount(26);
- const geometry=await page.locator('.fa-partner__body').first().evaluate(node=>({width:node.getBoundingClientRect().width,radius:parseFloat(getComputedStyle(node).borderRadius)}));
- expect(geometry.width).toBeLessThan(140);expect(geometry.radius).toBeGreaterThanOrEqual(22);
- const continuity=await page.locator('.fa-partner-scroll').evaluate(node=>new Promise(resolve=>{
-   let frames=0,hidden=false,maxJump=0,previous;
-   const sample=()=>{
-     const cards=[...node.querySelectorAll('.fa-partner')];
-     const boxes=cards.map(c=>c.getBoundingClientRect());
-     hidden ||= cards.some(c=>getComputedStyle(c).visibility!=='visible'||Number(getComputedStyle(c).opacity)<1);
-     if(previous)boxes.forEach((b,i)=>{maxJump=Math.max(maxJump,Math.hypot(b.x-previous[i].x,b.y-previous[i].y));});
-     previous=boxes;
-     if(++frames<90)requestAnimationFrame(sample);else resolve({hidden,maxJump});
-   };requestAnimationFrame(sample);
- }));
- expect(continuity.hidden).toBe(false);expect(continuity.maxJump).toBeLessThan(20);
+ expect(seen.size).toBe(26);
+ await page.screenshot({path:info.outputPath('partner-orbits.png')});
+ await page.context().route('**/*', route=>route.request().isNavigationRequest() ? route.fulfill({body:'Partner destination'}) : route.continue());
+ const view=await orbitSnapshot(node);
+ expect(view.crossings).toBeGreaterThan(0);
+ // Leave the animation running while exercising a real tap/click at a crossing.
+ const popup=page.waitForEvent('popup');
+ if(info.project.use.hasTouch) await page.touchscreen.tap(view.hit.x,view.hit.y);
+ else await page.mouse.click(view.hit.x,view.hit.y);
+ await expect(await popup).toHaveURL(view.hit.href);
 });
 
-test('desktop orbit stays active in shorter windows and at Windows display scaling sizes', async ({page}, info) => {
-  await page.setViewportSize({width: 1536, height: 736});
-  await enter(page);
-  const stage = page.locator('.fa-partner-scroll__stage');
-  const viewports = [[1536, 736], [1280, 600], [1024, 600], [1366, 500]];
-  for (const [width, height] of viewports) {
-    await page.setViewportSize({width, height});
-    await expect(stage).toHaveCSS('position', 'sticky');
-    // Earlier home sections change height after resizing. Enter the orbit at
-    // its settled document position before measuring the pinned cards.
-    await expect(async () => {
-      await page.locator('.fa-partner-scroll').evaluate(node => {
-        const sectionTop = scrollY + node.getBoundingClientRect().top;
-        window.scrollTo({top: sectionTop + .35 * (node.offsetHeight - innerHeight), behavior: 'instant'});
-      });
-      await page.waitForTimeout(300);
-      const top = await stage.evaluate(node => node.getBoundingClientRect().top);
-      expect(Math.abs(top)).toBeLessThan(1);
-    }).toPass({timeout: 5000});
-    const firstCard = stage.locator('.fa-partner').first();
-    const transform = () => firstCard.evaluate(card => card.style.transform);
-    const firstPosition = await transform();
-    await expect.poll(transform).not.toBe(firstPosition);
-    const layout = await stage.evaluate(node => {
-      const boxes = [...node.querySelectorAll('.fa-partner')].map(card => card.getBoundingClientRect());
-      const heading = node.querySelector('header').getBoundingClientRect();
-      const dock = document.querySelector('.desktop-social-dock')?.getBoundingClientRect();
-      const overlaps = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-      return {
-        count: boxes.length,
-        collision: boxes.some((box, i) => overlaps(box, heading) || (dock && overlaps(box, dock)) ||
-          boxes.slice(i + 1).some(other => overlaps(box, other))),
-        clipped: boxes.some(box => box.left < 0 || box.right > innerWidth || box.top < 0 || box.bottom > innerHeight),
-      };
-    });
-    expect(layout, `layout at ${width}×${height}`).toEqual({count: 26, collision: false, clipped: false});
-    await page.screenshot({path: info.outputPath(`short-desktop-${width}-${height}.png`)});
-  }
+test('partner orbits fit short desktop windows, phones and landscape rotation',async({page})=>{
+ await enter(page);
+ for(const [width,height] of [[320,568],[390,844],[844,390],[1024,600],[1366,500],[1536,736]]) {
+   await page.setViewportSize({width,height});
+   const node=await enterOrbit(page,.42);
+   const view=await orbitSnapshot(node);
+   expect(view.clipped, `viewport ${width}x${height}`).toEqual([]);
+   expect(view.overflow).toBe(0);
+   expect(view.wrongSurface).toBe(0);
+ }
+});
+
+test('a finger swipe turns the partner orbits on Android',async({page},info)=>{
+ test.skip(info.project.name !== 'mobile-chromium', 'CDP touch gestures run on Android Chromium.');
+ await enter(page);
+ const node = await enterOrbit(page,.25);
+ const time = () => node.locator('li').first().evaluate(el=>el.getAnimations()[0].currentTime);
+ const before = await time();
+ const initialScroll = await page.evaluate(()=>scrollY);
+ const client = await page.context().newCDPSession(page);
+ try {
+   await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:160,y:500}]});
+   for (const y of [475,450,425,400,375,350]) {
+     await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:160,y}]});
+     await page.waitForTimeout(28);
+   }
+   await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+   await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(initialScroll+75);
+   await expect.poll(time).toBeGreaterThan(before+2200);
+ } finally {
+   await client.detach();
+ }
+});
+
+test('partners stay accessible as a grid with reduced motion',async({page})=>{
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ const grid=page.locator('.fa-partner-scroll');
+ await expect(grid).toHaveAttribute('data-layout','grid');
+ await expect(grid.locator('a.fa-partner__body')).toHaveCount(26);
+ expect(await grid.locator('ul').evaluate(ul=>ul.getAnimations({subtree:true}).length)).toBe(0);
 });
