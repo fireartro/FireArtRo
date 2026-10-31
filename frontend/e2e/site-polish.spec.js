@@ -124,3 +124,43 @@ test('all 26 partners orbit continuously without controls, hidden cards or inter
  }));
  expect(continuity.hidden).toBe(false);expect(continuity.maxJump).toBeLessThan(20);
 });
+
+test('desktop orbit stays active in shorter windows and at Windows display scaling sizes', async ({page}, info) => {
+  await page.setViewportSize({width: 1536, height: 736});
+  await enter(page);
+  const stage = page.locator('.fa-partner-scroll__stage');
+  const viewports = [[1536, 736], [1280, 600], [1024, 600], [1366, 500]];
+  for (const [width, height] of viewports) {
+    await page.setViewportSize({width, height});
+    await expect(stage).toHaveCSS('position', 'sticky');
+    // Earlier home sections change height after resizing. Enter the orbit at
+    // its settled document position before measuring the pinned cards.
+    await expect(async () => {
+      await page.locator('.fa-partner-scroll').evaluate(node => {
+        const sectionTop = scrollY + node.getBoundingClientRect().top;
+        window.scrollTo({top: sectionTop + .35 * (node.offsetHeight - innerHeight), behavior: 'instant'});
+      });
+      await page.waitForTimeout(300);
+      const top = await stage.evaluate(node => node.getBoundingClientRect().top);
+      expect(Math.abs(top)).toBeLessThan(1);
+    }).toPass({timeout: 5000});
+    const firstCard = stage.locator('.fa-partner').first();
+    const transform = () => firstCard.evaluate(card => card.style.transform);
+    const firstPosition = await transform();
+    await expect.poll(transform).not.toBe(firstPosition);
+    const layout = await stage.evaluate(node => {
+      const boxes = [...node.querySelectorAll('.fa-partner')].map(card => card.getBoundingClientRect());
+      const heading = node.querySelector('header').getBoundingClientRect();
+      const dock = document.querySelector('.desktop-social-dock')?.getBoundingClientRect();
+      const overlaps = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      return {
+        count: boxes.length,
+        collision: boxes.some((box, i) => overlaps(box, heading) || (dock && overlaps(box, dock)) ||
+          boxes.slice(i + 1).some(other => overlaps(box, other))),
+        clipped: boxes.some(box => box.left < 0 || box.right > innerWidth || box.top < 0 || box.bottom > innerHeight),
+      };
+    });
+    expect(layout, `layout at ${width}×${height}`).toEqual({count: 26, collision: false, clipped: false});
+    await page.screenshot({path: info.outputPath(`short-desktop-${width}-${height}.png`)});
+  }
+});

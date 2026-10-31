@@ -1,8 +1,9 @@
 import { partnerOrbitLayout } from './partnerOrbitLayout';
 
-test.each([[1200,741],[1440,900],[1512,982],[1920,1080],[3840,2160]])('all 26 partners remain visible without overlapping cards or the title at %sx%s', (width,height)=>{
- const halfWidth=Math.min(width*.17,255),center=height/2+30;
- const heading={left:width/2-halfWidth,right:width/2+halfWidth,top:center-100,bottom:center+100};
+test.each([[1024,600],[1280,600],[1536,736],[1366,500],[1200,741],[1440,900],[1512,982],[1920,1080],[3840,2160]])('all 26 partners remain visible without overlapping cards or the title at %sx%s', (width,height)=>{
+ const halfWidth=height<=740?Math.max(140,Math.min(width*.14,220)):Math.min(width*.17,255),center=height/2+30;
+ const halfHeight=height<=560?50:height<=740?72:100;
+ const heading={left:width/2-halfWidth,right:width/2+halfWidth,top:center-halfHeight,bottom:center+halfHeight};
  const seen=new Set();
  const hits=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
  for(let step=0;step<180;step++){

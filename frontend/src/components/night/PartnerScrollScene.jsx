@@ -21,7 +21,7 @@ export default function PartnerScrollScene({ partners, copy, title, reduceMotion
     const node = ref.current;
     const stage = node.querySelector('.fa-partner-scroll__stage');
     const cards = [...node.querySelectorAll('.fa-partner')];
-    const wide = window.matchMedia?.('(min-width:1200px) and (min-height:741px)') || { matches:false };
+    const wide = window.matchMedia?.('(min-width:1200px), (min-width:960px) and (orientation:landscape)') || { matches:false };
     let frame, visible = true, focused = false, last = 0, scrollTurn = null;
     const reset = () => cards.forEach(card => { card.removeAttribute('style'); card.removeAttribute('aria-hidden'); card.querySelector('a').removeAttribute('tabindex'); });
     const draw = now => {
