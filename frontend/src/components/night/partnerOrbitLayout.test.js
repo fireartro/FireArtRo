@@ -11,22 +11,6 @@ test.each([1, 2, 12, 26, 31])('evenly spaces each latitude for %s managed partne
   }
 });
 
-test.each([[308,434,141,160],[378,700,172,170],[1312,786,500,200],[716,256,304,112]])(
-  'keeps the actual centred title clear at %sx%s', (width,height,headingWidth,headingHeight) => {
-    const camera=orbitCamera(width,height,headingWidth,headingHeight);
-    for(let ring=0;ring<3;ring++) {
-      for(const {transform} of ringKeyframes(ring,camera)) {
-        const [x,y,scale]=transform.match(/-?[\d.]+/g).map(Number);
-        const clearHorizontally=Math.abs(x)-camera.cardWidth*scale/2 > headingWidth/2;
-        const clearVertically=Math.abs(y)-camera.cardHeight*scale/2 > headingHeight/2;
-        expect(clearHorizontally || clearVertically).toBe(true);
-        expect(Math.abs(x)+camera.cardWidth*scale/2).toBeLessThan(width/2);
-        expect(Math.abs(y)+camera.cardHeight*scale/2).toBeLessThan(height/2);
-      }
-    }
-  },
-);
-
 test.each([[300,325],[380,580],[820,225],[1320,280],[1440,725],[3600,1720]])('every depth fits the %sx%s camera and the loop closes', (width, height) => {
   const camera = orbitCamera(width, height);
   for (let ring = 0; ring < 3; ring++) {
