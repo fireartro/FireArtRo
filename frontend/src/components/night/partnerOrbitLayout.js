@@ -1,35 +1,52 @@
-const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
-const overlaps = (a, b, gap = 12) => a.left < b.right + gap && a.right + gap > b.left && a.top < b.bottom + gap && a.bottom + gap > b.top;
+const tracks = new Map();
+export const PARTNER_CARD_WIDTH = 128;
+export const PARTNER_CARD_HEIGHT = 92;
 
-// Three spherical ribbons. Each uses its actual population, so adding partners
-// never repeats the original four-slot angle and stacks multiple logos.
-export function partnerOrbitLayout(count, width, height, angle, progress, heading) {
-  const unit = Math.min(width / 11.2, height / 7.6);
-  const assemble = clamp(progress / .18, 0, 1);
-  const spread = 1 + (1 - assemble) * .35 + clamp((progress - .88) / .12, 0, 1) * .25;
-  const cards = Array.from({ length: count }, (_, index) => {
-    const ring = index % 3;
-    const population = Math.ceil((count - ring) / 3);
-    const theta = Math.floor(index / 3) / population * Math.PI * 2 + ring * .42 + angle;
-    const latitude = (ring - 1) * .62;
-    const radius = 3.8 + ring * .16;
-    const z = Math.sin(theta) * radius * Math.cos(latitude);
-    const perspective = 10.5 / (10.5 - z);
-    const x = width / 2 + Math.cos(theta) * radius * Math.cos(latitude) * unit * perspective * spread;
-    const y = height / 2 - Math.sin(latitude) * 2.35 * unit * perspective * spread;
-    const scale = unit / 120 * perspective;
-    const w = 164 * scale, h = 118 * scale;
-    return { index, x, y, scale, z, left: x-w/2, right: x+w/2, top: y-h/2, bottom: y+h/2 };
+// Equal arc-length spacing keeps the whole catalogue on two rounded orbital
+// paths. Cards never need collision-based hiding or a visibility threshold.
+function track(rx, ry) {
+  const key = `${rx}:${ry}`;
+  if (tracks.has(key)) return tracks.get(key);
+  const points = [];
+  let length = 0;
+  for (let step=0;step<=512;step++) {
+    const theta=step/512*Math.PI*2;
+    const c=Math.cos(theta),s=Math.sin(theta);
+    const point={x:rx*Math.sign(c)*Math.abs(c)**(2/3),y:ry*Math.sign(s)*Math.abs(s)**(2/3)};
+    if(step) length+=Math.hypot(point.x-points[step-1].x,point.y-points[step-1].y);
+    points.push({...point,length});
+  }
+  const result={points,length};
+  if(tracks.size>16)tracks.clear();
+  tracks.set(key,result);
+  return result;
+}
+
+function position(path, fraction) {
+  const distance=((fraction%1)+1)%1*path.length;
+  let low=0,high=path.points.length-1;
+  while(high-low>1){const mid=(low+high)>>1;if(path.points[mid].length<distance)low=mid;else high=mid;}
+  const a=path.points[low],b=path.points[high],t=(distance-a.length)/(b.length-a.length);
+  return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+}
+
+export function partnerOrbitLayout(count, width, height, angle) {
+  const unit=Math.min(width/1440,height/900);
+  const size=unit*Math.min(1,26/Math.max(1,count));
+  const cx=width/2,cy=(84+height-24)/2;
+  const outerRx=width/2-PARTNER_CARD_WIDTH*unit/2-22;
+  const outerRy=(height-108)/2-PARTNER_CARD_HEIGHT*unit/2-12;
+  const radii=[[outerRx,outerRy],[outerRx-170*unit,outerRy-132*unit]];
+  const populations=[Math.ceil(count*.615),Math.floor(count*.385)];
+  return Array.from({length:count},(_,index)=>{
+    const ring=index<populations[0]?0:1;
+    const slot=ring?index-populations[0]:index;
+    const [rx,ry]=radii[ring];
+    const fraction=slot/populations[ring]+angle/(Math.PI*2)*(ring ? -.72 : 1)+(ring ? .037 : 0);
+    const point=position(track(rx,ry),fraction);
+    const z=point.y/ry;
+    const scale=size*(.95+.05*(z+1)/2);
+    const x=cx+point.x,y=cy+point.y,w=PARTNER_CARD_WIDTH*scale,h=PARTNER_CARD_HEIGHT*scale;
+    return {index,x,y,z,scale,visible:true,opacity:1,left:x-w/2,right:x+w/2,top:y-h/2,bottom:y+h/2};
   });
-  const occupied = heading ? [heading] : [];
-  // Front cards win occlusion; logo and caption always move as one surface.
-  [...cards].sort((a,b)=>b.z-a.z).forEach(card => {
-    const clearance = Math.min(card.left-18,width-18-card.right,card.top-82,height-24-card.bottom,
-      ...occupied.map(box=>Math.max(box.left-card.right,card.left-box.right,box.top-card.bottom,card.top-box.bottom)));
-    card.visible = card.left >= 18 && card.right <= width-18 && card.top >= 82 && card.bottom <= height-24
-      && !occupied.some(box=>overlaps(card,box));
-    if (card.visible) occupied.push(card);
-    card.opacity = card.visible ? clamp(.7 + card.z / 14, .48, 1) * clamp(clearance/28,0,1) : 0;
-  });
-  return cards;
 }

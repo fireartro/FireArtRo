@@ -89,7 +89,7 @@ test('MacBook CSS viewports keep the same substantial scale in both browser engi
  expect(metrics.root).toBe(18);expect(metrics.nav).toBeGreaterThanOrEqual(15.75);expect(metrics.overflow).toBeLessThanOrEqual(0);
 });
 
-test('partners orbit with scroll, keep whole cards clear of the title, and expose the complete list',async({page},info)=>{
+test('all 26 partners orbit continuously without controls, hidden cards or intersections',async({page},info)=>{
  await page.setViewportSize({width:1512,height:982});await enter(page);
  let previous;
  for(const progress of [.2,.5,.8]){
@@ -102,12 +102,25 @@ test('partners orbit with scroll, keep whole cards clear of the title, and expos
    const overlaps=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
    return {count:cards.length,positions:cards.map(c=>c.style.transform).join('|'),hits:boxes.some((a,i)=>overlaps(a,title)||boxes.slice(i+1).some(b=>overlaps(a,b))),outside:boxes.some(a=>a.left<0||a.right>innerWidth||a.top<0||a.bottom>innerHeight)};
   });
-  expect(state.count).toBeGreaterThanOrEqual(4);expect(state.hits).toBe(false);expect(state.outside).toBe(false);
+  expect(state.count).toBe(26);expect(state.hits).toBe(false);expect(state.outside).toBe(false);
   if(previous)expect(state.positions).not.toBe(previous);previous=state.positions;
   await page.screenshot({path:info.outputPath(`orbit-${progress}.png`)});
  }
- await page.getByRole('button',{name:'Vezi toți cei 26 parteneri'}).click();
- await expect(page.locator('.fa-partner-scroll')).toHaveAttribute('data-layout','grid');
+ await expect(page.locator('.fa-partner-scroll button')).toHaveCount(0);
+ await expect(page.locator('.fa-partner-scroll')).toHaveAttribute('data-layout','orbit');
  await expect(page.locator('.fa-partner__body:visible')).toHaveCount(26);
- await expect(page.getByRole('button',{name:'Înapoi la orbită'})).toBeInViewport();
+ const geometry=await page.locator('.fa-partner__body').first().evaluate(node=>({width:node.getBoundingClientRect().width,radius:parseFloat(getComputedStyle(node).borderRadius)}));
+ expect(geometry.width).toBeLessThan(140);expect(geometry.radius).toBeGreaterThanOrEqual(22);
+ const continuity=await page.locator('.fa-partner-scroll').evaluate(node=>new Promise(resolve=>{
+   let frames=0,hidden=false,maxJump=0,previous;
+   const sample=()=>{
+     const cards=[...node.querySelectorAll('.fa-partner')];
+     const boxes=cards.map(c=>c.getBoundingClientRect());
+     hidden ||= cards.some(c=>getComputedStyle(c).visibility!=='visible'||Number(getComputedStyle(c).opacity)<1);
+     if(previous)boxes.forEach((b,i)=>{maxJump=Math.max(maxJump,Math.hypot(b.x-previous[i].x,b.y-previous[i].y));});
+     previous=boxes;
+     if(++frames<90)requestAnimationFrame(sample);else resolve({hidden,maxJump});
+   };requestAnimationFrame(sample);
+ }));
+ expect(continuity.hidden).toBe(false);expect(continuity.maxJump).toBeLessThan(20);
 });

@@ -135,4 +135,5 @@ test('renders every current partner once in the scroll scene without duplicate c
  expect(names()).toHaveLength(26);expect(new Set(names()).size).toBe(26);
  expect(container.querySelectorAll('.fa-partner__body')).toHaveLength(26);
  expect(container.querySelectorAll('canvas')).toHaveLength(0);
+ expect(container.querySelectorAll('button')).toHaveLength(0);
 });
