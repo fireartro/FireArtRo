@@ -96,6 +96,7 @@ test('two curved partner ribbons follow scroll, accept taps and recover after a 
  const before=await frame();
  await enterRibbons(page,.42);
  await expect.poll(frame).not.toBe(before);
+ await expect(canvas).toHaveAttribute('data-settled','true');
  await expect(node.locator('.fa-partner__body')).toHaveCount(26);
  await expect(node.locator('button')).toHaveCount(0);
  await page.screenshot({path:info.outputPath('x-partner-ribbons.png')});
@@ -107,7 +108,7 @@ test('two curved partner ribbons follow scroll, accept taps and recover after a 
      c.dispatchEvent(new PointerEvent('pointermove',{clientX:x,clientY:y,pointerType:'mouse'}));
      return c.title;
    }
-   for(let y=rect.top+rect.height*.22;y<rect.top+rect.height*.85;y+=18) {
+   for(let y=rect.top+rect.height*.40;y<rect.top+rect.height*.85;y+=18) {
      for(let x=rect.left+rect.width*.12;x<rect.left+rect.width*.88;x+=18) {
        const name=nameAt(x,y);
        if(name && [[-7,-7],[7,-7],[-7,7],[7,7]].every(([dx,dy])=>nameAt(x+dx,y+dy)===name)) {
@@ -118,13 +119,12 @@ test('two curved partner ribbons follow scroll, accept taps and recover after a 
    }
    return null;
  });
- // A settled sample must survive a second hit test before touching it.
- let hit;
- await expect.poll(async()=>{
-   const previous=hit;
-   hit=await findTarget();
-   return Boolean(hit && previous && hit.name===previous.name && hit.x===previous.x && hit.y===previous.y);
- }).toBe(true);
+ const hit=await findTarget();
+ expect(hit).not.toBeNull();
+ if(!info.project.use.hasTouch) {
+   await page.mouse.move(hit.x,hit.y);
+   await expect(canvas).toHaveAttribute('title',hit.name);
+ }
  const destination=new URL(hit.href);
  await page.context().route(url=>url.origin===destination.origin,route=>route.fulfill({body:'Partner destination'}));
  const popup=page.context().waitForEvent('page');
@@ -142,8 +142,10 @@ test('two curved partner ribbons follow scroll, accept taps and recover after a 
  // Returning to the same scroll offset must put the original partner back
  // under the pointer, including after backing up through the helix.
  await enterRibbons(page,.62);
+ await expect(canvas).toHaveAttribute('data-settled','true');
  await expect.poll(targetName).not.toBe(hit.name);
  await enterRibbons(page,.42);
+ await expect(canvas).toHaveAttribute('data-settled','true');
  await expect.poll(targetName).toBe(hit.name);
 });
 

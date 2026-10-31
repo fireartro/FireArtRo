@@ -136,14 +136,18 @@ export function mountPartnerRibbons({canvas, section, partners, onReady, onFailu
   }
 
   function updateScroll() {
-    targetProgress = THREE.MathUtils.clamp((window.scrollY - top) / scrollRange, 0, 1);
+    const next = THREE.MathUtils.clamp((window.scrollY - top) / scrollRange, 0, 1);
+    if (next !== targetProgress) canvas.dataset.settled = 'false';
+    targetProgress = next;
     schedule();
   }
 
   function render(now) {
     frame = 0;
     if (disposed || !visible || document.hidden) { last = 0; return; }
-    const delta = last ? Math.min((now - last) / 1000, 0.1) : 1 / 60;
+    // Exponential damping already bounds the step. Count elapsed time even
+    // when a slow GPU skips frames; suspend/resume resets the clock.
+    const delta = last ? Math.max(0, (now - last) / 1000) : 1 / 60;
     currentProgress = damp(currentProgress, targetProgress, delta);
     const settled = Math.abs(currentProgress - targetProgress) < 0.00005;
     if (settled) currentProgress = targetProgress;
@@ -169,6 +173,7 @@ export function mountPartnerRibbons({canvas, section, partners, onReady, onFailu
       line.geometry.setDrawRange(first, Math.max(0, end - first + 1));
     }
     renderer.render(scene, camera);
+    if (settled && canvas.dataset.settled !== 'true') canvas.dataset.settled = 'true';
     last = settled ? 0 : now;
     if (!settled) schedule();
   }
