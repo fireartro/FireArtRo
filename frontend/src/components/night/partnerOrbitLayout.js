@@ -1,5 +1,5 @@
 const rings = 3;
-const steps = 60;
+const steps = 90;
 export const ORBIT_DURATION = 70000;
 
 export function partnerPhase(index, count) {
@@ -8,35 +8,37 @@ export function partnerPhase(index, count) {
   return Math.floor(index / rings) / population + ring * .42 / (2 * Math.PI);
 }
 
-export function orbitCamera(width, height) {
-  const phone = width < 600;
-  const cardWidth = Math.min(132, Math.max(70, width * (phone ? .195 : .092)), height * .68);
+export function orbitCamera(width, height, headingWidth = 0, headingHeight = 0) {
+  const portrait = height > width * 1.15;
+  const cardWidth = Math.min(128, Math.max(48, width * (portrait ? .15 : .08)), height * .22);
   const cardHeight = cardWidth * .66;
-  const radius = Math.max(1, Math.min(width * .40, (width * .5 - cardWidth * .78 - 5) * .93));
-  const verticalRoom = Math.max(0, height / 3.1 - cardHeight / 2 - 6);
+  const maxScale = 1 / .72;
   return {
-    cardWidth, cardHeight, radius, perspective: radius * 2.95,
-    lift: phone ? verticalRoom * .74 : Math.min(verticalRoom * .70, radius * .36),
-    tilt: Math.min(verticalRoom * .25, phone ? 56 : Math.max(25, radius * .14)),
+    cardWidth, cardHeight,
+    radiusX: Math.max(1, width / 2 - cardWidth * maxScale / 2 - 10),
+    radiusY: Math.max(1, height / 2 - cardHeight * maxScale / 2 - 14),
+    headingWidth, headingHeight,
   };
 }
 
-// The three latitudes and stagger come from the first partner scene. All logos
-// on one latitude share a native transform animation with a different phase.
+// The title remains the fixed centre. Three intersecting ellipses carry the
+// whole catalogue around it, with near and far cards sorted by camera depth.
 export function ringKeyframes(ring, camera) {
-  const latitude = (ring - 1) * .62;
-  const belt = Math.cos(latitude) * (3.8 + ring * .16) / 3.96;
   return Array.from({length: steps + 1}, (_, step) => {
     const angle = (step % steps) * Math.PI * 2 / steps;
-    const depth = Math.sin(angle) * belt;
-    const x = Math.cos(angle) * belt * camera.radius;
-    const y = (ring - 1) * camera.lift + depth * camera.tilt;
-    const z = depth * camera.radius;
-    const scale = camera.perspective / (camera.perspective - z);
-    // Project once. An explicit stacking order also makes WebKit hit-test
-    // overlapping links in the same order as Chromium and the camera.
+    const depth = Math.sin(angle);
+    const scale = 1 / (1 - depth * .28);
+    let x = Math.cos(angle) * camera.radiusX * (.82 + ring * .09);
+    let y = Math.sin(angle) * camera.radiusY * (1 - ring * .09);
+    const halfWidth = camera.headingWidth / 2 + camera.cardWidth * scale / 2 + 7;
+    const halfHeight = camera.headingHeight / 2 + camera.cardHeight * scale / 2 + 7;
+    // A rounded rectangular clearance follows the actual typeset heading.
+    // Calculated only on resize, it keeps lettering and logos from crossing.
+    const clearance = Math.max(1, (2 / ((Math.abs(x) / halfWidth) ** 12 + (Math.abs(y) / halfHeight) ** 12)) ** (1 / 12));
+    x *= clearance;
+    y *= clearance;
     return {
-      transform: `translate(${(x * scale).toFixed(3)}px, ${(y * scale).toFixed(3)}px) scale(${scale.toFixed(5)})`,
+      transform: `translate(${x.toFixed(3)}px, ${y.toFixed(3)}px) scale(${scale.toFixed(5)})`,
       zIndex: Math.round(512 + depth * 500),
     };
   });

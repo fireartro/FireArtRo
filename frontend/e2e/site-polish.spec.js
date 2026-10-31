@@ -103,6 +103,8 @@ async function orbitSnapshot(node) {
    const inFront = new Set();
    let crossings = 0, wrongSurface = 0, hit;
    const heading = section.querySelector('header').getBoundingClientRect();
+   const stage = section.querySelector('.fa-partner-scroll__stage').getBoundingClientRect();
+   const camera = section.querySelector('ul').getBoundingClientRect();
    const docks = [...document.querySelectorAll('.desktop-social-dock,.mobile-social-dock')].map(d => d.getBoundingClientRect()).filter(r=>r.width);
    const intersects = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
    boxes.forEach((a,i) => {
@@ -125,7 +127,12 @@ async function orbitSnapshot(node) {
    });
    return {
      count:cards.length, inFront:[...inFront], crossings, wrongSurface, hit,
-     clipped:boxes.flatMap((b,i)=>b.left < -1 || b.right > innerWidth+1 || b.top < heading.bottom-1 || b.bottom > innerHeight+1 || docks.some(d=>intersects(d,b))
+     centered:Math.abs(heading.x+heading.width/2-stage.x-stage.width/2)<1 &&
+       Math.abs(heading.y+heading.height/2-camera.y-camera.height/2)<1,
+     around:boxes.some(b=>b.bottom<heading.top) && boxes.some(b=>b.top>heading.bottom) &&
+       boxes.some(b=>b.right<heading.left) && boxes.some(b=>b.left>heading.right),
+     titleCovered:boxes.some(b=>intersects(b,heading)),
+     clipped:boxes.flatMap((b,i)=>b.left < -1 || b.right > innerWidth+1 || b.top < camera.top-1 || b.bottom > innerHeight+1 || docks.some(d=>intersects(d,b))
        ? [{partner:cards[i].dataset.partnerId,rect:b.toJSON(),heading:heading.bottom,docks:docks.map(d=>d.toJSON())}] : []),
      overflow:Math.max(0,document.documentElement.scrollWidth-document.documentElement.clientWidth),
      broken:[...section.querySelectorAll('img')].filter(img=>!img.complete || !img.naturalWidth).map(img=>img.src),
@@ -148,6 +155,9 @@ test('partner orbits have real front-to-back crossings and working links', async
    await expect.poll(async()=> (await orbitSnapshot(node)).broken).toEqual([]);
    const view=await orbitSnapshot(node);
    expect(view.clipped).toEqual([]);
+   expect(view.centered).toBe(true);
+   expect(view.around).toBe(true);
+   expect(view.titleCovered).toBe(false);
    expect(view.overflow).toBe(0);
    expect(view.wrongSurface).toBe(0);
    expect(view.inFront.length).toBeGreaterThan(7);
@@ -172,6 +182,7 @@ test('partner orbits fit short desktop windows, phones and landscape rotation',a
    const node=await enterOrbit(page,.42);
    const view=await orbitSnapshot(node);
    expect(view.clipped, `viewport ${width}x${height}`).toEqual([]);
+   expect(view.titleCovered).toBe(false);
    expect(view.overflow).toBe(0);
    expect(view.wrongSurface).toBe(0);
  }

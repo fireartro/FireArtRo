@@ -6,7 +6,7 @@ import { ORBIT_DURATION, orbitCamera, partnerPhase, ringKeyframes } from './part
 function Mark({ partner }) {
   const [failed, setFailed] = useState(null);
   const logo = partner.logo && failed !== partner.logo;
-  return <a className="fa-partner__body" href={partnerDestination(partner)} target="_blank" rel="noopener noreferrer" aria-label={`Deschide ${partner.name}`}>
+  return <a className="fa-partner__body" href={partnerDestination(partner)} target="_blank" rel="noopener noreferrer" title={partner.name} aria-label={`Deschide ${partner.name}`}>
     {logo && <span className="fa-partner__mark" data-theme={partner.theme || 'light'}><img src={partner.logo} alt="" loading="lazy" decoding="async" onError={() => setFailed(partner.logo)} /></span>}
     <span className="fa-partner__name" data-partner-name>{partner.name}</span>
   </a>;
@@ -17,6 +17,7 @@ export default function PartnerScrollScene({ partners, copy, title, reduceMotion
   useEffect(() => {
     const node = ref.current;
     const marks = node.querySelector('ul');
+    const heading = node.querySelector('header');
     if (reduceMotion || !marks.animate || !window.ResizeObserver) return undefined;
     const cards = Array.from(marks.children);
     let animations = [];
@@ -35,7 +36,8 @@ export default function PartnerScrollScene({ partners, copy, title, reduceMotion
       if (!width || !height) return;
       phase = animations[0]?.currentTime ?? phase;
       animations.forEach(animation => animation.cancel());
-      const camera = orbitCamera(width, height);
+      const headingBox = heading.getBoundingClientRect();
+      const camera = orbitCamera(width, height, headingBox.width, headingBox.height);
       marks.style.setProperty('--card-width', `${camera.cardWidth}px`);
       marks.style.setProperty('--card-height', `${camera.cardHeight}px`);
       const belts = [0, 1, 2].map(ring => ringKeyframes(ring, camera));
@@ -79,6 +81,7 @@ export default function PartnerScrollScene({ partners, copy, title, reduceMotion
     node.dataset.layout = 'orbit';
     const bounds = new ResizeObserver(resize);
     bounds.observe(marks);
+    bounds.observe(heading);
     const observer = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
       visibility();
