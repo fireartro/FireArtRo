@@ -10,14 +10,18 @@ for profile,tag in [('landscape','wide'),('portrait','portrait')]:
     if args.profile and args.profile!=profile:continue
     source=R/f'FireArt-{profile}-4K.mp4'
     for i in range(3):
-        for uhd in [False,True]:
-            w,h=((3840,2160) if tag=='wide' else (2160,3840)) if uhd else ((1920,1080) if tag=='wide' else (1080,1920))
-            out=dest/f"hero-film-{tag}-{i+1}{'-uhd' if uhd else ''}.mp4"
+        variants=[
+            ('hd', (1920,1080) if tag=='wide' else (1080,1920), '24'),
+            ('retina', (2560,1440) if tag=='wide' else (1440,2560), '21'),
+        ]
+        if tag=='wide':variants.append(('uhd',(3840,2160),'24'))
+        for quality,(w,h),crf in variants:
+            suffix={'hd':'','retina':'-retina','uhd':'-uhd'}[quality]
+            out=dest/f"hero-film-{tag}-{i+1}{suffix}.mp4"
             if args.only and out.stem not in args.only.split(','):continue
             temporary=out.with_name(out.stem+'.encoding.mp4')
-            cmd=['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(i*30),'-i',str(source),'-t','30','-vf',f'scale={w}:{h}:in_range=auto:out_range=tv:flags=lanczos,setsar=1','-an','-c:v','h264_nvenc','-preset','p5','-rc','vbr','-cq','19','-b:v','0','-maxrate','24M' if uhd else '12M','-bufsize','48M' if uhd else '24M','-profile:v','high','-pix_fmt','yuv420p','-r','30','-g','60','-video_track_timescale','15360','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-map_metadata','-1','-movflags','+faststart',str(out)]
+            cmd=['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(i*30),'-i',str(source),'-t','30','-vf',f'scale={w}:{h}:in_range=auto:out_range=tv:flags=lanczos,setsar=1','-an','-c:v','libx264','-preset','medium','-crf',crf,'-profile:v','high','-pix_fmt','yuv420p','-r','30','-g','60','-video_track_timescale','15360','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-color_range','tv','-map_metadata','-1','-map_chapters','-1','-movflags','+faststart',str(out)]
             cmd[-1]=str(temporary)
-            cmd[-1:-1]=['-color_range','tv']
             subprocess.run(cmd,check=True)
             probe=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(temporary)]))
             video=probe['streams'][0]
@@ -31,7 +35,7 @@ for profile,tag in [('landscape','wide'),('portrait','portrait')]:
                     if attempt==5:raise
                     time.sleep(1)
             report=[r for r in report if r['file']!=out.name]
-            report.append({'file':out.name,'width':w,'height':h,'frames':900,'duration':30,'bytes':out.stat().st_size})
+            report.append({'file':out.name,'quality':quality,'width':w,'height':h,'frames':900,'duration':30,'crf':int(crf),'bytes':out.stat().st_size})
             (R/'delivery-report.json').write_text(json.dumps(report,indent=2))
             # Keep the already-running, explicitly selected preview in sync.
             build=repo/'frontend/build/media'/out.name

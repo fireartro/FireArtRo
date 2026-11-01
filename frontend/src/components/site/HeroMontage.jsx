@@ -7,10 +7,14 @@ import { selectHeroDelivery } from './heroDelivery';
 import { watchHeroFrames } from './heroFrameWatch';
 import '../../styles/hero-montage.css';
 
-const mediaVersion = '20261101-balanced-r4';
+const mediaVersion = '20261101-optimized-r5';
 const films = {
   wide: [1, 2, 3].map(index => `/media/hero-film-wide-${index}.mp4?v=${mediaVersion}`),
   portrait: [1, 2, 3].map(index => `/media/hero-film-portrait-${index}.mp4?v=${mediaVersion}`),
+};
+const retinaFilms = {
+  wide: [1, 2, 3].map(index => `/media/hero-film-wide-${index}-retina.mp4?v=${mediaVersion}`),
+  portrait: [1, 2, 3].map(index => `/media/hero-film-portrait-${index}-retina.mp4?v=${mediaVersion}`),
 };
 const posters = {
   wide: `/media/hero-film-wide.webp?v=${mediaVersion}`,
@@ -52,7 +56,8 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
   playbackAllowed.current = visible && enabled && !lifecycleHidden.current;
   const currentFilmIndex = slotIndices[activeSlot];
   const filmSource = index => delivery === 'uhd'
-    ? films[format][index].replace('.mp4?', '-uhd.mp4?') : films[format][index];
+    ? films[format][index].replace('.mp4?', '-uhd.mp4?')
+    : delivery === 'retina' ? retinaFilms[format][index] : films[format][index];
   const currentSource = filmSource(currentFilmIndex);
   // Read the media element immediately before a format/quality change. A
   // timeupdate event can lag the displayed frame by a quarter of a second.
@@ -155,7 +160,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
     if (!activated || !visible || !enabled || !video) return undefined;
     return watchHeroFrames(video, onDecoderStall, () => playbackAllowed.current
       && !pendingSwitch.current && !isHeroIntroLoading(window), () => {
-      if (delivery === 'uhd') onDeliveryError();
+      if (delivery !== 'hd') onDeliveryError();
     });
   }, [activated, activeSlot, visible, enabled, delivery, onDecoderStall, onDeliveryError]);
 
@@ -343,7 +348,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
             }}
             onTimeUpdate={slot === activeSlot ? onTimeUpdate : undefined}
             onEnded={slot === activeSlot ? onEnded : undefined}
-            onError={() => delivery === 'uhd' ? onDeliveryError() : retryVideo(slot)}
+            onError={() => delivery !== 'hd' ? onDeliveryError() : retryVideo(slot)}
             data-media-variant={format}
             data-media-quality={delivery}
             data-film-index={index}
@@ -372,7 +377,7 @@ export default function HeroMontage() {
   }, []);
   const [forceHD, setForceHD] = useState(false);
   const [delivery, setDelivery] = useState(() => typeof window === 'undefined' ? 'hd'
-    : selectHeroDelivery(window.innerWidth, window.innerHeight, window.devicePixelRatio, navigator.connection));
+    : selectHeroDelivery(window.innerWidth, window.innerHeight, window.devicePixelRatio, navigator.connection, readFormat()));
   useEffect(() => {
     let lastWidth = window.innerWidth;
     const update = () => {
@@ -381,14 +386,16 @@ export default function HeroMontage() {
       if (width === lastWidth && width <= 900) return;
       lastWidth = width;
       capturePlayheadRef.current?.();
-      setFormat(readFormat());
-      setDelivery(selectHeroDelivery(width, window.innerHeight, window.devicePixelRatio, navigator.connection));
+      const nextFormat = readFormat();
+      setFormat(nextFormat);
+      setDelivery(selectHeroDelivery(width, window.innerHeight, window.devicePixelRatio, navigator.connection, nextFormat));
     };
     window.addEventListener('resize', update, { passive: true });
     const rotate = () => {
       capturePlayheadRef.current?.();
       setFormat(readFormat());
-      setDelivery(selectHeroDelivery(window.innerWidth, window.innerHeight, window.devicePixelRatio, navigator.connection));
+      const nextFormat = readFormat();
+      setDelivery(selectHeroDelivery(window.innerWidth, window.innerHeight, window.devicePixelRatio, navigator.connection, nextFormat));
     };
     window.addEventListener('orientationchange', rotate, { passive: true });
     return () => {

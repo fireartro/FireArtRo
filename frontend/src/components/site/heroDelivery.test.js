@@ -7,8 +7,8 @@ test('serves the UHD rendition on a 4K screen and on a Retina laptop', () => {
 });
 
 test('accounts for device pixels in portrait without treating CSS size as resolution', () => {
-  expect(selectHeroDelivery(430, 932, 3)).toBe('uhd');
-  expect(selectHeroDelivery(768, 1024, 2)).toBe('uhd');
+  expect(selectHeroDelivery(430, 932, 3, {}, 'portrait')).toBe('retina');
+  expect(selectHeroDelivery(768, 1024, 2, {}, 'portrait')).toBe('retina');
   expect(selectHeroDelivery(390, 844, 1)).toBe('hd');
 });
 

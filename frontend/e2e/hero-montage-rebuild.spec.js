@@ -36,7 +36,10 @@ for (const [name,width,height,deviceScaleFactor] of sizes) {
     // Windows WebKit rounds its display-sized decode surface to whole pixels.
     // Exact encoded dimensions are independently checked by verify.py.
     expect(Math.abs(state.w-state.h*(portrait?9/16:16/9))).toBeLessThanOrEqual(1);
-    if (Math.max(width,height)*deviceScaleFactor>2000) expect(state.src).toContain('-uhd.mp4');
+    const physicalPixels=Math.max(width,height)*deviceScaleFactor;
+    const quality=physicalPixels>3000&&!portrait?'uhd':physicalPixels>2000?'retina':'hd';
+    if(quality==='hd')expect(state.src).not.toMatch(/-(?:retina|uhd)\.mp4/);
+    else expect(state.src).toContain(`-${quality}.mp4`);
     await expect.poll(() => active(page).evaluate(v=>v.currentTime)).toBeGreaterThan(state.t+.2);
     await seek(page,8.9);
     await expect(page.locator('[data-cue="points"]')).toHaveCSS('visibility','visible');
@@ -173,11 +176,11 @@ test('4K media failure falls back to real HD media',async({browser})=>{
   await context.close();
 });
 
-test('prolonged UHD buffering switches to HD at the current moment',async({browser})=>{
+test('prolonged high-resolution portrait buffering switches to HD at the current moment',async({browser})=>{
   const context=await browser.newContext({baseURL,viewport:{width:430,height:932},deviceScaleFactor:3});
   const page=await context.newPage();
   await enter(page);
-  await expect(active(page)).toHaveAttribute('data-media-quality','uhd');
+  await expect(active(page)).toHaveAttribute('data-media-quality','retina');
   await seek(page,12);
   await active(page).evaluate(v=>{
     Object.defineProperty(v,'readyState',{configurable:true,get:()=>2});
