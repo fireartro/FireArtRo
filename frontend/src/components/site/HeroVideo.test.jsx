@@ -2,6 +2,20 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import HeroVideo from './HeroVideo';
 
+// Exercise optional codec selection independently of the formats bundled on site.
+jest.mock('@/data/content', () => {
+  const content = jest.requireActual('@/data/content');
+  return {
+    ...content,
+    HERO_MEDIA: {
+      ...content.HERO_MEDIA,
+      variants: Object.fromEntries(Object.entries(content.HERO_MEDIA.variants).map(([name, media]) => [
+        name, { ...media, av1Src: '/test-fixtures/hero-av1.mp4' },
+      ])),
+    },
+  };
+});
+
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let container;
 let root;
