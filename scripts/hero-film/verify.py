@@ -14,6 +14,7 @@ for tag in ['wide','portrait']:
             w,h=((3840,2160) if tag=='wide' else (2160,3840)) if uhd else ((1920,1080) if tag=='wide' else (1080,1920))
             assert (v['width'],v['height'])==(w,h)
             assert v['codec_name']=='h264' and v['pix_fmt']=='yuv420p'
+            assert v['color_range']=='tv' and v['color_space']=='bt709'
             assert int(v['nb_frames'])==900 and abs(float(data['format']['duration'])-30)<.001
             times=sorted(float(p['pts_time']) for p in data['packets'])
             assert len(times)==900 and all(abs(t-i/30)<.00001 for i,t in enumerate(times)),('nonuniform frame timestamps',path)

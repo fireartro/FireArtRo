@@ -7,7 +7,7 @@ import { selectHeroDelivery } from './heroDelivery';
 import { watchHeroFrames } from './heroFrameWatch';
 import '../../styles/hero-montage.css';
 
-const mediaVersion = '20261030-unique-r3';
+const mediaVersion = '20261101-balanced-r4';
 const films = {
   wide: [1, 2, 3].map(index => `/media/hero-film-wide-${index}.mp4?v=${mediaVersion}`),
   portrait: [1, 2, 3].map(index => `/media/hero-film-portrait-${index}.mp4?v=${mediaVersion}`),
@@ -154,8 +154,10 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
     const video = videoRefs.current[activeSlot];
     if (!activated || !visible || !enabled || !video) return undefined;
     return watchHeroFrames(video, onDecoderStall, () => playbackAllowed.current
-      && !pendingSwitch.current && !isHeroIntroLoading(window));
-  }, [activated, activeSlot, visible, enabled, onDecoderStall]);
+      && !pendingSwitch.current && !isHeroIntroLoading(window), () => {
+      if (delivery === 'uhd') onDeliveryError();
+    });
+  }, [activated, activeSlot, visible, enabled, delivery, onDecoderStall, onDeliveryError]);
 
   const retryVideo = useCallback((slot, reload = true) => {
     const video = videoRefs.current[slot];
@@ -395,9 +397,10 @@ export default function HeroMontage() {
     };
   }, []);
   const quality = forceHD ? 'hd' : delivery;
+  const fallBackToHD = useCallback(() => {
+    capturePlayheadRef.current?.();
+    setForceHD(true);
+  }, []);
   return <HeroMontagePlayer key={`${format}-${quality}-${decoderGeneration}`} format={format} delivery={quality} onDecoderStall={recoverDecoder}
-    playheadRef={playheadRef} capturePlayheadRef={capturePlayheadRef} onDeliveryError={() => {
-      capturePlayheadRef.current?.();
-      setForceHD(true);
-    }} />;
+    playheadRef={playheadRef} capturePlayheadRef={capturePlayheadRef} onDeliveryError={fallBackToHD} />;
 }

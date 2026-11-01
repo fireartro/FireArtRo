@@ -2,31 +2,103 @@
   {
     "duration": 30,
     "cues": [
-      { "id": "form", "start": 0.5, "end": 4.5, "motion": "rise", "lines": ["CERUL", "IA FORMĂ."] },
-      { "id": "points", "start": 8.1, "end": 10.8, "motion": "punch", "lines": ["FIECARE PUNCT", "CONTEAZĂ."] },
-      { "id": "ignite", "start": 11.5, "end": 15.5, "motion": "punch", "lines": ["TOTUL", "SE APRINDE."] },
-      { "id": "combined", "start": 20.3, "end": 23.8, "motion": "punch", "lines": ["ARTIFICII", "ȘI DRONE."] },
-      { "id": "beyond", "start": 24.5, "end": 29.7, "motion": "rise", "lines": ["DINCOLO DE", "AȘTEPTĂRI."] }
+      {
+        "id": "form",
+        "start": 0.7,
+        "end": 3.8,
+        "motion": "rise",
+        "lines": [
+          "PRIVEȘTE",
+          "ÎN SUS."
+        ]
+      },
+      {
+        "id": "points",
+        "start": 7.3,
+        "end": 10.2,
+        "motion": "rise",
+        "lines": [
+          "LUMINA",
+          "PRINDE FORMĂ."
+        ]
+      },
+      {
+        "id": "rhythm",
+        "start": 21.4,
+        "end": 25,
+        "motion": "stack",
+        "lines": [
+          "RITM."
+        ]
+      }
     ]
   },
   {
     "duration": 30,
     "cues": [
-      { "id": "color", "start": 0.5, "end": 4.5, "motion": "slide", "lines": ["CULOAREA", "INTRĂ ÎN SCENĂ."] },
-      { "id": "day", "start": 4.8, "end": 7.8, "motion": "rise", "lines": ["CLIPA PRINDE", "VIAȚĂ."] },
-      { "id": "light", "start": 8.4, "end": 14.8, "motion": "slide", "lines": ["LA FIECARE", "PRIVIRE."] },
-      { "id": "emotion", "start": 15.5, "end": 20.8, "motion": "rise", "lines": ["EMOȚII LA", "ÎNĂLȚIME."] },
-      { "id": "memory", "start": 25.4, "end": 29.7, "motion": "punch", "lines": ["MOMENTE", "CARE RĂMÂN."] }
+      {
+        "id": "color",
+        "start": 0.8,
+        "end": 4.8,
+        "motion": "stack",
+        "lines": [
+          "CULOARE."
+        ]
+      },
+      {
+        "id": "day",
+        "start": 14.2,
+        "end": 18,
+        "motion": "slide",
+        "lines": [
+          "ÎN PLINĂ",
+          "ZI."
+        ]
+      },
+      {
+        "id": "sync",
+        "start": 22.3,
+        "end": 26,
+        "motion": "rise",
+        "lines": [
+          "TOTUL,",
+          "ÎN SINCRON."
+        ]
+      }
     ]
   },
   {
     "duration": 30,
     "cues": [
-      { "id": "story", "start": 0.4, "end": 4.2, "motion": "punch", "lines": ["CERUL SPUNE", "POVESTEA."] },
-      { "id": "sky-story", "start": 4.8, "end": 9.2, "motion": "rise", "lines": ["O POVESTE", "SUS, PE CER."] },
-      { "id": "moment", "start": 10, "end": 14.7, "motion": "slide", "lines": ["UN MOMENT.", "MII DE PRIVIRI."] },
-      { "id": "combined", "start": 22.3, "end": 24.8, "motion": "punch", "lines": ["ARTIFICII", "ȘI DRONE."] },
-      { "id": "finale", "start": 25.4, "end": 29.8, "motion": "rise", "lines": ["FINALE CARE", "RĂMÂN."] }
+      {
+        "id": "story",
+        "start": 0.15,
+        "end": 2.9,
+        "motion": "rise",
+        "lines": [
+          "POVESTEA TA.",
+          "PE CER."
+        ]
+      },
+      {
+        "id": "combined",
+        "start": 19.2,
+        "end": 21.9,
+        "motion": "punch",
+        "lines": [
+          "ARTIFICII",
+          "ȘI DRONE."
+        ]
+      },
+      {
+        "id": "finale",
+        "start": 23.2,
+        "end": 26.8,
+        "motion": "stack",
+        "lines": [
+          "ÎMPREUNĂ."
+        ]
+      }
     ]
   }
 ]

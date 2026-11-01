@@ -15,8 +15,9 @@ for profile,tag in [('landscape','wide'),('portrait','portrait')]:
             out=dest/f"hero-film-{tag}-{i+1}{'-uhd' if uhd else ''}.mp4"
             if args.only and out.stem not in args.only.split(','):continue
             temporary=out.with_name(out.stem+'.encoding.mp4')
-            cmd=['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(i*30),'-i',str(source),'-t','30','-vf',f'scale={w}:{h}:flags=lanczos,setsar=1','-an','-c:v','h264_nvenc','-preset','p5','-rc','vbr','-cq','19','-b:v','0','-maxrate','24M' if uhd else '12M','-bufsize','48M' if uhd else '24M','-profile:v','high','-pix_fmt','yuv420p','-r','30','-g','60','-video_track_timescale','15360','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-map_metadata','-1','-movflags','+faststart',str(out)]
+            cmd=['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(i*30),'-i',str(source),'-t','30','-vf',f'scale={w}:{h}:in_range=auto:out_range=tv:flags=lanczos,setsar=1','-an','-c:v','h264_nvenc','-preset','p5','-rc','vbr','-cq','19','-b:v','0','-maxrate','24M' if uhd else '12M','-bufsize','48M' if uhd else '24M','-profile:v','high','-pix_fmt','yuv420p','-r','30','-g','60','-video_track_timescale','15360','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-map_metadata','-1','-movflags','+faststart',str(out)]
             cmd[-1]=str(temporary)
+            cmd[-1:-1]=['-color_range','tv']
             subprocess.run(cmd,check=True)
             probe=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(temporary)]))
             video=probe['streams'][0]

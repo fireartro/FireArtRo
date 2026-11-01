@@ -16,6 +16,7 @@ async function seek(page, time) {
 }
 
 const sizes = [
+  ['small-phone',320,568,2], ['phone-landscape',844,390,2],
   ['phone',375,812,2], ['phone-retina',430,932,3],
   ['tablet-portrait',768,1024,2], ['tablet-wide',1024,768,2],
   ['desktop',1512,982,1], ['retina',1512,982,2],
@@ -68,6 +69,28 @@ for (const [name,width,height,deviceScaleFactor] of sizes) {
     expect(bounds.bottom).toBeLessThanOrEqual(bounds.heroBottom+1);
     expect(errors).toEqual([]);
     await page.screenshot({path:testInfo.outputPath(`${name}.png`)});
+    await seek(page,22.5);
+    const stack=page.locator('[data-cue="rhythm"]');
+    await expect(stack).toHaveCSS('visibility','visible');
+    await expect(stack.locator('.hero-kinetic__echo')).toHaveCount(4);
+    const rows=await stack.evaluate(cue=>{
+      const hero=cue.closest('.nr-hero').getBoundingClientRect();
+      const actions=cue.closest('.nr-hero').querySelector('.nr-hero__actions').getBoundingClientRect();
+      return [...cue.querySelectorAll('.hero-kinetic__lead,.hero-kinetic__echo')].map(node=>{
+        const range=document.createRange();range.selectNodeContents(node);
+        const r=range.getBoundingClientRect();
+        return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,heroBottom:hero.bottom,actionsBottom:actions.bottom,opacity:Number(node.style.opacity)};
+      });
+    });
+    for(const row of rows){
+      expect(row.opacity).toBeGreaterThan(0);
+      expect(row.left).toBeGreaterThanOrEqual(-1);
+      expect(row.right).toBeLessThanOrEqual(width+1);
+      expect(row.top).toBeGreaterThanOrEqual(0);
+      expect(row.bottom).toBeLessThanOrEqual(row.heroBottom);
+      if((width<=900&&height>600)||height>width)expect(row.top).toBeGreaterThan(row.actionsBottom);
+    }
+    await page.screenshot({path:testInfo.outputPath(`${name}-five-rows.png`)});
     await context.close();
   });
 }
@@ -106,6 +129,31 @@ test('three real 30-second chapters switch, loop and retain the playhead on rota
   expect(time).toBeLessThan(17);
 });
 
+for(const [name,width,height] of [['phone',390,844],['tablet',768,1024]]){
+  test(`all nine phrases and five-row accents fit: ${name}`,async({browser})=>{
+    const context=await browser.newContext({baseURL,viewport:{width,height},deviceScaleFactor:2});
+    const page=await context.newPage();await enter(page);
+    for(let chapter=0;chapter<3;chapter++){
+      const cues=chapter===0?[[2,'form'],[8.9,'points'],[22.5,'rhythm']]:chapter===1?[[2,'color'],[15.5,'day'],[24,'sync']]:[[1.5,'story'],[20.5,'combined'],[24.5,'finale']];
+      for(const [time,id] of cues){
+        await seek(page,time);const cue=page.locator(`[data-cue="${id}"]`);
+        await expect(cue).toHaveCSS('visibility','visible');
+        const bounds=await cue.evaluate(node=>{
+          const hero=node.closest('.nr-hero').getBoundingClientRect();
+          return [...node.querySelectorAll('.hero-kinetic__lead,.hero-kinetic__echo')].filter(n=>Number(n.style.opacity)>.1).map(n=>{
+            const range=document.createRange();range.selectNodeContents(n);const r=range.getBoundingClientRect();
+            return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,heroBottom:hero.bottom};
+          });
+        });
+        expect(bounds.length).toBeGreaterThan(0);
+        for(const b of bounds){expect(b.left).toBeGreaterThanOrEqual(0);expect(b.right).toBeLessThanOrEqual(width);expect(b.top).toBeGreaterThanOrEqual(0);expect(b.bottom).toBeLessThanOrEqual(b.heroBottom);}
+      }
+      if(chapter<2){await seek(page,29.9);await expect(active(page)).toHaveAttribute('data-film-index',String(chapter+1),{timeout:15000});}
+    }
+    await context.close();
+  });
+}
+
 test('4K media failure falls back to real HD media',async({browser})=>{
   const context=await browser.newContext({baseURL,viewport:{width:1512,height:982},deviceScaleFactor:2});
   const page=await context.newPage();
@@ -122,5 +170,24 @@ test('4K media failure falls back to real HD media',async({browser})=>{
   // actual encoded 1920x1080 dimensions are checked by verify.py with ffprobe.
   expect(state.ratio).toBeCloseTo(16/9,2);
   await expect.poll(()=>active(page).evaluate(v=>v.currentTime)).toBeGreaterThan(state.time+.2);
+  await context.close();
+});
+
+test('prolonged UHD buffering switches to HD at the current moment',async({browser})=>{
+  const context=await browser.newContext({baseURL,viewport:{width:430,height:932},deviceScaleFactor:3});
+  const page=await context.newPage();
+  await enter(page);
+  await expect(active(page)).toHaveAttribute('data-media-quality','uhd');
+  await seek(page,12);
+  await active(page).evaluate(v=>{
+    Object.defineProperty(v,'readyState',{configurable:true,get:()=>2});
+    Object.defineProperty(v,'networkState',{configurable:true,get:()=>2});
+  });
+  await expect(active(page)).toHaveAttribute('data-media-quality','hd',{timeout:14000});
+  await expect.poll(()=>active(page).evaluate(v=>v.readyState>=2&&!v.paused)).toBe(true);
+  const time=await active(page).evaluate(v=>v.currentTime);
+  expect(time).toBeGreaterThanOrEqual(12);
+  expect(await active(page).getAttribute('data-film-index')).toBe('0');
+  await expect.poll(()=>active(page).evaluate(v=>v.currentTime)).toBeGreaterThan(time+.2);
   await context.close();
 });

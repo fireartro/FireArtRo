@@ -29,6 +29,15 @@ test('uses visibly different punch, lateral and cascade entrances', () => {
   expect(getHeroCuePose({start:2,end:5,motion:'rise'},2.05).y).toBeGreaterThan(5);
 });
 
+test('the repeated rows recombine smoothly before the cue ends', () => {
+  const cue = { start: 2, end: 5, motion: 'stack' };
+  const pose = getHeroEchoPose(cue, 4.9, 2);
+  expect(pose.y).toBeGreaterThan(0);
+  expect(pose.y).toBeLessThan(172);
+  expect(pose.opacity).toBeGreaterThan(0);
+  expect(pose.opacity).toBeLessThan(.55);
+});
+
 test('resynchronizes after a loop and rejects invalid clock values', () => {
   expect(getHeroFilmCue(33)?.id).toBe('lift');
   expect(getHeroFilmCue(32)).toBeNull();

@@ -83,7 +83,8 @@ export default function HeroKineticTitles({ videoRef, enabled, source, filmConfi
       const actions = host.querySelector('.nr-hero__actions') || content;
       if (!actions || !hero.width || !hero.height) return;
       const actionBox = actions.getBoundingClientRect();
-      const stacked = hero.width <= 900 || hero.height > hero.width;
+      const shortLandscape = hero.width > hero.height && hero.width <= 900 && hero.height <= 600;
+      const stacked = !shortLandscape && (hero.width <= 900 || hero.height > hero.width);
       if (stacked) {
         const startY = Math.max(actionBox.bottom - hero.top + 28, hero.height * .59);
         const available = hero.height - 76 - startY;

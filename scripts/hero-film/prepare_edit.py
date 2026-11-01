@@ -8,7 +8,7 @@ videos={v['id']:v for v in inv['videos']}
 drones={d['id']:d for d in json.loads((R/'drones.json').read_text())}
 
 # Cut windows were inspected around ignition, peak and decay. Each effect is
-# used once. Desktop daylight uses two continuous, separate camera events.
+# used once. Daylight uses two separate camera events, interleaved with drones.
 # Portrait substitutions are explicit editorial choices, never a blind centre crop.
 shots=json.loads((Path(__file__).parent/'edit.json').read_text())['shots']
 
@@ -31,18 +31,21 @@ def prepare(job):
         return
     v=videos[src]; dest=assets/(shot['id']+'.mp4')
     stamp=dest.with_suffix('.json')
-    key=json.dumps([spec,duration])
+    key=json.dumps([spec,duration,'4k-tv-range-v4'])
     if dest.exists() and stamp.exists() and stamp.read_text()==key: return
     at=spec['at'];rate=spec['rate']
     assert at+duration*rate<=v['duration']+.01,(shot,profile)
     # Lossless framing follows in HyperFrames; source orientation is normalised here.
     vf=f'setpts=(PTS-STARTPTS)/{rate},'
     vf+=('minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1' if spec.get('interpolate') else 'fps=30')
-    vf+=',setsar=1'
-    # Native 8K portrait is normalised to the 4K portrait canvas before authoring.
-    if max(v['stream']['width'],v['stream']['height'])>3840:
-        vf+=',scale=2160:3840:force_original_aspect_ratio=decrease:flags=lanczos'
-    run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(at),'-i',v['path'],'-vf',vf,'-frames:v',str(round(duration*30)),'-an','-c:v','h264_nvenc','-preset','p5','-rc','vbr','-cq','17','-b:v','0','-pix_fmt','yuv420p','-g','30','-map_metadata','-1','-movflags','+faststart',str(dest)])
+    w,h=(3840,2160) if profile=='landscape' else (2160,3840)
+    # Normalise once; reject mismatched aspect ratios instead of stretching.
+    sw,sh=v['stream']['width'],v['stream']['height']
+    rotation=next((d.get('rotation',0) for d in v['stream'].get('side_data_list',[]) if 'rotation' in d),0)
+    if abs(rotation)%180==90:sw,sh=sh,sw
+    assert abs(sw/sh-w/h)<.015,(profile,src,sw,sh)
+    vf+=f',scale={w}:{h}:in_range=auto:out_range=tv:flags=lanczos,setsar=1'
+    run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(at),'-i',v['path'],'-vf',vf,'-frames:v',str(round(duration*30)),'-an','-c:v','h264_nvenc','-preset','p5','-rc','vbr','-cq','17','-b:v','0','-pix_fmt','yuv420p','-color_range','tv','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-g','30','-video_track_timescale','15360','-map_metadata','-1','-movflags','+faststart',str(dest)])
     stamp.write_text(key)
     print(profile,shot['id'],flush=True)
 

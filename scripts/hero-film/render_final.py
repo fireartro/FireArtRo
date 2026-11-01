@@ -25,15 +25,17 @@ def render(profile):
             continue
         spec=shot['wide' if profile=='landscape' else 'portrait']
         asset=root/'assets'/(shot['id']+('.webp' if spec['src'].startswith('D') else '.mp4'))
-        fingerprint=hashlib.sha256(asset.read_bytes()+(root/'compositions'/(shot['id']+'.html')).read_bytes()+b'hero-pipeline-v2').hexdigest()
+        fingerprint=hashlib.sha256(asset.read_bytes()+(root/'compositions'/(shot['id']+'.html')).read_bytes()+b'hero-pipeline-v3').hexdigest()
         stamp=dest.with_suffix('.sha256')
         if valid(dest,shot['duration']) and stamp.exists() and stamp.read_text()==fingerprint:continue
         if not spec['src'].startswith('D'):
             # These shots contain no authored graphic layers or transforms.
             # Conform their already-cut original pixels directly: no browser
             # JPEG roundtrip, and bounded memory for the native 4K footage.
-            w,h=(3840,2160) if profile=='landscape' else (2160,3840)
-            run(['ffmpeg','-v','error','-y','-i',str(root/'assets'/(shot['id']+'.mp4')),'-vf',f'scale={w}:{h}:flags=lanczos,setsar=1','-frames:v',str(round(shot['duration']*30)),'-an','-c:v','h264_nvenc','-preset','p5','-cq','17','-b:v','0','-pix_fmt','yuv420p','-video_track_timescale','15360','-movflags','+faststart',str(dest)])
+            # Prepared footage already has the final canvas and timebase.
+            # Link it to avoid another lossy encode and duplicate 4K data.
+            if dest.exists():dest.unlink()
+            os.link(asset,dest)
             if not valid(dest,shot['duration']):raise RuntimeError('invalid conformed source')
             stamp.write_text(fingerprint)
             print('CONFORMED',profile,shot['id'],flush=True)

@@ -29,5 +29,8 @@ export function getHeroEchoPose(cue, time, row) {
   if (cue.motion !== 'stack' || !Number.isFinite(elapsed) || elapsed < .3 || time >= cue.end) return {opacity:0,x:0,y:0};
   const progress = Math.max(0, Math.min(1, (elapsed - .3 - (rank - 1) * .08) / .32));
   const rest = (1 - progress) ** 4;
-  return {opacity:progress > 0 ? rank === 2 ? .55 : .85 : 0, x:rest * row * 65, y:row * 86 * (1 - rest)};
+  // Recombine the five rows before the cut; never run on a separate clock.
+  const exit = Math.min(1, Math.max(0, (cue.end - time) / .35));
+  const spread = 1 - (1 - exit) ** 3;
+  return {opacity:(progress > 0 ? rank === 2 ? .55 : .85 : 0) * exit, x:rest * row * 65, y:row * 86 * (1 - rest) * spread};
 }

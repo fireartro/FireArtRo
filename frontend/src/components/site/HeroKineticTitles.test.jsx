@@ -61,6 +61,16 @@ test('does not add titles over a poster, reduced-motion fallback or custom CMS m
   expect(container.querySelector('.hero-kinetic')).toBeNull();
 });
 
+test('renders the original five-row stack with one lead and four echoes', () => {
+  mount();
+  seek(10.4);
+  const cue = container.querySelector('[data-cue="rhythm"]');
+  expect(cue.style.visibility).toBe('visible');
+  expect(cue.querySelectorAll('.hero-kinetic__lead')).toHaveLength(1);
+  expect(cue.querySelectorAll('.hero-kinetic__echo')).toHaveLength(4);
+  expect([...cue.querySelectorAll('.hero-kinetic__echo')].every(node => Number(node.style.opacity) > 0)).toBe(true);
+});
+
 test('does not rewrite animated styles when the video has not advanced', () => {
   mount();
   seek(1);

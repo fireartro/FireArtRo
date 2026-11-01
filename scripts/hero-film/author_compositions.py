@@ -21,9 +21,11 @@ for profile,w,h in [('landscape',3840,2160),('portrait',2160,3840)]:
         else:
             v=json.loads(subprocess.check_output(['ffprobe','-v','error','-select_streams','v:0','-show_entries','stream=width,height','-of','json',str(path)]))['streams'][0]
             sw,sh=v['width'],v['height']
-        # Desktop accepts native panoramic sources only. No half-frame panels.
-        if profile=='landscape':
+        # Desktop recordings are panoramic; photo crops preserve the formation.
+        if profile=='landscape' and not photo:
             assert abs(sw/sh-16/9)<.015, f'Landscape source must be panoramic: {s["id"]} {sw}x{sh}'
+        if profile=='landscape' and photo and abs(sw/sh-16/9)>=.015:
+            assert sw>sh and 'position' in spec, f'Photographic crop requires reviewed framing: {s["id"]}'
         box='left:0;width:100%;'
         fit='cover'
         position=spec.get('position','center')

@@ -24,3 +24,21 @@ test('recovers a discarded media buffer after the browser returns idle',()=>{
  jest.advanceTimersByTime(3500);
  expect(recover).toHaveBeenCalledTimes(1);stop();
 });
+
+test('a current frame without future data is buffering, not a broken decoder',()=>{
+ const recover=jest.fn();
+ const video={readyState:2,networkState:2,paused:false,currentTime:14,requestVideoFrameCallback:jest.fn(),cancelVideoFrameCallback:jest.fn()};
+ const stop=watchHeroFrames(video,recover,()=>true);
+ jest.advanceTimersByTime(6000);
+ expect(recover).not.toHaveBeenCalled();stop();
+});
+
+test('long buffering offers a smaller rendition once without reloading the decoder',()=>{
+ const recover=jest.fn(), fallback=jest.fn();let allowed=true;
+ const video={readyState:2,networkState:2,paused:false,currentTime:14};
+ const stop=watchHeroFrames(video,recover,()=>allowed,fallback);
+ allowed=false;jest.advanceTimersByTime(12000);expect(fallback).not.toHaveBeenCalled();
+ allowed=true;jest.advanceTimersByTime(9000);expect(fallback).toHaveBeenCalledTimes(1);
+ jest.advanceTimersByTime(12000);expect(fallback).toHaveBeenCalledTimes(1);
+ expect(recover).not.toHaveBeenCalled();stop();
+});
