@@ -1,5 +1,6 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { Building2, CalendarDays, MapPinned, UsersRound } from "lucide-react";
 
 import useManagedContent from "@/hooks/useManagedContent";

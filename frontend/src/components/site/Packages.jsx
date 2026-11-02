@@ -1,6 +1,6 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { useReducedMotion } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { ArrowUpRight } from "lucide-react";
 import PackageVideoPlayer from "./PackageVideoPlayer";
 import { useLocation, useNavigate } from "react-router-dom";

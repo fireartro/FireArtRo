@@ -30,6 +30,23 @@ test('renders the homepage with published content and its metadata', () => {
   expect(page.html).toContain('href="/pachete"');
 });
 
+test('lets the browser select the portrait hero before the client script starts', () => {
+  const page = renderPublicPage('/', data);
+  const picture = page.html.match(/<picture data-hero-poster="responsive">[\s\S]*?<\/picture>/)?.[0];
+  expect(picture).toBeDefined();
+  expect(picture).toMatch(/media="\(orientation: portrait\)"[^>]*type="image\/webp"/);
+  expect(picture).toContain('fetchPriority="high"');
+  expect(picture).toContain('loading="eager"');
+  // React must not hoist a preload for the wide fallback outside its picture.
+  expect(page.html).not.toMatch(/<link[^>]*rel="preload"[^>]*hero-film-wide/);
+  expect(page.html).toContain('<!--$-->');
+  expect(page.html).toContain('data-testid="route-shutter"');
+  const first = page.html.match(/<video[^>]*data-hero-initial-film[^>]*>/)?.[0];
+  expect(first).toBeDefined();
+  expect(first).not.toMatch(/\ssrc=/);
+  expect(first).toContain('preload="none"');
+});
+
 test('renders archive and article content supplied by the public data reader', () => {
   const post = { id: 'public-article', slug: 'eveniment-real', title: 'Eveniment real', excerpt: 'Descriere verificată', body: 'Conținut publicat', published_at: '2026-10-01T12:00:00Z', updated_at: '2026-10-02T12:00:00Z', category: '', cover_media_id: '', cover_alt: '' };
   const archive = renderPublicPage('/blog', { ...data, posts: [post] });

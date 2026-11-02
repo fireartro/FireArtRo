@@ -66,9 +66,25 @@ test('buffers the first film and starts with future frames without a canplaythro
   expect(HTMLMediaElement.prototype.play.mock.instances).toContain(first);
 });
 
-test('announces that a supported hero expects video before the delayed player mounts', () => {
+test('exposes a source-less first element for early buffering before activation', () => {
   expect(container.querySelector('.hero-video-stage').dataset.heroPlayback).toBe('video');
-  expect(container.querySelector('video')).toBeNull();
+  const video = container.querySelector('video');
+  expect(video.hasAttribute('data-hero-initial-film')).toBe(true);
+  expect(video.getAttribute('preload')).toBe('none');
+  expect(video.hasAttribute('src')).toBe(false);
+  expect(JSON.parse(video.dataset.heroInitialSources).portrait.hd).toContain('portrait-1.mp4');
+});
+
+test('takes over an early buffered first element without replacing or resetting its source', () => {
+  const first = container.querySelector('video');
+  first.src = JSON.parse(first.dataset.heroInitialSources).wide.hd;
+  first.currentTime = 0.25;
+  const assignSource = jest.spyOn(first, 'src', 'set');
+  activate();
+  expect(container.querySelector('video')).toBe(first);
+  expect(first.currentTime).toBe(0.25);
+  expect(assignSource).not.toHaveBeenCalled();
+  expect(HTMLMediaElement.prototype.load).not.toHaveBeenCalled();
 });
 
 test('mounts the first film on 3g and permits deliberate entry before buffering completes', () => {
@@ -114,7 +130,7 @@ test('nudges a suspended metadata-only preload without spending the initial buff
 });
 
 test('loads only the first film after the poster, and preloads the next at 35 seconds', () => {
-  expect(container.querySelector('video')).toBeNull();
+  expect(container.querySelector('video').hasAttribute('src')).toBe(false);
   activate();
   const video = container.querySelector('video');
   expect(video.getAttribute('src')).toContain('wide-1.mp4');
@@ -283,9 +299,12 @@ test('cancels pending media retries when the player is unmounted', async () => {
 
 test('switches format when a desktop window changes aspect ratio without changing width', () => {
   resize(1000, 800);
-  expect(container.querySelector('img').getAttribute('src')).toContain('wide.webp');
+  activate();
+  expect(container.querySelector('video').dataset.mediaVariant).toBe('wide');
   resize(1000, 1200);
-  expect(container.querySelector('img').getAttribute('src')).toContain('portrait.webp');
+  activate();
+  expect(container.querySelector('video').dataset.mediaVariant).toBe('portrait');
+  expect(container.querySelector('source[media="(orientation: portrait)"]').srcset).toContain('hero-portrait-810');
 });
 
 test('does not restart a video on loadeddata after the page becomes hidden', () => {

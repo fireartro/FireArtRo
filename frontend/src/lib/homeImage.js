@@ -10,7 +10,20 @@ const variants = {
   '/media/gallery/fireartro-nunta-spectacol-019.webp': ['owner-effects', 1920],
 };
 
+const optimized = {
+  '/media/gallery/fireartro-artificii-zi-spectacol-003.webp?v=source-crop-20260828': ['package-day', 1080],
+  '/media/gallery/fireartro-drone-show-mastercard-img-5103.webp': ['package-drone', 1411],
+  '/media/gallery/fireartro-artificii-noapte-spectacol-110.webp': ['package-night', 1280],
+  '/media/gallery/fireartro-nunta-spectacol-019.webp': ['package-effects', 1920],
+};
+
 export function homeImageProps(src) {
+  if (optimized[src]) {
+    const [name, width] = optimized[src];
+    return { src, srcSet: [480, 640, 960].map(size =>
+      `/media/optimized/${name}-${size}-20261102.webp ${size}w`).concat(`${src} ${width}w`).join(', '),
+      sizes: '(max-width: 899px) 100vw, clamp(704px, 56vw, 1152px)' };
+  }
   const variant = variants[src];
   if (!variant) return { src };
   const [name, width] = variant;

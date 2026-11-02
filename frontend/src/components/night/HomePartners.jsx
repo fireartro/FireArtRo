@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useReducedMotion } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { isOriginalPartnerSeed, resolveDisplayPartners } from "@/data/partnerCatalog";
 import useManagedContent from "@/hooks/useManagedContent";

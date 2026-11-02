@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { useReducedMotion } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 

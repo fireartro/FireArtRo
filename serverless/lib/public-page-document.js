@@ -41,7 +41,7 @@ const NO_SCRIPT_STYLE = '#fireart-intro{display:none!important}'
   + '#root .nr-hero__title-line{display:none!important}';
 
 /** Fill the trusted CRA template with the same public React component output. */
-export function publicPageDocument(template, result, { styles = [] } = {}) {
+export function publicPageDocument(template, result, { styles = [], inlineStyles = {}, scripts = [] } = {}) {
   if (typeof template !== 'string' || typeof result?.html !== 'string' || !result.meta) {
     throw new Error('Public document unavailable');
   }
@@ -58,6 +58,19 @@ export function publicPageDocument(template, result, { styles = [] } = {}) {
     .replace(/<script\b(?=[^>]*\bid=["'](?:page-structured-data|fireart-public-page-data)["'])[^>]*>[\s\S]*?<\/script>/gi, '');
 
   const tag = (key, value, property = false) => `<meta ${property ? 'property' : 'name'}="${key}" content="${escapeHtml(value)}" />`;
+  const styleTag = style => {
+    const css = inlineStyles[style];
+    if (typeof css !== 'string') return `<link rel="stylesheet" href="${escapeHtml(style)}" />`;
+    if (/<\/style\b/i.test(css)) throw new Error('Invalid compiled stylesheet');
+    // MiniCssExtractPlugin recognises data-href and avoids a duplicate fetch
+    // when the same route chunk mounts. The exact compiled cascade is retained.
+    return `<style data-href="${escapeHtml(style)}">${css}</style>`;
+  };
+  html = html.replace(/<link\b[^>]*>/gi, link => {
+    const href = attribute(link, 'href');
+    return attribute(link, 'rel') === 'stylesheet' && styles.includes(href)
+      && typeof inlineStyles[href] === 'string' ? styleTag(href) : link;
+  });
   const head = [
     `<title>${escapeHtml(meta.title)}</title>`,
     tag('description', meta.description),
@@ -72,7 +85,16 @@ export function publicPageDocument(template, result, { styles = [] } = {}) {
     if (typeof style !== 'string' || !/^\/static\/css\/[a-z0-9_./-]+\.css$/i.test(style)
         || style.includes('..') || style.includes('//')) throw new Error('Invalid public stylesheet');
     if (!html.includes(`href="${style}"`) && !html.includes(`href='${style}'`)) {
-      head.push(`<link rel="stylesheet" href="${escapeHtml(style)}" />`);
+      head.push(styleTag(style));
+    }
+  }
+  // Warm only this route's ordinary lazy chunks. Preload never executes code,
+  // and low priority leaves the logo, hero image and fonts ahead of it.
+  for (const script of new Set(scripts)) {
+    if (typeof script !== 'string' || !/^\/static\/js\/[a-z0-9_.-]+\.js$/i.test(script)
+        || script.includes('..')) throw new Error('Invalid public script');
+    if (!html.includes(`href="${script}"`)) {
+      head.push(`<link rel="preload" as="script" href="${escapeHtml(script)}" fetchpriority="low" />`);
     }
   }
   if (!/<\/head>/i.test(html)) throw new Error('Public document unavailable');

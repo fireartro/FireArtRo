@@ -39,5 +39,7 @@ test('every public route has its compiled stylesheet available for initial HTML'
   for (const route of ['/', '/pachete', '/galerie', '/contact', '/intrebari-frecvente', '/blog', '/blog/:slug', '/servicii/:slug', '/cookies', '/confidentialitate', '/termeni-si-conditii']) {
     assert.ok(manifest.routes[route]?.length, `Missing CSS for ${route}`);
     for (const css of manifest.routes[route]) assert.ok(fs.existsSync(path.join(build, css)), css);
+    assert.ok(manifest.routeScripts[route]?.length, `Missing lazy script group for ${route}`);
+    for (const script of manifest.routeScripts[route]) assert.ok(fs.existsSync(path.join(build, script)), script);
   }
 });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import HeroKineticTitles from './HeroKineticTitles';
+import HeroPoster from './HeroPoster';
 import { selectHeroMontageTitles } from '@/data/heroMontageTitles';
 import { canPlayHeroVideo, canStartHeroVideo, getHeroAutoplayPolicy, isHeroIntroLoading, primeHeroVideoBuffer, scheduleHeroVideoPlayback } from './heroPlayback';
 import { getNextFilmIndex, selectMontageFormat, shouldPreloadNextFilm } from './heroMontagePlayback';
@@ -16,10 +17,10 @@ const retinaFilms = {
   wide: [1, 2, 3].map(index => `/media/hero-film-wide-${index}-retina.mp4?v=${mediaVersion}`),
   portrait: [1, 2, 3].map(index => `/media/hero-film-portrait-${index}-retina.mp4?v=${mediaVersion}`),
 };
-const posters = {
-  wide: `/media/hero-film-wide.webp?v=${mediaVersion}`,
-  portrait: `/media/hero-film-portrait.webp?v=${mediaVersion}`,
-};
+const initialSources = JSON.stringify(Object.fromEntries(['wide', 'portrait'].map(format => [format, {
+  hd: films[format][0], retina: retinaFilms[format][0],
+  uhd: films[format][0].replace('.mp4?', '-uhd.mp4?'),
+}])));
 const readFormat = () => typeof window === 'undefined'
   ? 'wide'
   : selectMontageFormat(window.innerWidth, window.innerHeight);
@@ -43,13 +44,18 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
   const recoverRef = useRef(null);
   const [posterReady, setPosterReady] = useState(false);
   const [activated, setActivated] = useState(false);
+  // A source-less first element lets the small startup script buffer the
+  // correct rendition before React downloads, without a speculative desktop
+  // request on phones or a request for data-saving/reduced-motion visitors.
+  const initialFilm = useRef(playheadRef.current.index === 0 && playheadRef.current.time === 0);
   const [slotIndices, setSlotIndices] = useState(() => [playheadRef.current.index, null]);
   const [activeSlot, setActiveSlot] = useState(0);
-  const [playingSlot, setPlayingSlot] = useState(null);
+  const [playingSlot, setPlayingSlot] = useState(() => typeof document !== 'undefined'
+    && document.querySelector('#acasa video[data-hero-initial-film]')?.dataset.heroPrimed === 'true' ? 0 : null);
   const [pageVisible, setPageVisible] = useState(() => typeof document === 'undefined' || document.visibilityState !== 'hidden');
   const [inView, setInView] = useState(true);
-  const [autoplayEligible, setAutoplayEligible] = useState(() => typeof window === 'undefined' || getHeroAutoplayPolicy(window));
-  const [videoSupported] = useState(() => typeof document === 'undefined' || canPlayHeroVideo(document.createElement('video')));
+  const [autoplayEligible, setAutoplayEligible] = useState(true);
+  const [videoSupported, setVideoSupported] = useState(true);
   const visible = pageVisible && inView;
   const enabled = autoplayEligible && videoSupported;
   activeSlotRef.current = activeSlot;
@@ -115,6 +121,8 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
 
   useEffect(() => {
     const update = () => setAutoplayEligible(getHeroAutoplayPolicy(window));
+    update();
+    setVideoSupported(canPlayHeroVideo(document.createElement('video')));
     const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     const connection = window.navigator?.connection;
     motion?.addEventListener?.('change', update);
@@ -143,6 +151,14 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
     const video = videoRefs.current[activeSlot];
     activeVideoRef.current = video;
     if (!video) return undefined;
+    if (video.hasAttribute('data-hero-initial-film') && !video.poster) {
+      const poster = stageRef.current?.querySelector('picture img')?.currentSrc;
+      if (poster) video.poster = poster;
+    }
+    if (video.hasAttribute('data-hero-initial-film') && video.getAttribute('src') !== currentSource) {
+      video.src = currentSource;
+    }
+    video.preload = 'auto';
     const startPlayback = () => {
       if (!playbackAllowed.current) return;
       if (canStartHeroVideo(video, window)) {
@@ -153,7 +169,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
     else video.pause();
     window.addEventListener('fireart:intro-dismissed', startPlayback);
     return () => window.removeEventListener('fireart:intro-dismissed', startPlayback);
-  }, [activated, activeSlot, visible, enabled]);
+  }, [activated, activeSlot, visible, enabled, currentSource]);
 
   useEffect(() => {
     const video = videoRefs.current[activeSlot];
@@ -302,30 +318,27 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
 
   return (
     <div ref={stageRef} data-hero-playback={enabled ? 'video' : 'poster'} className="hero-video-stage hero-montage absolute inset-0 z-0 overflow-hidden">
-      <img
-        src={posters[format]}
-        onLoad={() => setPosterReady(true)}
-        onError={() => setPosterReady(true)}
-        alt="Spectacol real de artificii FireArtRo"
-        width={format === 'wide' ? 1920 : 1080}
-        height={format === 'wide' ? 1080 : 1920}
+      <HeroPoster
+        onReady={() => setPosterReady(true)}
         className="hero-media-surface hero-media-webp hero-montage__poster absolute inset-0 h-full w-full object-cover"
-        fetchPriority="high"
-        decoding="async"
-        loading="eager"
       />
-      {activated && enabled && [0, 1].map(slot => {
+      {[0, 1].map(slot => {
         const index = slotIndices[slot];
         if (index === null) return null;
+        const initial = initialFilm.current && slot === 0 && index === 0;
+        if ((!activated || !enabled) && !initial) return null;
         return (
           <video
             key={`${format}-${slot}-${index}`}
             ref={element => { videoRefs.current[slot] = element; if (slot === activeSlot) activeVideoRef.current = element; }}
-            src={filmSource(index)}
-            autoPlay={slot === activeSlot && visible && !isHeroIntroLoading(window)}
+            src={initial ? undefined : filmSource(index)}
+            suppressHydrationWarning={initial}
+            data-hero-initial-film={initial ? 'true' : undefined}
+            data-hero-initial-sources={initial ? initialSources : undefined}
+            autoPlay={activated && slot === activeSlot && visible && typeof window !== 'undefined' && !isHeroIntroLoading(window)}
             muted
             playsInline
-            preload="auto"
+            preload={initial && !activated ? 'none' : 'auto'}
             onLoadedMetadata={event => onMetadata(slot, event.currentTarget)}
             onLoadedData={slot === activeSlot ? event => {
               clearRetry(slot);
@@ -352,7 +365,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
             data-media-variant={format}
             data-media-quality={delivery}
             data-film-index={index}
-            className={`hero-media-surface hero-media-video hero-montage__video absolute inset-0 h-full w-full object-cover${slot === activeSlot && playingSlot === slot ? ' hero-montage__video--visible' : ''}`}
+            className={`hero-media-surface hero-media-video hero-montage__video absolute inset-0 h-full w-full object-cover${enabled && slot === activeSlot && playingSlot === slot ? ' hero-montage__video--visible' : ''}`}
           />
         );
       })}

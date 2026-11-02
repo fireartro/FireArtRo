@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { ArrowUpRight } from "lucide-react";
 import { SERVICES } from "@/data/content";
 import { useLocation, useNavigate } from "react-router-dom";

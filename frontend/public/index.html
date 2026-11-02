@@ -4,13 +4,16 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#050308" />
+        <link rel="preload" as="image" href="%PUBLIC_URL%/media/fireart-logo.webp" fetchpriority="high" />
+        <link rel="preload" as="image" type="image/webp" fetchpriority="high" media="(orientation: portrait)" imagesrcset="/media/optimized/hero-portrait-480-20261102.webp 480w, /media/optimized/hero-portrait-810-20261102.webp 810w, /media/optimized/hero-portrait-1080-20261102.webp 1080w" imagesizes="100vw" />
+        <link rel="preload" as="image" type="image/webp" fetchpriority="high" media="(orientation: landscape)" imagesrcset="/media/optimized/hero-wide-960-20261102.webp 960w, /media/optimized/hero-wide-1440-20261102.webp 1440w, /media/optimized/hero-wide-1920-20261102.webp 1920w" imagesizes="100vw" />
         <link rel="icon" href="%PUBLIC_URL%/favicon.ico" sizes="16x16 32x32 48x48" />
         <link rel="icon" type="image/png" href="%PUBLIC_URL%/favicon-96x96.png" sizes="96x96" />
         <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" sizes="180x180" />
         <meta name="color-scheme" content="dark" />
         <script src="%PUBLIC_URL%/site-bootstrap.js?v=20260930-1"></script>
         <link rel="stylesheet" href="%PUBLIC_URL%/startup-intro.css?v=20261030-2" />
-        <script defer src="%PUBLIC_URL%/startup-intro.js?v=20261031-3"></script>
+        <script defer src="%PUBLIC_URL%/startup-intro.js?v=20261102-native-poster"></script>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="icon" type="image/png" href="%PUBLIC_URL%/favicon-16x16.png" sizes="16x16" />
@@ -193,9 +196,13 @@
     <body>
         <noscript>Ai nevoie de JavaScript activat pentru a folosi site-ul FireArtRo.</noscript>
         <div id="fireart-intro" class="fireart-intro" role="status" aria-label="Se pregătește experiența FireArtRo">
-            <video class="fireart-intro__footage" src="%PUBLIC_URL%/media/startup-fireworks.mp4" poster="%PUBLIC_URL%/media/hero-film-wide.webp?v=20261030" autoplay muted playsinline loop preload="auto" aria-hidden="true"></video>
+            <picture aria-hidden="true">
+                <source media="(orientation: portrait)" type="image/webp" srcset="%PUBLIC_URL%/media/optimized/hero-portrait-480-20261102.webp 480w, %PUBLIC_URL%/media/optimized/hero-portrait-810-20261102.webp 810w, %PUBLIC_URL%/media/optimized/hero-portrait-1080-20261102.webp 1080w" sizes="100vw" />
+                <img class="fireart-intro__footage" src="%PUBLIC_URL%/media/optimized/hero-wide-1920-20261102.webp" srcset="%PUBLIC_URL%/media/optimized/hero-wide-960-20261102.webp 960w, %PUBLIC_URL%/media/optimized/hero-wide-1440-20261102.webp 1440w, %PUBLIC_URL%/media/optimized/hero-wide-1920-20261102.webp 1920w" sizes="100vw" alt="" fetchpriority="high" />
+            </picture>
+            <video class="fireart-intro__footage" src="%PUBLIC_URL%/media/startup-fireworks.mp4?v=20261030" autoplay muted playsinline loop preload="auto" aria-hidden="true"></video>
             <div class="fireart-intro__identity">
-                <img class="fireart-intro__logo" src="%PUBLIC_URL%/media/fireart-logo.webp" width="720" height="311" alt="FireArtRo" decoding="async" />
+                <img class="fireart-intro__logo" src="%PUBLIC_URL%/media/fireart-logo.webp" width="720" height="311" alt="FireArtRo" decoding="async" fetchpriority="high" />
                 <p class="fireart-intro__signature">ARTIFICII · DRONE · EMOȚIE</p>
             </div>
             <div class="fireart-intro__foot">

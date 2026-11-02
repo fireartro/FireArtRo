@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
-import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, motion, useMotionValueEvent, useScroll, useTransform } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { ArrowRight } from "lucide-react";
 import { HERO_POSTER, MEDIA } from "@/data/content";
 import { useIsTouchDevice } from "@/hooks/useMediaQuery";

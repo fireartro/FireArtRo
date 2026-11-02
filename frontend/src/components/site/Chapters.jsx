@@ -1,12 +1,6 @@
 import { useRef, useState, useCallback } from "react";
-import {
-  motion,
-  AnimatePresence,
-  useScroll,
-  useMotionValueEvent,
-  useTransform,
-  useReducedMotion,
-} from "framer-motion";
+import { motion, AnimatePresence, useScroll, useMotionValueEvent, useTransform } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { STORY } from "@/data/content";
 
 const EASE = [0.22, 1, 0.36, 1];
