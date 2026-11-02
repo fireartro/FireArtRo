@@ -1,4 +1,5 @@
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { ArrowRight } from "lucide-react";
 import { PROCESS_ENHANCED } from "@/data/content";
 import { goToContact } from "@/lib/contactNavigation";

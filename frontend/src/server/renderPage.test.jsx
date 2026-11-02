@@ -39,6 +39,12 @@ test('lets the browser select the portrait hero before the client script starts'
   expect(picture).toContain('loading="eager"');
   // React must not hoist a preload for the wide fallback outside its picture.
   expect(page.html).not.toMatch(/<link[^>]*rel="preload"[^>]*hero-film-wide/);
+  expect(page.html).toContain('<!--$-->');
+  expect(page.html).toContain('data-testid="route-shutter"');
+  const first = page.html.match(/<video[^>]*data-hero-initial-film[^>]*>/)?.[0];
+  expect(first).toBeDefined();
+  expect(first).not.toMatch(/\ssrc=/);
+  expect(first).toContain('preload="none"');
 });
 
 test('renders archive and article content supplied by the public data reader', () => {

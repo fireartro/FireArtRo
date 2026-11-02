@@ -19,6 +19,37 @@
     playFootage();
     const skip = intro.querySelector('button');
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const firstHero = document.querySelector?.('video[data-hero-initial-film]');
+    const markPrimed = () => {
+        if (!firstHero || firstHero.readyState < 3 || motion.matches || navigator.connection?.saveData) return;
+        firstHero.dataset.heroPrimed = 'true';
+        firstHero.classList.add('hero-montage__video--visible');
+        firstHero.removeEventListener('canplay', markPrimed);
+    };
+    // Source selection precedes the application bundle, while the existing
+    // reveal and player retain control of playback and film transitions.
+    if (firstHero && !document.hidden && !motion.matches && !navigator.connection?.saveData
+        && firstHero.canPlayType('video/mp4; codecs="avc1.640028"')) {
+        try {
+            const sources = JSON.parse(firstHero.getAttribute('data-hero-initial-sources'));
+            const format = window.innerWidth <= window.innerHeight ? 'portrait' : 'wide';
+            const connection = navigator.connection || {};
+            const pixels = Math.max(window.innerWidth, window.innerHeight) * (window.devicePixelRatio || 1);
+            const slow = ['slow-2g', '2g', '3g'].includes(connection.effectiveType);
+            const quality = !slow && pixels >= 3200 && format !== 'portrait' ? 'uhd'
+                : !slow && pixels > 2000 ? 'retina' : 'hd';
+            const source = sources[format]?.[quality];
+            if (typeof source === 'string' && /^\/media\/hero-film-[a-z0-9-]+\.mp4\?v=[a-z0-9-]+$/.test(source)) {
+                firstHero.muted = true;
+                firstHero.preload = 'auto';
+                firstHero.dataset.mediaVariant = format;
+                firstHero.dataset.mediaQuality = quality;
+                firstHero.addEventListener('canplay', markPrimed);
+                firstHero.src = source;
+                markPrimed();
+            }
+        } catch { /* React retains its ordinary source-selection fallback. */ }
+    }
     const started = window.__fireartIntroStarted ?? performance.now();
     const minimumDuration = 1300;
     let closed = false;
@@ -75,6 +106,7 @@
         ['loadeddata', 'canplay', 'canplaythrough', 'error'].forEach(type => document.removeEventListener(type, checkMedia, true));
         footage?.removeEventListener('canplay', playFootage);
         footage?.removeEventListener?.('playing', hidePoster);
+        firstHero?.removeEventListener('canplay', markPrimed);
         window.removeEventListener('pageshow', onPageShow);
         document.removeEventListener('visibilitychange', onVisibility);
         motion.removeEventListener?.('change', onMotion);

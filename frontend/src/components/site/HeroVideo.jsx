@@ -40,11 +40,8 @@ export const HeroVideo = ({ mediaOverride }) => {
   const poster = media.poster || HERO_POSTER;
   const objectPosition = HERO_MEDIA.position || "50% 50%";
   const [videoFailed, setVideoFailed] = useState(false);
-  const [bundledVideoSupported] = useState(() => typeof document === "undefined"
-    || canPlayHeroVideo(document.createElement("video")));
-  const [autoplayEligible, setAutoplayEligible] = useState(
-    () => typeof window === "undefined" || getHeroAutoplayPolicy(window),
-  );
+  const [bundledVideoSupported, setBundledVideoSupported] = useState(true);
+  const [autoplayEligible, setAutoplayEligible] = useState(true);
   const [activatedSource, setActivatedSource] = useState("");
   const [readyPoster, setReadyPoster] = useState("");
   const isVideoMedia = !mediaOverride || mediaOverride.type === "video";
@@ -106,6 +103,8 @@ export const HeroVideo = ({ mediaOverride }) => {
 
   useEffect(() => {
     const updateAutoplayPolicy = () => setAutoplayEligible(getHeroAutoplayPolicy(window));
+    updateAutoplayPolicy();
+    setBundledVideoSupported(canPlayHeroVideo(document.createElement('video')));
     const motionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
     const connection = window.navigator?.connection;
     motionQuery?.addEventListener?.("change", updateAutoplayPolicy);

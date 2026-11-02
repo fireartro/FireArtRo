@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 const source = readFileSync(path.resolve(__dirname, '../frontend/public/startup-intro.js'), 'utf8');
 
-function start({ reduced = false, active = true, connection = {} } = {}) {
+function start({ reduced = false, active = true, connection = {}, firstFilm = null, width = 1440, height = 900, dpr = 1 } = {}) {
   let now = 0;
   let nextId = 1;
   const tasks = new Map();
@@ -45,10 +45,11 @@ function start({ reduced = false, active = true, connection = {} } = {}) {
   const document = {
     documentElement: html, hidden: false, activeElement: null,
     getElementById: id => ({ root, 'fireart-intro': intro, acasa: hero })[id],
-    addEventListener, removeEventListener
+    addEventListener, removeEventListener,
+    querySelector: () => firstFilm,
   };
   const motion = { matches: reduced, addEventListener, removeEventListener };
-  const window = { __fireartIntroStarted: 0, innerWidth: 1440, innerHeight: 900, location: { reload() { window.reloaded = true; } }, matchMedia: () => motion, addEventListener, removeEventListener, dispatchEvent: event => events.get(event.type)?.(event) };
+  const window = { __fireartIntroStarted: 0, innerWidth: width, innerHeight: height, devicePixelRatio: dpr, location: { reload() { window.reloaded = true; } }, matchMedia: () => motion, addEventListener, removeEventListener, dispatchEvent: event => events.get(event.type)?.(event) };
   vm.runInNewContext(source, {
     window, document, navigator: { connection }, Event, performance: { now: () => now },
     setTimeout: (fn, delay) => timer(fn, delay), clearTimeout: id => tasks.delete(id),
@@ -56,6 +57,41 @@ function start({ reduced = false, active = true, connection = {} } = {}) {
     requestAnimationFrame: () => 0, cancelAnimationFrame: () => {}
   });
   return { window, intro, root, media, html, button, tasks, events, advance };
+}
+
+function initialFilm() {
+  const sources = Object.fromEntries(['wide', 'portrait'].map(format => [format,
+    Object.fromEntries(['hd', 'retina', 'uhd'].map(quality => [quality,
+      `/media/hero-film-${format}-1${quality === 'hd' ? '' : `-${quality}`}.mp4?v=test`]))]));
+  return { dataset: {}, readyState: 4, canPlayType: () => 'probably',
+    getAttribute: () => JSON.stringify(sources), classList: { add() {} },
+    addEventListener() {}, removeEventListener() {} };
+}
+
+for (const [width, height, dpr, connection, expected] of [
+  [390, 844, 1.75, {}, 'portrait-1.mp4'],
+  [390, 844, 3, {}, 'portrait-1-retina.mp4'],
+  [1920, 1080, 2, {}, 'wide-1-uhd.mp4'],
+  [1920, 1080, 2, { effectiveType: '3g' }, 'wide-1.mp4'],
+]) {
+  test(`early buffer uses the same player rendition: ${expected}`, () => {
+    const firstFilm = initialFilm();
+    start({ firstFilm, width, height, dpr, connection });
+    assert.ok(firstFilm.src.includes(expected));
+    assert.equal(firstFilm.preload, 'auto');
+    assert.equal(firstFilm.dataset.heroPrimed, 'true');
+    assert.equal(firstFilm.dataset.mediaVariant, expected.startsWith('portrait') ? 'portrait' : 'wide');
+    assert.equal(firstFilm.dataset.mediaQuality, expected.includes('-uhd') ? 'uhd' : expected.includes('-retina') ? 'retina' : 'hd');
+  });
+}
+
+for (const options of [{ reduced: true }, { connection: { saveData: true } }]) {
+  test(`early buffer respects explicit playback policy: ${JSON.stringify(options)}`, () => {
+    const firstFilm = initialFilm();
+    start({ firstFilm, ...options });
+    assert.equal(firstFilm.src, undefined);
+    assert.equal(firstFilm.preload, undefined);
+  });
 }
 
 test('ready first video releases all input by 1.5 seconds', () => {

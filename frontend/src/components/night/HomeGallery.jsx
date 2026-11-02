@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useReducedMotion } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";

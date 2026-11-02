@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useState } from "react";
-import { useReducedMotion } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 
 const KEYWORDS = ["lumină.", "mișcare.", "aer.", "ritm."];

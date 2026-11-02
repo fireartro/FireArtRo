@@ -1,5 +1,6 @@
 import { useRef } from "react";
-import { motion, useInView, useReducedMotion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
 // Dramatic easeOutExpo-style curve for a cinematic, expensive feel.

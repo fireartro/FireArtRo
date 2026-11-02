@@ -1,24 +1,21 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
-// Generic media-query hook (SSR-safe-ish for CRA).
+const serverQuery = () => false;
+
+// The initial hydration must use the same query result as the server. React
+// then applies the actual viewport without discarding the server-rendered page.
 export function useMediaQuery(query) {
-  const get = () =>
+  const get = useCallback(() =>
     typeof window !== "undefined" && window.matchMedia
       ? window.matchMedia(query).matches
-      : false;
-
-  const [matches, setMatches] = useState(get);
-
-  useEffect(() => {
-    if (!window.matchMedia) return;
+      : false, [query]);
+  const subscribe = useCallback(onChange => {
+    if (typeof window === 'undefined' || !window.matchMedia) return () => {};
     const mql = window.matchMedia(query);
-    const onChange = () => setMatches(mql.matches);
-    onChange();
     mql.addEventListener("change", onChange);
     return () => mql.removeEventListener("change", onChange);
   }, [query]);
-
-  return matches;
+  return useSyncExternalStore(subscribe, get, serverQuery);
 }
 
 // True on phones / small viewports — used to lighten animations & layout.
