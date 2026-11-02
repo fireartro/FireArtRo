@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2, Mail, MessageCircle, Phone } from "lucide-react"
 import NightButton from "@/components/night/NightButton";
 import { buildWhatsappLink } from "@/lib/constants";
 import { readContactPrefill } from "@/lib/contactNavigation";
+import { trackQuoteAccepted } from "@/lib/analytics";
 import useManagedContent from "@/hooks/useManagedContent";
 import TurnstileWidget from "./TurnstileWidget";
 
@@ -231,6 +232,7 @@ export const QuoteForm = () => {
       if (submissionRef.current?.key !== key) submissionRef.current = { key, id: newSubmissionId() };
       const result = await postQuote({ ...form, submission_id: submissionRef.current.id, turnstile_token: turnstileToken });
       if (result?.accepted !== true) throw new Error("Confirmarea trimiterii lipsește.");
+      trackQuoteAccepted();
       submissionRef.current = null;
       setDone(true);
       setForm(freshForm());

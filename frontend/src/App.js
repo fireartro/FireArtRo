@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import "@/App.css";
 // These shared styles already ship on every public route; keep their cascade
 // stable when pages and Admin previews load in different orders.
@@ -10,6 +10,7 @@ import AnalyticsLoader from "@/components/site/AnalyticsLoader";
 import RouteShutter from "@/components/night/RouteShutter";
 import { scrollToHash, scrollToTop, syncScrollOffset } from "@/lib/scrollNavigation";
 import { ManagedContentProvider, useManagedContentSnapshot } from "@/content/ManagedContentProvider";
+import { InitialPublicRenderDataProvider, readPublicRenderData } from '@/content/PublicRenderData';
 
 const loadHome = () => import("@/pages/Home");
 const loadGallery = () => import("@/pages/GalleryPage");
@@ -19,6 +20,7 @@ const loadContact = () => import("@/pages/ContactPage");
 const loadLegal = () => import("@/pages/LegalPage");
 const loadBlog = () => import("@/pages/BlogPage");
 const loadArticle = () => import("@/pages/BlogArticlePage");
+const loadService = () => import('@/pages/ServicePage');
 const Home = lazy(loadHome);
 const GalleryPage = lazy(loadGallery);
 const PackagesPage = lazy(loadPackages);
@@ -28,6 +30,7 @@ const LegalPage = lazy(loadLegal);
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const BlogPage = lazy(loadBlog);
 const BlogArticlePage = lazy(loadArticle);
+const ServicePage = lazy(loadService);
 const publicRouteLoaders = {
   '/': loadHome, '/galerie': loadGallery, '/pachete': loadPackages,
   '/intrebari-frecvente': loadFaq, '/contact': loadContact, '/blog': loadBlog,
@@ -90,7 +93,7 @@ function AppRoutes() {
     // Fetch only the requested public page in parallel with the CMS snapshot.
     // Interior routes never download homepage scenes or Admin code.
     const path = location.pathname.replace(/\/$/, '') || '/';
-    const loadPage = publicRouteLoaders[path] || (path.startsWith('/blog/') ? loadArticle : null);
+    const loadPage = publicRouteLoaders[path] || (path.startsWith('/blog/') ? loadArticle : path.startsWith('/servicii/') ? loadService : null);
     loadPage?.().catch(() => {});
   }, [location.pathname]);
 
@@ -116,6 +119,7 @@ function AppRoutes() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogArticlePage />} />
+          <Route path="/servicii/:slug" element={<ServicePage />} />
           <Route path="/confidentialitate" element={<LegalPage type="confidentialitate" />} />
           <Route path="/termeni-si-conditii" element={<LegalPage type="termeni" />} />
           <Route path="/cookies" element={<LegalPage type="cookies" />} />
@@ -143,6 +147,7 @@ export function focusRouteContent() {
 }
 
 function App() {
+  const [initialRenderData] = useState(readPublicRenderData);
   useEffect(() => {
     let stableWidth = window.innerWidth;
 
@@ -167,6 +172,7 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
+      <InitialPublicRenderDataProvider value={initialRenderData}>
         <ManagedContentProvider>
         <RouteShutter>
           <a className="skip-link" href="#main-content" onClick={event => {
@@ -180,6 +186,7 @@ function App() {
           <GlobalUi />
         </RouteShutter>
         </ManagedContentProvider>
+      </InitialPublicRenderDataProvider>
       </BrowserRouter>
     </div>
   );

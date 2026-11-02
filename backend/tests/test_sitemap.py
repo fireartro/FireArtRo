@@ -1,5 +1,8 @@
 """Public sitemap behavior for fixed pages and Admin-published Blog posts."""
 
+from urllib.parse import urlsplit
+from xml.etree import ElementTree
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -81,6 +84,42 @@ def test_sitemap_adds_only_service_supplied_published_entries_deterministically(
     assert first.text.index("/blog/nou-si-bun") < first.text.index(
         "/blog/titlu%20%26%20neobisnuit"
     )
+
+
+def test_service_pages_are_unique_canonical_entries_alongside_existing_pages_and_blog():
+    client, _ = client_for([
+        {"slug": "eveniment-publicat", "updated_at": "2026-11-01T14:00:00+00:00"},
+    ])
+
+    response = client.get("/api/sitemap.xml", headers={"host": "preview.example"})
+    assert response.status_code == 200
+    document = ElementTree.fromstring(response.content)
+    namespace = {"sitemap": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    entries = document.findall("sitemap:url", namespace)
+    locations = [entry.findtext("sitemap:loc", namespaces=namespace) for entry in entries]
+
+    expected_services = {
+        f"{CANONICAL_ORIGIN}/servicii/artificii-nunta",
+        f"{CANONICAL_ORIGIN}/servicii/spectacole-drone",
+        f"{CANONICAL_ORIGIN}/servicii/artificii-de-zi",
+        f"{CANONICAL_ORIGIN}/servicii/efecte-speciale",
+    }
+    actual_services = {location for location in locations if "/servicii/" in location}
+    assert actual_services == expected_services
+    assert len(locations) == len(set(locations)) == 14
+    assert all(urlsplit(location).scheme == "https" for location in locations)
+    assert all(urlsplit(location).netloc == "fireart.ro" for location in locations)
+    assert f"{CANONICAL_ORIGIN}/contact" in locations
+    assert f"{CANONICAL_ORIGIN}/pachete" in locations
+    assert f"{CANONICAL_ORIGIN}/blog" in locations
+
+    blog_entry = next(entry for entry in entries if entry.findtext("sitemap:loc", namespaces=namespace)
+                      == f"{CANONICAL_ORIGIN}/blog/eveniment-publicat")
+    assert blog_entry.findtext("sitemap:lastmod", namespaces=namespace) == "2026-11-01T14:00:00+00:00"
+    # No fabricated modification dates for code-owned service pages.
+    for entry in entries:
+        if entry.findtext("sitemap:loc", namespaces=namespace) in expected_services:
+            assert entry.find("sitemap:lastmod", namespace) is None
 
 
 def test_sitemap_fails_closed_when_database_or_query_is_unavailable():

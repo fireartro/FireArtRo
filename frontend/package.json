@@ -65,7 +65,7 @@
   },
   "scripts": {
     "start": "craco start",
-    "build": "craco build",
+    "build": "craco build && node scripts/build-server.cjs",
     "test": "craco test",
     "serve:e2e": "node scripts/serve-build.js",
     "test:e2e": "yarn build && playwright test"

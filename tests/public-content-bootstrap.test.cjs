@@ -5,12 +5,12 @@ const vm = require('node:vm');
 const path = require('node:path');
 const html = readFileSync(path.resolve(__dirname, '../frontend/public/index.html'), 'utf8');
 
-function bootstrap(pathname, fetch) {
+function bootstrap(pathname, fetch, serverRendered = false) {
   const source = html.match(/<script\s+src="%PUBLIC_URL%\/(site-bootstrap\.js(?:\?[^"<>]*)?)"\s*><\/script>/)?.[1];
   assert.ok(source, 'An early public-content bootstrap must exist');
   const script = readFileSync(path.resolve(__dirname, '../frontend/public', source.split('?')[0]), 'utf8');
   const window = {};
-  const document = { documentElement: { dataset: {} }, readyState: 'loading', addEventListener() {} };
+  const document = { documentElement: { dataset: serverRendered ? {fireartSsr:'true'} : {} }, readyState: 'loading', addEventListener() {} };
   vm.runInNewContext(script, { window, document, navigator: {}, location: { pathname }, fetch, Date, performance: { now: () => 0 }, setInterval: () => 1 });
   return window;
 }
@@ -26,6 +26,12 @@ test('starts an anonymous public-only request and exposes its handled promise', 
   });
   assert.equal(calls, 1);
   assert.deepEqual(await window.__fireartContentBoot.request, publication);
+});
+test('server-rendered pages do not download a second full content snapshot before conditional revalidation', () => {
+  let calls=0;
+  const window=bootstrap('/pachete',async()=>{calls++;return{ok:true,json:async()=>({})};},true);
+  assert.equal(calls,0);
+  assert.equal(window.__fireartContentBoot,undefined);
 });
 test('never prefetches for Admin or leaks an unhandled rejection on offline loads', async () => {
   for (const pathname of ['/admin', '/admin/']) {

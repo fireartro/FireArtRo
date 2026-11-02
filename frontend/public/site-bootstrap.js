@@ -26,6 +26,9 @@
 (() => {
   if (/^\/admin\/?$/.test(location.pathname)) return;
   // Only the published, anonymous snapshot; the provider still validates it.
+  // SSR already supplied that snapshot. The provider conditionally revalidates
+  // its revision after mounting instead of downloading the same data twice.
+  if (document.documentElement?.dataset?.fireartSsr === 'true') return;
   window.__fireartContentBoot = {
     startedAt: Date.now(),
     request: fetch('/api/content', { credentials: 'omit', cache: 'no-cache' })

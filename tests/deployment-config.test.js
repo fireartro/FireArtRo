@@ -59,19 +59,33 @@ test('Vercel deploys the CRA build alongside only the intended API functions', a
   assert.deepEqual(await filesUnder('api'), [
     'api/admin/blob-upload.js',
     'api/index.py',
+    'api/page.js',
   ]);
 });
 
-test('the SPA fallback preserves real 404s for missing static assets', async () => {
+test('the public HTML fallback preserves real 404s for missing static assets', async () => {
   const config = JSON.parse(await readFile(path.join(projectRoot, 'vercel.json'), 'utf8'));
   const fallback = config.rewrites.at(-1);
-  const matcher = new RegExp(`^${fallback.source}$`);
+  const matcher = new RegExp(`^${fallback.source.replace(':publicPath', '')}$`);
 
-  assert.equal(fallback.destination, '/index.html');
+  assert.equal(fallback.destination, '/api/page?__fireart_path=/:publicPath');
   assert.match('/pachete', matcher);
   assert.doesNotMatch('/media/inexistent.webp', matcher);
   assert.doesNotMatch('/static/js/inexistent.js', matcher);
   assert.doesNotMatch('/favicon.ico', matcher);
+});
+
+test('runtime public rendering is isolated from private API and Admin routing', async () => {
+  const config = JSON.parse(await readFile(path.join(projectRoot, 'vercel.json'), 'utf8'));
+  assert.equal(config.rewrites[0].source, '/api/page');
+  assert.equal(config.rewrites[0].destination, '/api/page');
+  assert.ok(config.rewrites.some(rule => rule.source === '/admin/:path*' && rule.destination === '/admin-shell.html'));
+  assert.ok(config.rewrites.some(rule => rule.source === '/' && rule.destination === '/api/page?__fireart_path=/'));
+  const page = config.functions['api/page.js'];
+  assert.ok(page.includeFiles.includes('frontend/server-build/**'));
+  assert.ok(page.includeFiles.includes('frontend/build/public-page-assets.json'));
+  assert.ok(!page.includeFiles.includes('frontend/public/**'));
+  assert.ok(config.redirects.some(rule => rule.source === '/admin/' && rule.destination === '/admin' && rule.permanent));
 });
 
 test('the production CSP permits only the Cloudflare origin required by Turnstile', async () => {

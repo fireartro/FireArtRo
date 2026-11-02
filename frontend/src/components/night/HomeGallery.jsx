@@ -21,7 +21,7 @@ export default function HomeGallery() {
   const galleryItems = useMemo(() => selectHomeGallery(homePage.promoSlides, mediaItems), [homePage.promoSlides, mediaItems]);
   const sectionRef = useRef(null);
   const reduceMotion = useReducedMotion();
-  const [shortDesktop, setShortDesktop] = useState(() => window.matchMedia?.(SHORT_DESKTOP_QUERY).matches || false);
+  const [shortDesktop, setShortDesktop] = useState(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.(SHORT_DESKTOP_QUERY).matches));
   const staticScene = reduceMotion || shortDesktop;
   useEffect(() => {
     const query = window.matchMedia?.(SHORT_DESKTOP_QUERY);

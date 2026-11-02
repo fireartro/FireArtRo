@@ -10,20 +10,23 @@ import usePageMeta from "@/hooks/usePageMeta";
 import { listPublishedPosts } from "@/lib/blogApi";
 import { watchBlogPublications } from "@/lib/blogPublicationSync";
 import useManagedContent from "@/hooks/useManagedContent";
+import { usePublicRenderData } from '@/content/PublicRenderData';
 
 export default function BlogPage() {
   const copy = useManagedContent("blogPage", CMS_DEFAULTS.blogPage);
   const siteDetails = useManagedContent("siteDetails", CMS_DEFAULTS.siteDetails);
+  const initialData = usePublicRenderData();
+  const initialPosts = initialData?.pathname === '/blog' ? initialData.posts : null;
   const [requestVersion, setRequestVersion] = useState(0);
   const [state, setState] = useState({
-    loading: true,
-    posts: [],
+    loading: !Array.isArray(initialPosts),
+    posts: initialPosts || [],
     error: "",
   });
 
   useEffect(() => {
     let active = true, controller;
-    setState((current) => ({ ...current, loading: true, error: "" }));
+    setState((current) => ({ ...current, loading: current.posts.length === 0 && !Array.isArray(initialPosts), error: "" }));
     const load = async (background = false, signal) => {
       controller?.abort();
       const request = new AbortController();
@@ -49,7 +52,7 @@ export default function BlogPage() {
     load();
     const stop = watchBlogPublications({ refresh: ({ signal }) => load(true, signal) });
     return () => { active = false; stop(); controller?.abort(); };
-  }, [requestVersion]);
+  }, [initialPosts, requestVersion]);
 
   const schema = useMemo(() => ({
     "@context": "https://schema.org",

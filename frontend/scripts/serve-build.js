@@ -8,6 +8,8 @@ const root = process.env.FIREART_PREVIEW_ROOT
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "127.0.0.1";
 const contentOrigin = process.env.FIREART_PREVIEW_CONTENT_ORIGIN;
+const ssrHandler = process.env.FIREART_SSR_PREVIEW === 'true'
+  ? require('./seo-preview-handler.cjs')(contentOrigin) : null;
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -35,7 +37,7 @@ function resolveAsset(requestUrl) {
   if (relative.startsWith("..") || path.isAbsolute(relative)) return null;
   if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
 
-  return path.join(root, "index.html");
+  return path.join(root, fs.existsSync(path.join(root, 'index.html')) ? 'index.html' : 'admin-shell.html');
 }
 
 const server = http.createServer(async (request, response) => {
@@ -81,6 +83,11 @@ const server = http.createServer(async (request, response) => {
   if (pathname.startsWith('/api/')) {
     response.writeHead(404, { 'Content-Type': 'application/json' });
     response.end(JSON.stringify({ error: 'This local preview is read-only.' }));
+    return;
+  }
+  if (ssrHandler && !pathname.startsWith('/admin') && !pathname.includes('.')) {
+    const handler = await ssrHandler;
+    await handler(request, response);
     return;
   }
   let assetPath;
