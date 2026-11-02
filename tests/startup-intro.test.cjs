@@ -46,7 +46,7 @@ function start({ reduced = false, active = true, connection = {}, firstFilm = nu
     documentElement: html, hidden: false, activeElement: null,
     getElementById: id => ({ root, 'fireart-intro': intro, acasa: hero })[id],
     addEventListener, removeEventListener,
-    querySelector: () => firstFilm,
+    querySelector: selector => selector.includes('picture') ? { currentSrc: '/media/optimized/test-selected-poster.webp' } : firstFilm,
   };
   const motion = { matches: reduced, addEventListener, removeEventListener };
   const window = { __fireartIntroStarted: 0, innerWidth: width, innerHeight: height, devicePixelRatio: dpr, location: { reload() { window.reloaded = true; } }, matchMedia: () => motion, addEventListener, removeEventListener, dispatchEvent: event => events.get(event.type)?.(event) };
@@ -80,6 +80,7 @@ for (const [width, height, dpr, connection, expected] of [
     assert.ok(firstFilm.src.includes(expected));
     assert.equal(firstFilm.preload, 'auto');
     assert.equal(firstFilm.dataset.heroPrimed, 'true');
+    assert.equal(firstFilm.poster, '/media/optimized/test-selected-poster.webp');
     assert.equal(firstFilm.dataset.mediaVariant, expected.startsWith('portrait') ? 'portrait' : 'wide');
     assert.equal(firstFilm.dataset.mediaQuality, expected.includes('-uhd') ? 'uhd' : expected.includes('-retina') ? 'retina' : 'hd');
   });
