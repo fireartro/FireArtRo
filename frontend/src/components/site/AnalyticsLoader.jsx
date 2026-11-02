@@ -78,6 +78,11 @@ export default function AnalyticsLoader({ production }) {
       const nextAllowed = eligible && analyticsAllowedByConsent(choice);
       currentChoice.current = choice;
       allowedNow.current = nextAllowed;
+      // A routing tag may also identify a different GA stream. Keep that
+      // stream disabled before Google loads; consent controls our destination.
+      if (TAG_ID_PATTERN.test(bootstrapTagId) && bootstrapTagId !== measurementId) {
+        window[`ga-disable-${bootstrapTagId}`] = true;
+      }
       window[`ga-disable-${measurementId}`] = !nextAllowed;
       if (!nextAllowed && initialized.current && window.gtag) {
         window.gtag("consent", "update", consentState(false));
@@ -106,7 +111,7 @@ export default function AnalyticsLoader({ production }) {
       window.removeEventListener('storage', onStorage);
       window.removeEventListener('focus', onFocus);
     };
-  }, [eligible, measurementId]);
+  }, [bootstrapTagId, eligible, measurementId]);
 
   useEffect(() => {
     if (!eligible || !allowed) {
@@ -119,7 +124,9 @@ export default function AnalyticsLoader({ production }) {
     if (!initialized.current) {
       window.gtag("consent", "default", consentState(true));
       window.gtag("js", new Date());
-      window.gtag("config", measurementId, {
+      // Configure the loaded tag. A destination-only ID can otherwise trigger
+      // a second, unavailable script; explicit events select the GA4 destination.
+      window.gtag("config", bootstrapTagId, {
         send_page_view: false,
         allow_google_signals: false,
         allow_ad_personalization_signals: false,
@@ -146,12 +153,13 @@ export default function AnalyticsLoader({ production }) {
     window.gtag("set", "page_location", pageLocation);
     window.gtag("set", "page_referrer", pageReferrer);
     window.gtag("event", "page_view", {
+      send_to: measurementId,
       page_path: pagePath,
       page_location: pageLocation,
       page_referrer: pageReferrer,
       page_title: document.title,
     });
-  }, [allowed, eligible, pagePath]);
+  }, [allowed, eligible, measurementId, pagePath]);
 
   useEffect(() => {
     if (!eligible || !allowed || !initialized.current) return undefined;
@@ -161,6 +169,7 @@ export default function AnalyticsLoader({ production }) {
       // Event scope overrides the landing page's config scope after SPA navigation.
       try { window.gtag("event", name, {
         ...parameters,
+        send_to: measurementId,
         page_location: `https://${CANONICAL_HOSTNAME}${pagePath}`,
         page_referrer: referrerForAnalytics(document.referrer),
       }); }
