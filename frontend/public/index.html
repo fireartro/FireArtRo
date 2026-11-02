@@ -4,6 +4,7 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#050308" />
+        <link rel="preload" as="image" href="%PUBLIC_URL%/media/fireart-logo.webp" fetchpriority="high" />
         <link rel="preload" as="image" type="image/webp" fetchpriority="high" media="(orientation: portrait)" imagesrcset="/media/optimized/hero-portrait-480-20261102.webp 480w, /media/optimized/hero-portrait-810-20261102.webp 810w, /media/optimized/hero-portrait-1080-20261102.webp 1080w" imagesizes="100vw" />
         <link rel="preload" as="image" type="image/webp" fetchpriority="high" media="(orientation: landscape)" imagesrcset="/media/optimized/hero-wide-960-20261102.webp 960w, /media/optimized/hero-wide-1440-20261102.webp 1440w, /media/optimized/hero-wide-1920-20261102.webp 1920w" imagesizes="100vw" />
         <link rel="icon" href="%PUBLIC_URL%/favicon.ico" sizes="16x16 32x32 48x48" />
@@ -201,7 +202,7 @@
             </picture>
             <video class="fireart-intro__footage" src="%PUBLIC_URL%/media/startup-fireworks.mp4?v=20261030" autoplay muted playsinline loop preload="auto" aria-hidden="true"></video>
             <div class="fireart-intro__identity">
-                <img class="fireart-intro__logo" src="%PUBLIC_URL%/media/fireart-logo.webp" width="720" height="311" alt="FireArtRo" decoding="async" />
+                <img class="fireart-intro__logo" src="%PUBLIC_URL%/media/fireart-logo.webp" width="720" height="311" alt="FireArtRo" decoding="async" fetchpriority="high" />
                 <p class="fireart-intro__signature">ARTIFICII · DRONE · EMOȚIE</p>
             </div>
             <div class="fireart-intro__foot">
