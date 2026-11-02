@@ -22,7 +22,10 @@ webpack({
     process.exitCode = 1;
     return;
   }
-  const template = fs.readFileSync(path.resolve(__dirname, '../build/index.html'), 'utf8');
+  const startupCss = fs.readFileSync(path.resolve(__dirname, '../public/startup-intro.css'), 'utf8');
+  const template = fs.readFileSync(path.resolve(__dirname, '../build/index.html'), 'utf8')
+    .replace(/<link\b[^>]*href="\/startup-intro\.css[^"<>]*"[^>]*>/i,
+      () => `<style data-href="/startup-intro.css">${startupCss}</style>`);
   fs.writeFileSync(path.resolve(__dirname, '../server-build/template.html'), template);
   const adminShell = template.replace(/<meta\s+name="robots"\s+content="[^"]*"\s*\/?\s*>/i, '<meta name="robots" content="noindex, nofollow" />');
   fs.writeFileSync(path.resolve(__dirname, '../build/admin-shell.html'), adminShell);

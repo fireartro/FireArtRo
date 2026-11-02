@@ -21,7 +21,12 @@ class PublicPageAssetsPlugin {
           for(const [route,name] of Object.entries(routePages)) if(name===page) routes[route]=files;
         }
         const common=[...compilation.entrypoints.values()].flatMap(entry=>entry.getFiles()).filter(file=>file.endsWith('.css')).map(file=>`/${file}`);
-        compilation.emitAsset('public-page-assets.json',new compiler.webpack.sources.RawSource(JSON.stringify({routes,common})));
+        const inlineStyles = {};
+        for (const file of new Set([...common, ...Object.values(routes).flat()])) {
+          const asset = compilation.getAsset(file.slice(1));
+          if (asset) inlineStyles[file] = asset.source.source().toString();
+        }
+        compilation.emitAsset('public-page-assets.json',new compiler.webpack.sources.RawSource(JSON.stringify({routes,common,inlineStyles})));
       });
     });
   }
