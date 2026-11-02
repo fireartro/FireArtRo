@@ -41,7 +41,11 @@
             const source = sources[format]?.[quality];
             if (typeof source === 'string' && /^\/media\/hero-film-[a-z0-9-]+\.mp4\?v=[a-z0-9-]+$/.test(source)) {
                 const heroPoster = document.querySelector('#acasa picture[data-hero-poster] img');
-                if (heroPoster?.currentSrc) firstHero.poster = heroPoster.currentSrc;
+                if (heroPoster?.currentSrc) {
+                    firstHero.poster = heroPoster.currentSrc;
+                    firstHero.dataset.heroPosterReady = 'true';
+                    firstHero.classList.add('hero-montage__video--visible');
+                }
                 firstHero.muted = true;
                 firstHero.preload = 'auto';
                 firstHero.dataset.mediaVariant = format;
