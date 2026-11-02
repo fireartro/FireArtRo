@@ -121,7 +121,9 @@ export function createPublicPageHandler({
         readData(route.pathname), readTemplate(), readAssets(),
       ]);
       const result = await render(route.renderUrl, data);
-      const html = publicPageDocument(template, result, { styles: stylesheetPaths(assets, route.pathname) });
+      const html = publicPageDocument(template, result, {
+        styles: stylesheetPaths(assets, route.pathname), inlineStyles: assets?.inlineStyles || {},
+      });
       if (result.meta.noindex) response.setHeader('X-Robots-Tag', 'noindex, nofollow');
       return send(response, request, 200, html);
     } catch (error) {

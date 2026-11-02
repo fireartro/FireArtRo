@@ -7,6 +7,16 @@ const template = '<!doctype html><html lang="ro"><head><title>Old</title><meta n
 const result = { pathname: '/pachete', html: '<main><h1>Pachete</h1><a href="/contact">Contact</a></main>', meta: {title: 'Pachete & oferte', description: 'Descriere "corectă"', path: '/pachete', schema: {'@context':'https://schema.org','@type':'Service', name:'Pachete'}}, data:{publication:{revision_id:'public',content:{text:'</script><script>alert(1)</script>'}}} };
 const response = () => ({headers:{},setHeader(k,v){this.headers[k.toLowerCase()]=v;},status(n){this.statusCode=n;return this;},end(body){this.body=body;},send(body){this.body=body;}});
 
+test('inlines trusted compiled CSS in cascade order and marks it loaded for the client runtime', () => {
+  const source = template.replace('</head>', '<link rel="stylesheet" href="/static/css/main.css"></head>');
+  const html = publicPageDocument(source, result, {styles:['/static/css/main.css','/static/css/route.css'],
+    inlineStyles:{'/static/css/main.css':'body{margin:0}', '/static/css/route.css':'.page{color:white}'}});
+  assert.ok(html.includes('<style data-href="/static/css/main.css">body{margin:0}</style>'));
+  assert.ok(html.includes('<style data-href="/static/css/route.css">.page{color:white}</style>'));
+  assert.ok(html.indexOf('body{margin:0}') < html.indexOf('.page{color:white}'));
+  assert.equal(html.includes('rel="stylesheet"'), false);
+});
+
 test('the document exposes route content, canonical and escaped inert data under the existing CSP', () => {
   const html=publicPageDocument(template,result,{styles:['/static/css/route.css']});
   assert.match(html, /<h1>Pachete<\/h1>/);
