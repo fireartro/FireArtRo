@@ -72,13 +72,9 @@ function publicRequest(rawUrl) {
   };
 }
 
-function routeKey(pathname) {
-  return pathname.startsWith('/blog/') ? '/blog/:slug'
-    : pathname.startsWith('/servicii/') ? '/servicii/:slug' : pathname;
-}
-
 function stylesheetPaths(assets, pathname) {
-  const key = routeKey(pathname);
+  const key = pathname.startsWith('/blog/') ? '/blog/:slug'
+    : pathname.startsWith('/servicii/') ? '/servicii/:slug' : pathname;
   return [...(Array.isArray(assets?.common) ? assets.common : []),
     ...(Array.isArray(assets?.routes?.[key]) ? assets.routes[key] : []),
     ...(key !== pathname && Array.isArray(assets?.routes?.[pathname]) ? assets.routes[pathname] : [])];
@@ -127,7 +123,6 @@ export function createPublicPageHandler({
       const result = await render(route.renderUrl, data);
       const html = publicPageDocument(template, result, {
         styles: stylesheetPaths(assets, route.pathname), inlineStyles: assets?.inlineStyles || {},
-        scripts: assets?.routeScripts?.[routeKey(route.pathname)] || [],
       });
       if (result.meta.noindex) response.setHeader('X-Robots-Tag', 'noindex, nofollow');
       return send(response, request, 200, html);
