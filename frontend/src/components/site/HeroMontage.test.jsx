@@ -283,9 +283,12 @@ test('cancels pending media retries when the player is unmounted', async () => {
 
 test('switches format when a desktop window changes aspect ratio without changing width', () => {
   resize(1000, 800);
-  expect(container.querySelector('img').getAttribute('src')).toContain('wide.webp');
+  activate();
+  expect(container.querySelector('video').dataset.mediaVariant).toBe('wide');
   resize(1000, 1200);
-  expect(container.querySelector('img').getAttribute('src')).toContain('portrait.webp');
+  activate();
+  expect(container.querySelector('video').dataset.mediaVariant).toBe('portrait');
+  expect(container.querySelector('source[media="(orientation: portrait)"]').srcset).toContain('hero-portrait-810');
 });
 
 test('does not restart a video on loadeddata after the page becomes hidden', () => {

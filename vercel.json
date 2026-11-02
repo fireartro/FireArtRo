@@ -127,6 +127,15 @@
       ]
     },
     {
+      "source": "/media/optimized/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/media/startup-fireworks.mp4",
+      "has": [{ "type": "query", "key": "v", "value": ".+" }],
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
       "source": "/fonts/(.*)",
       "headers": [
         {

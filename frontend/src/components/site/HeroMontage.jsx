@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import HeroKineticTitles from './HeroKineticTitles';
+import HeroPoster from './HeroPoster';
 import { selectHeroMontageTitles } from '@/data/heroMontageTitles';
 import { canPlayHeroVideo, canStartHeroVideo, getHeroAutoplayPolicy, isHeroIntroLoading, primeHeroVideoBuffer, scheduleHeroVideoPlayback } from './heroPlayback';
 import { getNextFilmIndex, selectMontageFormat, shouldPreloadNextFilm } from './heroMontagePlayback';
@@ -15,10 +16,6 @@ const films = {
 const retinaFilms = {
   wide: [1, 2, 3].map(index => `/media/hero-film-wide-${index}-retina.mp4?v=${mediaVersion}`),
   portrait: [1, 2, 3].map(index => `/media/hero-film-portrait-${index}-retina.mp4?v=${mediaVersion}`),
-};
-const posters = {
-  wide: `/media/hero-film-wide.webp?v=${mediaVersion}`,
-  portrait: `/media/hero-film-portrait.webp?v=${mediaVersion}`,
 };
 const readFormat = () => typeof window === 'undefined'
   ? 'wide'
@@ -302,17 +299,9 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
 
   return (
     <div ref={stageRef} data-hero-playback={enabled ? 'video' : 'poster'} className="hero-video-stage hero-montage absolute inset-0 z-0 overflow-hidden">
-      <img
-        src={posters[format]}
-        onLoad={() => setPosterReady(true)}
-        onError={() => setPosterReady(true)}
-        alt="Spectacol real de artificii FireArtRo"
-        width={format === 'wide' ? 1920 : 1080}
-        height={format === 'wide' ? 1080 : 1920}
+      <HeroPoster
+        onReady={() => setPosterReady(true)}
         className="hero-media-surface hero-media-webp hero-montage__poster absolute inset-0 h-full w-full object-cover"
-        fetchPriority="high"
-        decoding="async"
-        loading="eager"
       />
       {activated && enabled && [0, 1].map(slot => {
         const index = slotIndices[slot];

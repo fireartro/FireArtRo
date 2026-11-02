@@ -5,6 +5,11 @@
     if (!intro || !html.dataset.fireartIntro) { intro?.remove(); return; }
     const root = document.getElementById('root');
     const footage = intro.querySelector('video');
+    const poster = intro.querySelector('picture');
+    const hidePoster = () => { if (poster) poster.hidden = true; };
+    // Keep the original single .46-opacity film once frames are playing;
+    // the responsive still is only its initial loading fallback.
+    footage?.addEventListener?.('playing', hidePoster);
     const playFootage = () => {
         if (!footage || document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
         footage.loop = true;
@@ -69,6 +74,7 @@
         footage?.pause();
         ['loadeddata', 'canplay', 'canplaythrough', 'error'].forEach(type => document.removeEventListener(type, checkMedia, true));
         footage?.removeEventListener('canplay', playFootage);
+        footage?.removeEventListener?.('playing', hidePoster);
         window.removeEventListener('pageshow', onPageShow);
         document.removeEventListener('visibilitychange', onVisibility);
         motion.removeEventListener?.('change', onMotion);

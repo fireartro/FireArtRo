@@ -193,7 +193,11 @@
     <body>
         <noscript>Ai nevoie de JavaScript activat pentru a folosi site-ul FireArtRo.</noscript>
         <div id="fireart-intro" class="fireart-intro" role="status" aria-label="Se pregătește experiența FireArtRo">
-            <video class="fireart-intro__footage" src="%PUBLIC_URL%/media/startup-fireworks.mp4" poster="%PUBLIC_URL%/media/hero-film-wide.webp?v=20261030" autoplay muted playsinline loop preload="auto" aria-hidden="true"></video>
+            <picture aria-hidden="true">
+                <source media="(orientation: portrait)" type="image/webp" srcset="%PUBLIC_URL%/media/optimized/hero-portrait-480-20261102.webp 480w, %PUBLIC_URL%/media/optimized/hero-portrait-810-20261102.webp 810w, %PUBLIC_URL%/media/optimized/hero-portrait-1080-20261102.webp 1080w" sizes="100vw" />
+                <img class="fireart-intro__footage" src="%PUBLIC_URL%/media/optimized/hero-wide-1920-20261102.webp" srcset="%PUBLIC_URL%/media/optimized/hero-wide-960-20261102.webp 960w, %PUBLIC_URL%/media/optimized/hero-wide-1440-20261102.webp 1440w, %PUBLIC_URL%/media/optimized/hero-wide-1920-20261102.webp 1920w" sizes="100vw" alt="" fetchpriority="high" />
+            </picture>
+            <video class="fireart-intro__footage" src="%PUBLIC_URL%/media/startup-fireworks.mp4?v=20261030" autoplay muted playsinline loop preload="auto" aria-hidden="true"></video>
             <div class="fireart-intro__identity">
                 <img class="fireart-intro__logo" src="%PUBLIC_URL%/media/fireart-logo.webp" width="720" height="311" alt="FireArtRo" decoding="async" />
                 <p class="fireart-intro__signature">ARTIFICII · DRONE · EMOȚIE</p>
