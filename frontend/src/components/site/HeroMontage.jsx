@@ -151,6 +151,10 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
     const video = videoRefs.current[activeSlot];
     activeVideoRef.current = video;
     if (!video) return undefined;
+    if (video.hasAttribute('data-hero-initial-film') && !video.poster) {
+      const poster = stageRef.current?.querySelector('picture img')?.currentSrc;
+      if (poster) video.poster = poster;
+    }
     if (video.hasAttribute('data-hero-initial-film') && video.getAttribute('src') !== currentSource) {
       video.src = currentSource;
     }
