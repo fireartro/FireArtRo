@@ -23,3 +23,21 @@ test('the initial public JavaScript stays within its launch budget', () => {
   const jsBytes = fs.statSync(mainAsset('js', '.js')).size;
   assert.ok(jsBytes <= 940_000, `main JS is ${jsBytes} bytes; budget is 940000`);
 });
+
+test('the deployment has no static homepage that could bypass runtime HTML rendering', () => {
+  const frontend = path.resolve(__dirname, '../frontend');
+  assert.equal(fs.existsSync(path.join(frontend, 'build/index.html')), false);
+  const template = fs.readFileSync(path.join(frontend, 'server-build/template.html'), 'utf8');
+  assert.match(template, /<div id="root"><\/div>/);
+  const admin = fs.readFileSync(path.join(frontend, 'build/admin-shell.html'), 'utf8');
+  assert.match(admin, /name="robots" content="noindex, nofollow"/);
+});
+
+test('every public route has its compiled stylesheet available for initial HTML', () => {
+  const build = path.resolve(__dirname, '../frontend/build');
+  const manifest = JSON.parse(fs.readFileSync(path.join(build, 'public-page-assets.json'), 'utf8'));
+  for (const route of ['/', '/pachete', '/galerie', '/contact', '/intrebari-frecvente', '/blog', '/blog/:slug', '/servicii/:slug', '/cookies', '/confidentialitate', '/termeni-si-conditii']) {
+    assert.ok(manifest.routes[route]?.length, `Missing CSS for ${route}`);
+    for (const css of manifest.routes[route]) assert.ok(fs.existsSync(path.join(build, css)), css);
+  }
+});

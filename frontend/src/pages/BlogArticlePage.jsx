@@ -9,6 +9,7 @@ import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { CANONICAL_SITE_URL } from "@/data/businessContent";
 import usePageMeta from "@/hooks/usePageMeta";
 import useManagedContent from "@/hooks/useManagedContent";
+import { usePublicRenderData } from '@/content/PublicRenderData';
 import {
   blogMediaUrl,
   getPublishedPost,
@@ -24,18 +25,19 @@ const roDate = new Intl.DateTimeFormat("ro-RO", {
 
 export default function BlogArticlePage() {
   const { slug } = useParams();
+  const initialPost = usePublicRenderData()?.post;
   const siteDetails = useManagedContent("siteDetails", CMS_DEFAULTS.siteDetails);
   const [requestVersion, setRequestVersion] = useState(0);
   const [state, setState] = useState({
-    loading: true,
-    post: null,
+    loading: initialPost?.slug !== slug,
+    post: initialPost?.slug === slug ? initialPost : null,
     error: "",
     notFound: false,
   });
 
   useEffect(() => {
     let active = true, controller;
-    setState({ loading: true, post: null, error: "", notFound: false });
+    setState(current => current.post?.slug === slug ? current : { loading: true, post: null, error: "", notFound: false });
     const load = async (background = false, signal) => {
       controller?.abort();
       const request = new AbortController();

@@ -15,16 +15,35 @@
     },
     "api/admin/blob-upload.js": {
       "maxDuration": 60
+    },
+    "api/page.js": {
+      "maxDuration": 30,
+      "includeFiles": "{frontend/server-build/**,frontend/build/public-page-assets.json}"
     }
   },
+  "redirects": [
+    { "source": "/admin/", "destination": "/admin", "permanent": true }
+  ],
   "rewrites": [
+    {
+      "source": "/api/page",
+      "destination": "/api/page"
+    },
     {
       "source": "/api/:path*",
       "destination": "/api/index"
     },
     {
-      "source": "/((?!.*\\.).*)",
-      "destination": "/index.html"
+      "source": "/admin/:path*",
+      "destination": "/admin-shell.html"
+    },
+    {
+      "source": "/",
+      "destination": "/api/page?__fireart_path=/"
+    },
+    {
+      "source": "/:publicPath((?!.*\\.).*)",
+      "destination": "/api/page?__fireart_path=/:publicPath"
     }
   ],
   "headers": [

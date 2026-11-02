@@ -1,9 +1,10 @@
-import { act } from "react";
+import { act, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 
 import AnalyticsLoader from "./AnalyticsLoader";
 import { COOKIE_CONSENT_STORAGE_KEY } from "./CookieConsent";
+import { ANALYTICS_EVENT, trackQuoteAccepted } from "@/lib/analytics";
 
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -161,4 +162,103 @@ test("an expired consent event cannot re-enable measurement", async () => {
     detail: { analytics: true, expiresAt: '2000-01-01T00:00:00Z' },
   })));
   expect(document.getElementById('fireartro-ga4-script')).toBeNull();
+});
+
+function clickContact(href) {
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.innerHTML = "<span>Contact personal</span>";
+  anchor.addEventListener("click", event => event.preventDefault());
+  container.appendChild(anchor);
+  act(() => anchor.querySelector("span").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })));
+}
+
+const businessEvents = () => (window.dataLayer || []).filter(entry => entry[0] === "event"
+  && ["contact_click", "generate_lead"].includes(entry[1]));
+
+test("delegates contact clicks and confirmed leads with only fixed non-personal parameters", async () => {
+  consent(true);
+  await render("/contact?email=private@example.com");
+  clickContact("tel:+40787602144");
+  clickContact("mailto:contact@example.com?subject=Private");
+  clickContact("https://wa.me/40787602144?text=Private");
+  clickContact("https://wa.me.evil.test/");
+  act(() => trackQuoteAccepted());
+  const pageContext = { page_location: "https://fireart.ro/contact", page_referrer: "" };
+  expect(businessEvents().map(entry => [entry[1], entry[2]])).toEqual([
+    ["contact_click", { ...pageContext, channel: "phone" }],
+    ["contact_click", { ...pageContext, channel: "email" }],
+    ["contact_click", { ...pageContext, channel: "whatsapp" }],
+    ["generate_lead", { ...pageContext, method: "quote_form" }],
+  ]);
+  expect(JSON.stringify(businessEvents())).not.toMatch(/private|40787602144|example\.com|mailto|[?]/);
+  const config = window.dataLayer.find(entry => entry[0] === "config");
+  expect(config[2].page_location).toBe("https://fireart.ro/contact");
+  const page = window.dataLayer.find(entry => entry[0] === "event" && entry[1] === "page_view");
+  expect(page[2].page_location).toBe("https://fireart.ro/contact");
+});
+
+test("business events use the current sanitized page after SPA navigation", async () => {
+  consent(true);
+  await render("/contact?email=private@example.com");
+  act(() => container.querySelector("button").click());
+  clickContact("tel:+40787602144");
+  act(() => trackQuoteAccepted());
+  expect(businessEvents().map(entry => [entry[1], entry[2]])).toEqual([
+    ["contact_click", { channel: "phone", page_location: "https://fireart.ro/pachete", page_referrer: "" }],
+    ["generate_lead", { method: "quote_form", page_location: "https://fireart.ro/pachete", page_referrer: "" }],
+  ]);
+});
+
+test("business events require consent and stop immediately after withdrawal or expiry", async () => {
+  jest.useFakeTimers();
+  await render();
+  clickContact("tel:+40787602144");
+  act(() => trackQuoteAccepted());
+  expect(businessEvents()).toHaveLength(0);
+  await act(async () => window.dispatchEvent(new CustomEvent("fireartro-cookie-consent-updated", {
+    detail: { analytics: true, expiresAt: new Date(Date.now() + 1000).toISOString() },
+  })));
+  clickContact("tel:+40787602144");
+  expect(businessEvents()).toHaveLength(1);
+  await act(async () => jest.advanceTimersByTime(1100));
+  clickContact("tel:+40787602144");
+  act(() => trackQuoteAccepted());
+  expect(businessEvents()).toHaveLength(1);
+  await act(async () => window.dispatchEvent(new CustomEvent("fireartro-cookie-consent-updated", {
+    detail: { analytics: false },
+  })));
+  act(() => trackQuoteAccepted());
+  expect(businessEvents()).toHaveLength(1);
+});
+
+test("business events stay disabled outside production, in Admin descendants and on unknown routes", async () => {
+  consent(true);
+  await render("/", false);
+  clickContact("tel:+40787602144");
+  act(() => trackQuoteAccepted());
+  expect(businessEvents()).toHaveLength(0);
+  await act(async () => root.unmount());
+  root = createRoot(container);
+  await render("/admin/inbox", true);
+  clickContact("tel:+40787602144");
+  act(() => trackQuoteAccepted());
+  expect(businessEvents()).toHaveLength(0);
+  expect(document.getElementById("fireartro-ga4-script")).toBeNull();
+});
+
+test("StrictMode leaves one contact listener and ignores arbitrary analytics signal payloads", async () => {
+  consent(true);
+  await act(async () => root.render(<StrictMode><MemoryRouter><Harness /></MemoryRouter></StrictMode>));
+  clickContact("tel:+40787602144");
+  act(() => window.dispatchEvent(new CustomEvent(ANALYTICS_EVENT, {
+    detail: { name: "arbitrary_event", email: "private@example.com" },
+  })));
+  act(() => window.dispatchEvent(new CustomEvent(ANALYTICS_EVENT, {
+    detail: { name: "generate_lead", email: "private@example.com" },
+  })));
+  expect(businessEvents().map(entry => [entry[1], entry[2]])).toEqual([
+    ["contact_click", { channel: "phone", page_location: "https://fireart.ro/", page_referrer: "" }],
+    ["generate_lead", { method: "quote_form", page_location: "https://fireart.ro/", page_referrer: "" }],
+  ]);
 });

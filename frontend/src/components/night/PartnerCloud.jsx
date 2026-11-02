@@ -42,7 +42,7 @@ export default function PartnerCloud({ partners, copy, title, reduceMotion }) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
   const [focusedPartner, setFocusedPartner] = useState(null);
-  const [documentVisible, setDocumentVisible] = useState(!document.hidden);
+  const [documentVisible, setDocumentVisible] = useState(typeof document === 'undefined' || !document.hidden);
   const [repeats, setRepeats] = useState([1, 1]);
   const canMove = !reduceMotion && partners.length > 1;
   const moving = canMove && !focusedPartner;

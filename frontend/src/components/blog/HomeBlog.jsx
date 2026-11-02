@@ -3,9 +3,12 @@ import BlogCard from "@/components/blog/BlogCard";
 import NightButton from "@/components/night/NightButton";
 import { listPublishedPosts } from "@/lib/blogApi";
 import { watchBlogPublications } from "@/lib/blogPublicationSync";
+import { usePublicRenderData } from '@/content/PublicRenderData';
 
 export default function HomeBlog() {
-  const [posts, setPosts] = useState(null);
+  const initialData = usePublicRenderData();
+  const [posts, setPosts] = useState(() => initialData?.pathname === '/' && Array.isArray(initialData.posts)
+    ? initialData.posts.slice(0, 3) : null);
 
   useEffect(() => {
     let active = true, controller;

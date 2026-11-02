@@ -2,6 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 
 import QuoteForm from "./QuoteForm";
+import { ANALYTICS_EVENT } from "@/lib/analytics";
 
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -204,4 +205,25 @@ test("customer edits after a failed request rotate the submission UUID", async (
   act(() => container.querySelector('[data-testid="turnstile-double"] button').click());
   await submit();
   expect(JSON.parse(global.fetch.mock.calls[1][1].body).submission_id).not.toBe(first);
+});
+
+test("a lead is signalled only after the API confirms acceptance, without form or response data", async () => {
+  const events = [];
+  const onLead = event => events.push(event.detail);
+  window.addEventListener(ANALYTICS_EVENT, onLead);
+  try {
+    global.fetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ accepted: false }) });
+    completeRequiredFields();
+    act(() => container.querySelector('[data-testid="turnstile-double"] button').click());
+    await submit();
+    expect(events).toEqual([]);
+    global.fetch.mockResolvedValueOnce({ ok: true, status: 200,
+      json: async () => ({ accepted: true, quote_id: "private-response-id" }) });
+    act(() => container.querySelector('[data-testid="turnstile-double"] button').click());
+    await submit();
+    expect(events).toEqual([{ name: "generate_lead" }]);
+    expect(JSON.stringify(events)).not.toMatch(/client|Barbul|Ionuț|0787|private/);
+  } finally {
+    window.removeEventListener(ANALYTICS_EVENT, onLead);
+  }
 });

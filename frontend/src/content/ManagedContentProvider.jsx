@@ -4,6 +4,7 @@ import { CMS_DEFAULTS } from '@/data/cmsDefaults';
 import { fetchPublishedContent } from '@/lib/contentApi';
 import { watchPublications } from '@/lib/publicationSync';
 import { normalizePublishedContent } from './managedContentSchema';
+import { usePublicRenderData } from './PublicRenderData';
 
 const fallback = { content: CMS_DEFAULTS, revisionId: 'fallback', status: 'fallback', refresh: async () => {} };
 const loading = { content: null, revisionId: null, status: 'loading', refresh: async () => {} };
@@ -18,9 +19,16 @@ export function publicContentAfterFailure(previous, { production = process.env.N
 }
 
 export function ManagedContentProvider({ children }) {
-  const [state, setState] = useState(createPublicContentState);
+  const initial = usePublicRenderData()?.publication;
+  const [state, setState] = useState(() => {
+    if (initial?.revision_id && initial?.published_at) {
+      try { return {content: normalizePublishedContent(initial.content), revisionId: initial.revision_id, status: 'ready'}; }
+      catch { /* Invalid initial data uses the existing anonymous API flow. */ }
+    }
+    return createPublicContentState();
+  });
   const location = useLocation();
-  const revision = useRef(null);
+  const revision = useRef(state.status === 'ready' ? state.revisionId : null);
   const activeRequest = useRef(null);
   const sequence = useRef(0);
   const refresh = useCallback(async () => {
@@ -65,6 +73,11 @@ export function ManagedContentProvider({ children }) {
   }, [refresh, isAdmin]);
   useEffect(() => () => { activeRequest.current?.abort(); }, []);
   const value = useMemo(() => ({ ...state, refresh }), [state, refresh]);
+  return <ManagedContentContext.Provider value={value}>{children}</ManagedContentContext.Provider>;
+}
+
+export function PublishedContentSnapshotProvider({ content, revisionId, children }) {
+  const value = { content, revisionId, status: 'ready', refresh: async () => {} };
   return <ManagedContentContext.Provider value={value}>{children}</ManagedContentContext.Provider>;
 }
 

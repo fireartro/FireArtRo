@@ -1,5 +1,8 @@
-import { useEffect } from "react";
+import { createContext, useContext, useEffect } from "react";
 import { CANONICAL_SITE_URL } from "@/data/businessContent";
+
+// A collector belongs to one server render; concurrent requests share no state.
+export const PageMetadataContext = createContext(null);
 
 const ensureMeta = (selector, attributes) => {
   let element = document.head.querySelector(selector);
@@ -18,6 +21,8 @@ export default function usePageMeta({
   schema,
   noindex = false,
 }) {
+  const collector = useContext(PageMetadataContext);
+  if (collector) collector.current = { title, description, path, image, schema, noindex };
   const schemaText = schema ? JSON.stringify(schema).replace(/</g, "\\u003c") : "";
 
   useEffect(() => {
