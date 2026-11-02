@@ -83,7 +83,20 @@ function validatePublication(publication, withContent = false) {
 function criticalAssets(html) {
   const origin = originFromEnvironment();
   const assets = new Map();
-  for (const [tag] of html.replace(/<!--[\s\S]*?-->/g, "").matchAll(/<(?:script|link)\b[^>]*>/gi)) {
+  const document = html.replace(/<!--[\s\S]*?-->/g, "");
+  // The server may deliver the compiled CSS in HTML. Still verify the
+  // referenced file, which client navigation can request on other routes.
+  for (const [, tag, css] of document.matchAll(/(<style\b[^>]*>)([\s\S]*?)<\/style\s*>/gi)) {
+    const reference = tag.match(/\bdata-href\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
+    if (!reference) continue;
+    let url;
+    try { url = new URL(reference[1] ?? reference[2], `${origin}/`); }
+    catch { throw new Error("The public application shell contains an invalid stylesheet URL."); }
+    if (url.origin !== origin || !/^\/static\/css\/[^/]+\.css$/.test(url.pathname)) continue;
+    if (!css.trim()) throw new Error("The embedded application stylesheet is empty.");
+    assets.set(`${url.pathname}${url.search}`, "text/css");
+  }
+  for (const [tag] of document.matchAll(/<(?:script|link)\b[^>]*>/gi)) {
     const attributes = Object.fromEntries([...tag.matchAll(/([^\s=<>]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)]
       .map(([, key, doubleQuoted, singleQuoted, unquoted]) => [key.toLowerCase(), doubleQuoted ?? singleQuoted ?? unquoted]));
     const script = /^<script\b/i.test(tag);
