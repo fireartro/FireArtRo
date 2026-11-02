@@ -1,5 +1,6 @@
 import { useRef } from "react";
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import HeroVideo from "@/components/site/HeroVideo";
 import HeroMontage from "@/components/site/HeroMontage";
 import HeroTypingTitle from "@/components/site/HeroTypingTitle";

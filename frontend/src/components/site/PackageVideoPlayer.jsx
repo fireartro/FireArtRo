@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Play, Film } from 'lucide-react';
-import { useReducedMotion } from 'framer-motion';
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { collectPackageVideos } from '@/lib/categoryNavigation';
 import { readCookieConsent, COOKIE_CONSENT_UPDATED_EVENT, OPEN_COOKIE_SETTINGS_EVENT } from './CookieConsent';
 import '@/styles/package-video-playlist.css';

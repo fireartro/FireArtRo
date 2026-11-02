@@ -1,5 +1,6 @@
 import { useRef } from "react";
-import { motion, useScroll, useTransform, useInView, useReducedMotion } from "framer-motion";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { useIsMobile, useIsTouchDevice } from "@/hooks/useMediaQuery";
 
 export const EASE = [0.16, 1, 0.3, 1];

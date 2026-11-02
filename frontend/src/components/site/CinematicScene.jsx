@@ -1,5 +1,6 @@
 import { useRef } from "react";
-import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, useScroll, useSpring, useTransform } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { useIsMobile, useIsTouchDevice } from "@/hooks/useMediaQuery";
 
 const spring = { stiffness: 92, damping: 24, mass: 0.42 };

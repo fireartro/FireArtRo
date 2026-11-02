@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowRight } from "lucide-react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
+import useReducedMotion from "@/hooks/useReducedMotion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { navigateToHref } from "@/lib/scrollNavigation";
 

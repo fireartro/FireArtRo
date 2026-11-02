@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { renderToString } from 'react-dom/server';
 import { Routes, Route, StaticRouter } from 'react-router-dom';
 import { PublishedContentSnapshotProvider } from '@/content/ManagedContentProvider';
@@ -14,6 +15,9 @@ import BlogArticlePage from '@/pages/BlogArticlePage';
 import LegalPage from '@/pages/LegalPage';
 import ServicePage from '@/pages/ServicePage';
 import { SERVICE_CATALOG } from '@/data/serviceCatalog';
+import RouteShutter from '@/components/night/RouteShutter';
+
+const EffectOnlyRouteReady = () => null;
 
 const fixed = {
   '/': Home, '/pachete': PackagesPage, '/galerie': GalleryPage,
@@ -48,11 +52,16 @@ export function renderPublicPage(url, rawData) {
       <PublicRenderDataProvider value={data}>
         <PublishedContentSnapshotProvider content={data.publication.content} revisionId={publication.revision_id}>
           <PageMetadataContext.Provider value={metadata}>
-            <div className="App"><a className="skip-link" href="#main-content">Sari la conținut</a>
+            <div className="App"><RouteShutter><a className="skip-link" href="#main-content">Sari la conținut</a>
+              <EffectOnlyRouteReady />
               <div id="main-content" tabIndex="-1"><div className="route-stage">
-                <Routes><Route path={route.pattern} element={<route.Component />} /></Routes>
+                <Suspense fallback={null}>
+                  <EffectOnlyRouteReady />
+                  <Routes><Route path={route.pattern} element={<route.Component />} /></Routes>
+                </Suspense>
               </div></div>
-            </div>
+              <EffectOnlyRouteReady />
+            </RouteShutter></div>
           </PageMetadataContext.Provider>
         </PublishedContentSnapshotProvider>
       </PublicRenderDataProvider>
