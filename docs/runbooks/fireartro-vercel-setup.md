@@ -53,13 +53,22 @@ Această procedură se face o singură dată, după ce codul este aprobat. O pub
 | `TURNSTILE_ENABLED` | normal | obligatoriu; `false` până când ambele chei de mai jos sunt configurate în același mediu |
 | `TURNSTILE_SECRET_KEY` | secret | obligatoriu numai când `TURNSTILE_ENABLED=true`; nu ajunge în browser |
 | `REACT_APP_TURNSTILE_SITE_KEY` | public | cheia publică a aceluiași widget și mediu; necesită rebuild |
-| `REACT_APP_GA_MEASUREMENT_ID` | public | opțional, format `G-...`; fără el Analytics nu se încarcă |
+| `REACT_APP_GA_MEASUREMENT_ID` | public | opțional, format `G-...`; destinația GA4 pentru `gtag("config", ...)` și `ga-disable`; fără el Analytics nu se încarcă |
+| `REACT_APP_GA_TAG_ID` | public | opțional, format `G-...` sau `GT-...`; ID-ul Google tag folosit numai la încărcarea `gtag.js`; necesită rebuild |
 | `GOOGLE_PLACES_API_KEY`, `GOOGLE_PLACE_ID` | secret | opțional; fără ambele Google rămâne ascuns |
 | `META_PAGE_ID`, `META_PAGE_ACCESS_TOKEN` | secret | opțional; fără ambele Facebook rămâne ascuns |
 | `META_GRAPH_API_VERSION` | normal | opțional; păstrează versiunea aprobată |
 
-Nu crea niciodată variabile `REACT_APP_*` pentru secrete. Cele două valori publice permise sunt cheia de site Turnstile și Measurement ID-ul GA4; browserul nu primește parola Admin, hashuri, tokenuri Blob, cheia secretă Turnstile sau tokenuri Google/Meta.
+Nu crea niciodată variabile `REACT_APP_*` pentru secrete. Valorile publice permise sunt cheia de site Turnstile, Measurement ID-ul GA4 și ID-ul opțional Google tag; browserul nu primește parola Admin, hashuri, tokenuri Blob, cheia secretă Turnstile sau tokenuri Google/Meta.
 Fișierele locale `backend/.env` sunt excluse explicit din pachetul Python; nu le urca și nu le folosi ca mecanism de configurare în Vercel.
+
+## ID-ul Google tag și destinația GA4
+
+`REACT_APP_GA_TAG_ID` separă ID-ul care încarcă scriptul `https://www.googletagmanager.com/gtag/js?id=...` de destinația de măsurare. Dacă lipsește sau este gol după eliminarea spațiilor de la capete, loader-ul folosește `REACT_APP_GA_MEASUREMENT_ID`, păstrând configurația existentă. Un ID de tag nevid care nu respectă `^(?:G|GT)-[A-Z0-9]+$` blochează încărcarea Analytics; nu se revine automat la alt ID. Consimțământul, domeniul de producție și ruta publică eligibilă rămân obligatorii.
+
+Dacă scriptul încărcat cu ID-ul destinației răspunde `404` sau HTML în loc de JavaScript, deschide în GA4 **Admin → Data streams → fluxul web → Google tag → Manage Google tag**. Verifică ID-urile tagului și destinațiile asociate, apoi setează `REACT_APP_GA_TAG_ID` la un ID al tagului care conține destinația existentă. Păstrează `REACT_APP_GA_MEASUREMENT_ID` la destinația GA4 curentă; un răspuns `200` de la un tag fără legătura corectă nu dovedește că datele ajung în proprietatea dorită. Nu crea altă proprietate și nu modifica destinațiile sau key events pentru a remedia numai încărcarea scriptului. Distincția dintre tag și destinații este descrisă în [Google tag management](https://support.google.com/analytics/answer/12329709).
+
+După rebuild și deployment, verifică în browser că încărcarea are loc numai după consimțământ, că scriptul răspunde cu JavaScript și că evenimentele folosesc destinația existentă. Confirmă separat primirea lor prin Tag Assistant/Realtime, inclusiv după navigare SPA și după retragerea acordului. Testele locale ale loader-ului nu confirmă ingestia live.
 
 ## Validare Preview
 

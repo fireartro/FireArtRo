@@ -12,6 +12,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let container;
 let root;
 let previousMeasurementId;
+let previousTagId;
 
 function consent(analytics) {
   window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({
@@ -41,7 +42,9 @@ async function render(initialEntry = "/", production = true) {
 
 beforeEach(() => {
   previousMeasurementId = process.env.REACT_APP_GA_MEASUREMENT_ID;
+  previousTagId = process.env.REACT_APP_GA_TAG_ID;
   process.env.REACT_APP_GA_MEASUREMENT_ID = "G-ABC123XYZ";
+  delete process.env.REACT_APP_GA_TAG_ID;
   window.localStorage.clear();
   delete window.dataLayer;
   delete window.gtag;
@@ -60,14 +63,20 @@ afterEach(async () => {
   delete window.dataLayer;
   delete window.gtag;
   delete window["ga-disable-G-ABC123XYZ"];
+  delete window[`ga-disable-${(process.env.REACT_APP_GA_MEASUREMENT_ID || "").trim()}`];
+  delete window[`ga-disable-${(process.env.REACT_APP_GA_TAG_ID || "").trim()}`];
   if (previousMeasurementId === undefined) delete process.env.REACT_APP_GA_MEASUREMENT_ID;
   else process.env.REACT_APP_GA_MEASUREMENT_ID = previousMeasurementId;
+  if (previousTagId === undefined) delete process.env.REACT_APP_GA_TAG_ID;
+  else process.env.REACT_APP_GA_TAG_ID = previousTagId;
   jest.useRealTimers();
   document.cookie = '_ga=; Max-Age=0; path=/';
   document.cookie = 'unrelated=; Max-Age=0; path=/';
 });
 
 test("does not contact Google without consent, outside production, or in Admin", async () => {
+  process.env.REACT_APP_GA_TAG_ID = "GT-BOOTSTRAP123";
+  consent(false);
   await render();
   expect(document.getElementById("fireartro-ga4-script")).toBeNull();
   expect(window.dataLayer).toBeUndefined();
@@ -82,6 +91,51 @@ test("does not contact Google without consent, outside production, or in Admin",
   root = createRoot(container);
   await render("/admin", true);
   expect(document.getElementById("fireartro-ga4-script")).toBeNull();
+});
+
+test.each(["GT-BOOTSTRAP123", "G-BOOTSTRAP123"])(
+  "loads the linked Google tag %s while configuring and disabling the existing GA4 destination",
+  async tagId => {
+    process.env.REACT_APP_GA_TAG_ID = tagId;
+    consent(true);
+    await render();
+
+    expect(document.getElementById("fireartro-ga4-script").src)
+      .toBe(`https://www.googletagmanager.com/gtag/js?id=${tagId}`);
+    const configurations = window.dataLayer.filter(entry => entry[0] === "config");
+    expect(configurations).toHaveLength(1);
+    expect(configurations[0][1]).toBe("G-ABC123XYZ");
+    expect(window["ga-disable-G-ABC123XYZ"]).toBe(false);
+    expect(window[`ga-disable-${tagId}`]).toBeUndefined();
+
+    await act(async () => window.dispatchEvent(new CustomEvent("fireartro-cookie-consent-updated", {
+      detail: { analytics: false },
+    })));
+    expect(window["ga-disable-G-ABC123XYZ"]).toBe(true);
+    expect(window[`ga-disable-${tagId}`]).toBeUndefined();
+  },
+);
+
+test.each(["GTM-ABC123XYZ", "GT-BOOTSTRAP123&l=other", "GT-"])(
+  "does not load Google when the explicitly configured tag ID is invalid: %s",
+  async tagId => {
+    process.env.REACT_APP_GA_TAG_ID = tagId;
+    consent(true);
+    await render();
+
+    expect(document.getElementById("fireartro-ga4-script")).toBeNull();
+    expect(window.dataLayer).toBeUndefined();
+    expect(window["ga-disable-G-ABC123XYZ"]).toBe(true);
+  },
+);
+
+test("a valid bootstrap tag cannot replace the required GA4 measurement destination", async () => {
+  process.env.REACT_APP_GA_TAG_ID = "GT-BOOTSTRAP123";
+  delete process.env.REACT_APP_GA_MEASUREMENT_ID;
+  consent(true);
+  await render();
+  expect(document.getElementById("fireartro-ga4-script")).toBeNull();
+  expect(window.dataLayer).toBeUndefined();
 });
 
 test("loads GA4 only after analytics consent and records SPA page views once", async () => {

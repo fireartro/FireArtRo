@@ -12,6 +12,7 @@ import {
 const SCRIPT_ID = "fireartro-ga4-script";
 const CANONICAL_HOSTNAME = "fireart.ro";
 const MEASUREMENT_ID_PATTERN = /^G-[A-Z0-9]+$/;
+const TAG_ID_PATTERN = /^(?:G|GT)-[A-Z0-9]+$/;
 
 function analyticsAllowedByConsent(value = readCookieConsent()) {
   if (!value?.analytics) return false;
@@ -31,7 +32,7 @@ function clearAnalyticsCookies() {
   }
 }
 
-function ensureGtag(measurementId) {
+function ensureGtag(bootstrapTagId) {
   window.dataLayer = window.dataLayer || [];
   window.gtag = window.gtag || function gtag() {
     window.dataLayer.push(arguments);
@@ -41,7 +42,7 @@ function ensureGtag(measurementId) {
     const script = document.createElement("script");
     script.id = SCRIPT_ID;
     script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(bootstrapTagId)}`;
     script.referrerPolicy = "strict-origin-when-cross-origin";
     document.head.appendChild(script);
   }
@@ -59,7 +60,8 @@ function consentState(analytics) {
 export default function AnalyticsLoader({ production }) {
   const location = useLocation();
   const measurementId = (process.env.REACT_APP_GA_MEASUREMENT_ID || "").trim();
-  const configured = MEASUREMENT_ID_PATTERN.test(measurementId);
+  const bootstrapTagId = (process.env.REACT_APP_GA_TAG_ID || "").trim() || measurementId;
+  const configured = MEASUREMENT_ID_PATTERN.test(measurementId) && TAG_ID_PATTERN.test(bootstrapTagId);
   const isProduction = production ?? (typeof window !== "undefined" && window.location.hostname === CANONICAL_HOSTNAME);
   const pagePath = useMemo(() => pagePathForAnalytics(location.pathname), [location.pathname]);
   const eligible = configured && isProduction && Boolean(pagePath);
@@ -113,7 +115,7 @@ export default function AnalyticsLoader({ production }) {
     }
 
     window[`ga-disable-${measurementId}`] = false;
-    ensureGtag(measurementId);
+    ensureGtag(bootstrapTagId);
     if (!initialized.current) {
       window.gtag("consent", "default", consentState(true));
       window.gtag("js", new Date());
@@ -128,7 +130,7 @@ export default function AnalyticsLoader({ production }) {
     } else {
       window.gtag("consent", "update", consentState(true));
     }
-  }, [allowed, configured, eligible, measurementId, pagePath]);
+  }, [allowed, bootstrapTagId, configured, eligible, measurementId, pagePath]);
 
   useEffect(() => () => {
     window[`ga-disable-${measurementId}`] = true;

@@ -1,6 +1,14 @@
 # Implementarea SEO FireArtRo cu păstrarea designului
 
-Acest document descrie modificările pregătite în cod și verificarea lor locală. **Nu reprezintă confirmarea unei publicări pe fireart.ro, a indexării noilor pagini sau a primirii evenimentelor în proprietatea GA4 live.**
+Acest document descrie implementarea și verificările tehnice. Starea fiecărei verificări live este consemnată separat mai jos; indexarea și ingestia Analytics nu se deduc dintr-un build reușit.
+
+## Verificarea publicării din 2 noiembrie 2026
+
+PR-ul #21 a fost integrat în `main` prin commit-ul `25a9531`. Deploymentul Production a fost verificat ca versiune staged cu publicația existentă și apoi promovat pe fireart.ro. Matricea HTTP live din 16:13 UTC a trecut 20/20 cazuri: cele 13 pagini SSR și un URL filtrat cu 200, două pagini inexistente cu 404 și patru redirecționări cu 308. Cele zece CSS și trei scripturi inițiale au răspuns cu tipul corect; `npm run verify:production` a confirmat sănătatea API-ului, publicația, asset-urile, robots și sitemap-ul cu 13 URL-uri, inclusiv cele patru servicii. Dovezile sunt în `output/seo-release/`.
+
+Sitemap-ul a fost retrimis și acceptat în Search Console. `generate_lead` a fost înregistrat ca eveniment cheie GA4 fără valoare monetară prestabilită, iar `channel` ca dimensiune de eveniment „Canal de contact”. Aceste setări nu confirmă primirea datelor sau indexarea URL-urilor.
+
+În diagnosticul live, scriptul solicitat cu destinația `G-RL0GGGGVT2` a răspuns 404 HTML. Eticheta Google asociată în același cont are ID-ul `GT-NFJHCTKD`, răspunde 200 JavaScript și include destinația existentă. Corecția separă încărcarea etichetei de destinația GA4. Confirmarea colectării după publicarea acestei corecții rămâne o verificare distinctă.
 
 ## Livrarea inițială a paginilor publice
 
@@ -94,6 +102,10 @@ Nu sunt create studii de caz din informații neconfirmate și nu sunt trimise me
 
 Încărcarea GA4 rămâne condiționată de configurarea ID-ului de măsurare, domeniul de producție și consimțământul pentru analytics. Rutele administrative și adresele necunoscute nu sunt eligibile. Retragerea consimțământului și expirarea lui opresc măsurarea; handlerul verifică permisiunea și la trimiterea evenimentelor comerciale.
 
+`REACT_APP_GA_MEASUREMENT_ID` identifică destinația GA4 (`G-...`) folosită pentru `gtag("config", ...)` și `ga-disable`. Variabila publică opțională `REACT_APP_GA_TAG_ID` selectează separat ID-ul Google tag din URL-ul scriptului `gtag.js`, acceptând numai `^(?:G|GT)-[A-Z0-9]+$`. Lipsa sau o valoare goală după eliminarea spațiilor de la capete păstrează încărcarea cu ID-ul de măsurare; o valoare nevidă invalidă blochează încărcarea. Modificarea variabilei cere rebuild/deployment și nu schimbă destinația, proprietatea sau setările key events.
+
+Dacă URL-ul scriptului cu ID-ul destinației răspunde `404`/HTML, trebuie verificat în interfața Google tag un ID de tag asociat destinației existente, apoi configurat drept `REACT_APP_GA_TAG_ID`. Nu se înlocuiește destinația GA4 cu un alt ID doar pentru a obține `200`. [Documentația Google tag management](https://support.google.com/analytics/answer/12329709) explică asocierea tagurilor și destinațiilor; procedura de configurare și verificare live este în [runbook-ul Vercel](runbooks/fireartro-vercel-setup.md#id-ul-google-tag-și-destinația-ga4). Acest document nu confirmă publicarea sau ingestia live a corecției loader-ului.
+
 Sunt definite următoarele semnale:
 
 | Semnal | Declanșare | Date comerciale transmise explicit |
@@ -132,6 +144,8 @@ python -m pytest tests/test_sitemap.py -q
 ```
 
 Suita frontend finală a trecut cu **70 de suite și 476 de teste**, inclusiv regresia atribuirii evenimentelor după navigare SPA. Suitele API au trecut cu **77 de teste**, verificările de artefacte cu **32**, iar sitemap-ul cu **patru**. Testul separat de preview a trecut: byte ranges pentru video, HEAD și proxy public limitat la citire. Build-ul client și renderer a trecut. Deprecările raportate de mediul Python pentru pytest-asyncio/multipart nu sunt prezentate ca defecte remediate de această schimbare.
+
+Corecția ulterioară pentru ID-ul de încărcare Google tag a fost verificată separat: **17 teste AnalyticsLoader**, **70 de suite frontend cu 482 de teste** și build-ul client + renderer au trecut. Această verificare locală nu confirmă deploymentul corecției sau ingestia GA4 live.
 
 Pentru reproducerea preview-ului local cu conținutul publicat:
 
