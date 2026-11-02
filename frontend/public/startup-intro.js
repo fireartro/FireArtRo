@@ -42,6 +42,8 @@
             if (typeof source === 'string' && /^\/media\/hero-film-[a-z0-9-]+\.mp4\?v=[a-z0-9-]+$/.test(source)) {
                 firstHero.muted = true;
                 firstHero.preload = 'auto';
+                firstHero.dataset.mediaVariant = format;
+                firstHero.dataset.mediaQuality = quality;
                 firstHero.addEventListener('canplay', markPrimed);
                 firstHero.src = source;
                 markPrimed();

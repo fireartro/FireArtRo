@@ -80,6 +80,8 @@ for (const [width, height, dpr, connection, expected] of [
     assert.ok(firstFilm.src.includes(expected));
     assert.equal(firstFilm.preload, 'auto');
     assert.equal(firstFilm.dataset.heroPrimed, 'true');
+    assert.equal(firstFilm.dataset.mediaVariant, expected.startsWith('portrait') ? 'portrait' : 'wide');
+    assert.equal(firstFilm.dataset.mediaQuality, expected.includes('-uhd') ? 'uhd' : expected.includes('-retina') ? 'retina' : 'hd');
   });
 }
 
