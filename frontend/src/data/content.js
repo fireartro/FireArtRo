@@ -27,37 +27,37 @@ export const HERO_POSTER = "/media/fireart-hero-wide.webp?v=20260913-cinema-v7";
 export const HERO_MEDIA = {
   variants: {
     wide: {
-      src: "/media/hero-film-wide-1.mp4?v=20261101-balanced-r4",
+      src: "/media/hero-film-wide-1.mp4?v=20261102-complete-effects-r6",
       poster: "/media/fireart-hero-wide.webp?v=20260913-cinema-v7",
       width: 1920,
       height: 1080,
     },
     ultrawide: {
-      src: "/media/hero-film-wide-1.mp4?v=20261101-balanced-r4",
+      src: "/media/hero-film-wide-1.mp4?v=20261102-complete-effects-r6",
       poster: "/media/fireart-hero-ultrawide.webp?v=20260913-cinema-v7",
       width: 1920,
       height: 1080,
     },
     "tablet-landscape": {
-      src: "/media/hero-film-wide-1.mp4?v=20261101-balanced-r4",
+      src: "/media/hero-film-wide-1.mp4?v=20261102-complete-effects-r6",
       poster: "/media/fireart-hero-tablet-landscape.webp?v=20260913-cinema-v7",
       width: 1920,
       height: 1080,
     },
     "tablet-portrait": {
-      src: "/media/hero-film-portrait-1.mp4?v=20261101-balanced-r4",
+      src: "/media/hero-film-portrait-1.mp4?v=20261102-complete-effects-r6",
       poster: "/media/fireart-hero-tablet-portrait.webp?v=20260913-cinema-v7",
       width: 1080,
       height: 1920,
     },
     mobile: {
-      src: "/media/hero-film-portrait-1.mp4?v=20261101-balanced-r4",
+      src: "/media/hero-film-portrait-1.mp4?v=20261102-complete-effects-r6",
       poster: "/media/fireart-hero-mobile.webp?v=20260913-cinema-v7",
       width: 1080,
       height: 1920,
     },
     "mobile-tall": {
-      src: "/media/hero-film-portrait-1.mp4?v=20261101-balanced-r4",
+      src: "/media/hero-film-portrait-1.mp4?v=20261102-complete-effects-r6",
       poster: "/media/fireart-hero-mobile-tall.webp?v=20260913-cinema-v7",
       width: 1080,
       height: 1920,

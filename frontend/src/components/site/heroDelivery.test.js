@@ -1,8 +1,11 @@
 import { selectHeroDelivery } from './heroDelivery';
 
-test('serves the UHD rendition on a 4K screen and on a Retina laptop', () => {
+test('reserves UHD for larger displays and uses the dedicated Retina encode on a 14-inch laptop', () => {
   expect(selectHeroDelivery(3840, 2160, 1)).toBe('uhd');
-  expect(selectHeroDelivery(1512, 982, 2)).toBe('uhd');
+  expect(selectHeroDelivery(3440, 1440, 1)).toBe('uhd');
+  expect(selectHeroDelivery(1728, 1117, 2)).toBe('uhd');
+  expect(selectHeroDelivery(1512, 982, 2)).toBe('retina');
+  expect(selectHeroDelivery(2560, 1440, 1)).toBe('retina');
   expect(selectHeroDelivery(1440, 900, 1)).toBe('hd');
 });
 

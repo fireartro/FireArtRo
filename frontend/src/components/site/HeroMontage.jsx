@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import HeroKineticTitles from './HeroKineticTitles';
-import montageTitles from '@/data/heroMontageTitles.json';
+import { selectHeroMontageTitles } from '@/data/heroMontageTitles';
 import { canPlayHeroVideo, canStartHeroVideo, getHeroAutoplayPolicy, isHeroIntroLoading, primeHeroVideoBuffer, scheduleHeroVideoPlayback } from './heroPlayback';
 import { getNextFilmIndex, selectMontageFormat, shouldPreloadNextFilm } from './heroMontagePlayback';
 import { selectHeroDelivery } from './heroDelivery';
 import { watchHeroFrames } from './heroFrameWatch';
 import '../../styles/hero-montage.css';
 
-const mediaVersion = '20261101-optimized-r5';
+const mediaVersion = '20261102-complete-effects-r6';
 const films = {
   wide: [1, 2, 3].map(index => `/media/hero-film-wide-${index}.mp4?v=${mediaVersion}`),
   portrait: [1, 2, 3].map(index => `/media/hero-film-portrait-${index}.mp4?v=${mediaVersion}`),
@@ -276,8 +276,8 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
     const video = event.currentTarget;
     playheadRef.current = { index: currentFilmIndex, time: video.currentTime };
     if (!visible || !activated) return;
-    if (shouldPreloadNextFilm(video.currentTime, video.duration || 30, true)) requestNext();
-  }, [activated, requestNext, visible, currentFilmIndex, playheadRef]);
+    if (shouldPreloadNextFilm(video.currentTime, video.duration || selectHeroMontageTitles(currentFilmIndex, format).duration, true)) requestNext();
+  }, [activated, requestNext, visible, currentFilmIndex, playheadRef, format]);
 
   const onEnded = useCallback(() => {
     requestNext();
@@ -361,7 +361,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
       <div className="hero-video-overlay hero-video-overlay--vertical" />
       <div className="hero-video-overlay hero-video-overlay--horizontal" />
       <div className="hero-video-overlay hero-video-overlay--vignette" />
-      <HeroKineticTitles videoRef={activeVideoRef} enabled={activated && enabled && visible && playingSlot === activeSlot} source={currentSource} filmConfig={montageTitles[currentFilmIndex]} />
+      <HeroKineticTitles videoRef={activeVideoRef} enabled={activated && enabled && visible && playingSlot === activeSlot} source={currentSource} filmConfig={selectHeroMontageTitles(currentFilmIndex, format)} />
     </div>
   );
 }

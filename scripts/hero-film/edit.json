@@ -1,34 +1,56 @@
 {
   "fps": 30,
-  "duration": 90,
+  "duration": 120,
   "chapters": [
     0,
-    30,
-    60,
-    90
+    40,
+    80,
+    120
   ],
   "shots": [
     {
       "id": "blue-opening",
       "family": "blue-fan",
       "start": 0,
-      "duration": 7,
+      "duration": 18,
       "wide": {
         "src": "V02",
-        "at": 0.25,
-        "rate": 1
+        "at": 0,
+        "rate": 0.9972222222222222,
+        "source_out": 17.95
       },
       "portrait": {
         "src": "V18",
-        "at": 0.1,
-        "rate": 0.85
+        "at": 0,
+        "rate": 0.8026315789473684,
+        "source_out": 6.1,
+        "duration": 7.6
+      }
+    },
+    {
+      "id": "gold-trails",
+      "family": "gold-trails",
+      "start": 7.6,
+      "duration": 10.4,
+      "wide": {
+        "src": "V02",
+        "at": 8.88,
+        "rate": 1.021978021978022,
+        "source_out": 18.18,
+        "omit": true
+      },
+      "portrait": {
+        "src": "V03",
+        "at": 157,
+        "rate": 1.1538461538461537,
+        "source_out": 169
       }
     },
     {
       "id": "light-sculpture",
       "family": "drone",
-      "start": 7,
-      "duration": 3.5,
+      "start": 18,
+      "duration": 2.6,
       "wide": {
         "src": "D05"
       },
@@ -37,72 +59,64 @@
       }
     },
     {
-      "id": "gold-trails",
-      "family": "gold-trails",
-      "start": 10.5,
-      "duration": 7.5,
+      "id": "red-pulse",
+      "family": "red-fan",
+      "start": 20.6,
+      "duration": 16.6,
       "wide": {
         "src": "V02",
-        "at": 10.3,
-        "rate": 1
+        "at": 47.2,
+        "rate": 0.9318181818181814,
+        "source_out": 73.85,
+        "duration": 28.6
       },
       "portrait": {
-        "src": "V03",
-        "at": 32.4,
-        "rate": 1
+        "src": "V06",
+        "at": 85,
+        "rate": 1.1746987951807228,
+        "source_out": 104.5
       }
     },
     {
       "id": "sky-portrait",
       "family": "drone",
-      "start": 18,
-      "duration": 3,
+      "start": 37.2,
+      "duration": 2.6,
       "wide": {
-        "src": "D23"
+        "src": "D23",
+        "start": 49.2
       },
       "portrait": {
         "src": "D120"
       }
     },
     {
-      "id": "red-pulse",
-      "family": "red-fan",
-      "start": 21,
-      "duration": 9,
-      "wide": {
-        "src": "V02",
-        "at": 61.8,
-        "rate": 0.9
-      },
-      "portrait": {
-        "src": "V06",
-        "at": 62,
-        "rate": 0.85
-      }
-    },
-    {
       "id": "color-opening",
       "family": "daylight-fan",
-      "start": 30,
-      "duration": 11,
+      "start": 39.8,
+      "duration": 10,
       "wide": {
         "src": "V01",
-        "at": 5.05,
-        "rate": 0.5
+        "at": 4.95,
+        "rate": 0.7649999999999999,
+        "source_out": 12.6,
+        "start": 51.8
       },
       "portrait": {
         "src": "V13",
-        "at": 1.65,
-        "rate": 0.65
+        "at": 1.55,
+        "rate": 0.748,
+        "source_out": 9.03
       }
     },
     {
       "id": "human-light",
       "family": "drone",
-      "start": 41,
-      "duration": 3,
+      "start": 49.8,
+      "duration": 2.6,
       "wide": {
-        "src": "D19"
+        "src": "D19",
+        "start": 61.8
       },
       "portrait": {
         "src": "D115"
@@ -111,52 +125,63 @@
     {
       "id": "color-columns",
       "family": "daylight-columns",
-      "start": 44,
+      "start": 52.4,
       "duration": 5,
       "wide": {
         "src": "V14",
-        "at": 0.04,
-        "rate": 0.5
+        "at": 0,
+        "rate": 0.508,
+        "source_out": 2.54,
+        "start": 64.4
       },
       "portrait": {
         "src": "V12",
-        "at": 0.08,
-        "rate": 0.7
+        "at": 0,
+        "rate": 1,
+        "source_out": 3.7,
+        "duration": 3.7
       }
     },
     {
       "id": "light-waves",
       "family": "drone",
-      "start": 49,
-      "duration": 3,
+      "start": 57.4,
+      "duration": 2.6,
       "wide": {
-        "src": "D24"
+        "src": "D24",
+        "start": 69.4
       },
       "portrait": {
-        "src": "D01"
+        "src": "D01",
+        "start": 56.1
       }
     },
     {
       "id": "spark-cascade",
       "family": "spark-cascade",
-      "start": 52,
-      "duration": 8,
+      "start": 60,
+      "duration": 12,
       "wide": {
         "src": "V02",
-        "at": 34.5,
-        "rate": 1
+        "at": 47.2,
+        "rate": 0.4158333333333329,
+        "source_out": 52.19,
+        "omit": true
       },
       "portrait": {
         "src": "V05",
-        "at": 0.4,
-        "rate": 0.9
+        "at": 20,
+        "rate": 0.87593984962406,
+        "source_out": 31.65,
+        "start": 58.7,
+        "duration": 13.3
       }
     },
     {
       "id": "sky-story",
       "family": "drone",
-      "start": 60,
-      "duration": 3,
+      "start": 72,
+      "duration": 2.6,
       "wide": {
         "src": "D84",
         "position": "50% 0%"
@@ -169,24 +194,26 @@
     {
       "id": "violet-crown",
       "family": "violet-fan",
-      "start": 63,
-      "duration": 6,
+      "start": 74.6,
+      "duration": 8,
       "wide": {
         "src": "V02",
-        "at": 19.5,
-        "rate": 0.9
+        "at": 19.55,
+        "rate": 0.53375,
+        "source_out": 23.82
       },
       "portrait": {
-        "src": "V03",
-        "at": 48.3,
-        "rate": 1
+        "src": "V05",
+        "at": 72.9,
+        "rate": 0.5687499999999996,
+        "source_out": 77.45
       }
     },
     {
       "id": "light-portrait",
       "family": "drone",
-      "start": 69,
-      "duration": 3,
+      "start": 82.6,
+      "duration": 2.6,
       "wide": {
         "src": "D22"
       },
@@ -198,26 +225,30 @@
     {
       "id": "gold-palms",
       "family": "aerial-gold",
-      "start": 72,
-      "duration": 7,
+      "start": 85.2,
+      "duration": 7.2,
       "wide": {
         "src": "V02",
-        "at": 84.7,
-        "rate": 0.95
+        "at": 27.5,
+        "rate": 0.8194444444444442,
+        "source_out": 33.4,
+        "omit": true
       },
       "portrait": {
-        "src": "V06",
-        "at": 0.6,
-        "rate": 0.9
+        "src": "V05",
+        "at": 78.05,
+        "rate": 0.7777777777777789,
+        "source_out": 83.65
       }
     },
     {
       "id": "together",
       "family": "drone",
-      "start": 79,
-      "duration": 3,
+      "start": 92.4,
+      "duration": 2.6,
       "wide": {
-        "src": "D06"
+        "src": "D06",
+        "start": 85.2
       },
       "portrait": {
         "src": "D02"
@@ -226,17 +257,21 @@
     {
       "id": "last-bloom",
       "family": "grand-finale",
-      "start": 82,
-      "duration": 8,
+      "start": 95,
+      "duration": 25,
       "wide": {
         "src": "V02",
-        "at": 91.4,
-        "rate": 0.79
+        "at": 74,
+        "rate": 0.7329192546583848,
+        "source_out": 97.6,
+        "start": 87.8,
+        "duration": 32.2
       },
       "portrait": {
         "src": "V05",
-        "at": 79,
-        "rate": 0.85
+        "at": 83.95,
+        "rate": 0.5419999999999999,
+        "source_out": 97.5
       }
     }
   ]

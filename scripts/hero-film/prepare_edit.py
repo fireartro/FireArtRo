@@ -10,15 +10,16 @@ drones={d['id']:d for d in json.loads((R/'drones.json').read_text())}
 # Cut windows were inspected around ignition, peak and decay. Each effect is
 # used once. Daylight uses two separate camera events, interleaved with drones.
 # Portrait substitutions are explicit editorial choices, never a blind centre crop.
-shots=json.loads((Path(__file__).parent/'edit.json').read_text())['shots']
+edit=json.loads((Path(__file__).parent/'edit.json').read_text())
+shots=edit['shots']
 
 def run(args):
     p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     if p.returncode: raise RuntimeError(p.stderr.decode(errors='replace')[-4000:])
 
 for profile in ['landscape','portrait']:
-    (R/profile/'assets').mkdir(exist_ok=True)
-    (R/profile/'compositions').mkdir(exist_ok=True)
+    (R/profile/'assets').mkdir(parents=True,exist_ok=True)
+    (R/profile/'compositions').mkdir(parents=True,exist_ok=True)
 
 def prepare(job):
     shot,profile=job
@@ -45,10 +46,12 @@ def prepare(job):
     if abs(rotation)%180==90:sw,sh=sh,sw
     assert abs(sw/sh-w/h)<.015,(profile,src,sw,sh)
     vf+=f',scale={w}:{h}:in_range=auto:out_range=tv:flags=lanczos,setsar=1'
-    run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(at),'-i',v['path'],'-vf',vf,'-frames:v',str(round(duration*30)),'-an','-c:v','h264_nvenc','-preset','p5','-rc','vbr','-cq','17','-b:v','0','-pix_fmt','yuv420p','-color_range','tv','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-g','30','-video_track_timescale','15360','-map_metadata','-1','-movflags','+faststart',str(dest)])
+    temporary=dest.with_name(dest.stem+'.preparing.mp4')
+    run(['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',str(at),'-i',v['path'],'-vf',vf,'-frames:v',str(round(duration*30)),'-an','-c:v','h264_nvenc','-preset','p5','-rc','vbr','-cq','17','-b:v','0','-pix_fmt','yuv420p','-color_range','tv','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-g','30','-video_track_timescale','15360','-map_metadata','-1','-movflags','+faststart',str(temporary)])
+    temporary.replace(dest)
     stamp.write_text(key)
     print(profile,shot['id'],flush=True)
 
-(R/'edit.json').write_text(json.dumps({'fps':30,'duration':90,'chapters':[0,30,60,90],'shots':shots},indent=2),encoding='utf-8')
+(R/'edit.json').write_text(json.dumps(edit,indent=2),encoding='utf-8')
 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool: list(pool.map(prepare,[(s,p) for p in ['landscape','portrait'] for s in shots]))
 print('PREPARED',flush=True)

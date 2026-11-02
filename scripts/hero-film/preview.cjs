@@ -6,6 +6,7 @@ const http=require('http');
 const repo=path.resolve(__dirname,'../..');
 const root=path.join(repo,'frontend/build');
 const snapshot=process.env.PUBLIC_CONTENT_SNAPSHOT||path.join(repo,'output/hero-rebuild/live/public-content.json');
+const stagedMedia=process.env.HERO_MEDIA_DIRECTORY?path.resolve(process.env.HERO_MEDIA_DIRECTORY):null;
 const types={'.html':'text/html; charset=utf-8','.js':'application/javascript','.css':'text/css','.json':'application/json','.mp4':'video/mp4','.webp':'image/webp','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.ico':'image/x-icon','.woff2':'font/woff2','.ttf':'font/ttf'};
 const port=Number(process.env.PORT||4188);
 http.createServer((req,res)=>{
@@ -16,6 +17,10 @@ http.createServer((req,res)=>{
   }
   let file=path.resolve(root,'.'+decodeURIComponent(url.pathname));
   if(!file.startsWith(root+path.sep)&&file!==root){res.writeHead(403);res.end();return;}
+  if(stagedMedia&&/^\/media\/hero-film-(wide|portrait)(-[1-3](-(retina|uhd))?)?\.(mp4|webp)$/.test(url.pathname)){
+    file=path.join(stagedMedia,path.basename(url.pathname));
+    if(!fs.existsSync(file)){res.writeHead(404);res.end('Staged hero asset missing');return;}
+  }
   if(!fs.existsSync(file)||!fs.statSync(file).isFile()) {
     if(path.extname(url.pathname)||url.pathname.startsWith('/api/')){res.writeHead(404);res.end();return;}
     file=path.join(root,'index.html');

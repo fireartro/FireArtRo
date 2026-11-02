@@ -5,8 +5,11 @@ const active = page => page.locator('.hero-montage__video--visible');
 async function enter(page) {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   const consent = page.getByRole('button', { name: 'Doar necesare', exact: true });
-  await consent.waitFor({state:'visible',timeout:2000}).catch(()=>{});
-  if (await consent.isVisible().catch(() => false)) await consent.click();
+  await consent.waitFor({state:'visible',timeout:8000}).catch(()=>{});
+  if (await consent.isVisible().catch(() => false)) {
+    await consent.click();
+    await expect(consent).toBeHidden();
+  }
   await expect(active(page)).toHaveCount(1, { timeout: 25000 });
   await expect.poll(() => active(page).evaluate(v => v.readyState >= 2 && !v.paused && v.currentTime > 0), { timeout: 25000 }).toBe(true);
 }
@@ -37,14 +40,14 @@ for (const [name,width,height,deviceScaleFactor] of sizes) {
     // Exact encoded dimensions are independently checked by verify.py.
     expect(Math.abs(state.w-state.h*(portrait?9/16:16/9))).toBeLessThanOrEqual(1);
     const physicalPixels=Math.max(width,height)*deviceScaleFactor;
-    const quality=physicalPixels>3000&&!portrait?'uhd':physicalPixels>2000?'retina':'hd';
+    const quality=physicalPixels>=3200&&!portrait?'uhd':physicalPixels>2000?'retina':'hd';
     if(quality==='hd')expect(state.src).not.toMatch(/-(?:retina|uhd)\.mp4/);
     else expect(state.src).toContain(`-${quality}.mp4`);
     await expect.poll(() => active(page).evaluate(v=>v.currentTime)).toBeGreaterThan(state.t+.2);
-    await seek(page,8.9);
+    await seek(page,19.5);
     await expect(page.locator('[data-cue="points"]')).toHaveCSS('visibility','visible');
     await expect(page.locator('[data-cue="points"] .hero-kinetic__lead').first()).toBeVisible();
-    // The actual photographed formation at 8.9 s must fit, including its top.
+    // The actual photographed formation at 19.5 s must fit, including its top.
     // These source-image bounds include the full blue spiral or gold wings.
     const formation=await active(page).evaluate((v,isPortrait)=>{
       const rect=v.getBoundingClientRect();
@@ -72,9 +75,10 @@ for (const [name,width,height,deviceScaleFactor] of sizes) {
     expect(bounds.bottom).toBeLessThanOrEqual(bounds.heroBottom+1);
     expect(errors).toEqual([]);
     await page.screenshot({path:testInfo.outputPath(`${name}.png`)});
-    await seek(page,22.5);
+    await seek(page,23.0);
     const stack=page.locator('[data-cue="rhythm"]');
     await expect(stack).toHaveCSS('visibility','visible');
+    await expect(stack.locator('.hero-kinetic__lead')).toHaveCSS('color','rgb(120, 184, 255)');
     await expect(stack.locator('.hero-kinetic__echo')).toHaveCount(4);
     const rows=await stack.evaluate(cue=>{
       const hero=cue.closest('.nr-hero').getBoundingClientRect();
@@ -98,7 +102,7 @@ for (const [name,width,height,deviceScaleFactor] of sizes) {
   });
 }
 
-test('three real 30-second chapters switch, loop and retain the playhead on rotation', async ({page})=>{
+test('three real 40-second chapters switch, loop and retain the playhead on rotation', async ({page})=>{
   await page.setViewportSize({width:768,height:1024});
   await enter(page);
   await page.evaluate(()=>{
@@ -113,10 +117,10 @@ test('three real 30-second chapters switch, loop and retain the playhead on rota
     window.heroHandoffObserver.observe(document.querySelector('.hero-montage'),{subtree:true,attributes:true,childList:true});
   });
   for (const index of [1,2,0]) {
-    await seek(page,29.9);
+    await seek(page,39.9);
     await expect(active(page)).toHaveAttribute('data-film-index',String(index),{timeout:15000});
     await expect.poll(()=>active(page).evaluate(v=>!v.paused&&v.currentTime>0)).toBe(true);
-    expect(await active(page).evaluate(v=>v.duration)).toBeCloseTo(30,2);
+    expect(await active(page).evaluate(v=>v.duration)).toBeCloseTo(40,2);
   }
   const handoffs=await page.evaluate(()=>{
     window.heroHandoffObserver.disconnect();
@@ -132,12 +136,12 @@ test('three real 30-second chapters switch, loop and retain the playhead on rota
   expect(time).toBeLessThan(17);
 });
 
-for(const [name,width,height] of [['phone',390,844],['tablet',768,1024]]){
+for(const [name,width,height] of [['phone',390,844],['tablet',768,1024],['desktop',1512,982]]){
   test(`all nine phrases and five-row accents fit: ${name}`,async({browser})=>{
     const context=await browser.newContext({baseURL,viewport:{width,height},deviceScaleFactor:2});
     const page=await context.newPage();await enter(page);
     for(let chapter=0;chapter<3;chapter++){
-      const cues=chapter===0?[[2,'form'],[8.9,'points'],[22.5,'rhythm']]:chapter===1?[[2,'color'],[15.5,'day'],[24,'sync']]:[[1.5,'story'],[20.5,'combined'],[24.5,'finale']];
+      const cues=chapter===0?[[2,'form'],[19.5,'points'],[23,'rhythm']]:chapter===1?(width>height?[[14,'color'],[26,'day'],[31,'sync']]:[[2,'color'],[14,'day'],[22,'sync']]):(width>height?[[3.5,'story'],[6.5,'combined'],[33.5,'finale']]:[[3.5,'story'],[13.5,'combined'],[33.5,'finale']]);
       for(const [time,id] of cues){
         await seek(page,time);const cue=page.locator(`[data-cue="${id}"]`);
         await expect(cue).toHaveCSS('visibility','visible');
@@ -151,14 +155,14 @@ for(const [name,width,height] of [['phone',390,844],['tablet',768,1024]]){
         expect(bounds.length).toBeGreaterThan(0);
         for(const b of bounds){expect(b.left).toBeGreaterThanOrEqual(0);expect(b.right).toBeLessThanOrEqual(width);expect(b.top).toBeGreaterThanOrEqual(0);expect(b.bottom).toBeLessThanOrEqual(b.heroBottom);}
       }
-      if(chapter<2){await seek(page,29.9);await expect(active(page)).toHaveAttribute('data-film-index',String(chapter+1),{timeout:15000});}
+      if(chapter<2){await seek(page,39.9);await expect(active(page)).toHaveAttribute('data-film-index',String(chapter+1),{timeout:15000});}
     }
     await context.close();
   });
 }
 
 test('4K media failure falls back to real HD media',async({browser})=>{
-  const context=await browser.newContext({baseURL,viewport:{width:1512,height:982},deviceScaleFactor:2});
+  const context=await browser.newContext({baseURL,viewport:{width:1920,height:1080},deviceScaleFactor:2});
   const page=await context.newPage();
   await enter(page);
   await expect(active(page)).toHaveAttribute('data-media-quality','uhd');

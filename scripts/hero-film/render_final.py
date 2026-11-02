@@ -52,9 +52,9 @@ def render(profile):
     joined=out/'joined.mp4'
     run(['ffmpeg','-v','error','-y','-f','concat','-safe','0','-i',str(listing),'-c','copy',str(joined)])
     # Mixed camera and browser encoders have different B-frame start offsets.
-    # Assign one exact PTS per decoded frame so chapter cuts stay at 900 frames.
+    # Assign one exact PTS per decoded frame so chapter boundaries remain exact.
     run(['ffmpeg','-nostdin','-v','error','-y','-r','30','-reinit_filter','0','-i',str(joined),'-fps_mode','passthrough','-an','-c:v','h264_nvenc','-preset','p5','-cq','17','-b:v','0','-pix_fmt','yuv420p','-video_track_timescale','15360','-movflags','+faststart',str(master)])
-    if not valid(master,90):raise RuntimeError('invalid master')
+    if not valid(master,edit['duration']):raise RuntimeError('invalid master')
     joined.unlink()
     print('MASTER',profile,flush=True)
 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:

@@ -1,6 +1,6 @@
 [
   {
-    "duration": 30,
+    "duration": 40,
     "cues": [
       {
         "id": "form",
@@ -14,8 +14,8 @@
       },
       {
         "id": "points",
-        "start": 7.3,
-        "end": 10.2,
+        "start": 18.05,
+        "end": 20.58,
         "motion": "rise",
         "lines": [
           "LUMINA",
@@ -24,7 +24,7 @@
       },
       {
         "id": "rhythm",
-        "start": 21.4,
+        "start": 20.9,
         "end": 25,
         "motion": "stack",
         "lines": [
@@ -34,7 +34,7 @@
     ]
   },
   {
-    "duration": 30,
+    "duration": 40,
     "cues": [
       {
         "id": "color",
@@ -43,37 +43,49 @@
         "motion": "stack",
         "lines": [
           "CULOARE."
-        ]
+        ],
+        "wide": {
+          "start": 12.7,
+          "end": 16.7
+        }
       },
       {
         "id": "day",
-        "start": 14.2,
-        "end": 18,
+        "start": 12.5,
+        "end": 15.2,
         "motion": "slide",
         "lines": [
           "ÎN PLINĂ",
           "ZI."
-        ]
+        ],
+        "wide": {
+          "start": 24.6,
+          "end": 27.3
+        }
       },
       {
         "id": "sync",
-        "start": 22.3,
-        "end": 26,
+        "start": 20.3,
+        "end": 24.3,
         "motion": "rise",
         "lines": [
           "TOTUL,",
           "ÎN SINCRON."
-        ]
+        ],
+        "wide": {
+          "start": 29.9,
+          "end": 33.9
+        }
       }
     ]
   },
   {
-    "duration": 30,
+    "duration": 40,
     "cues": [
       {
         "id": "story",
-        "start": 0.15,
-        "end": 2.9,
+        "start": 2.65,
+        "end": 5.18,
         "motion": "rise",
         "lines": [
           "POVESTEA TA.",
@@ -82,18 +94,22 @@
       },
       {
         "id": "combined",
-        "start": 19.2,
-        "end": 21.9,
+        "start": 12.45,
+        "end": 14.98,
         "motion": "punch",
         "lines": [
           "ARTIFICII",
           "ȘI DRONE."
-        ]
+        ],
+        "wide": {
+          "start": 5.25,
+          "end": 7.78
+        }
       },
       {
         "id": "finale",
-        "start": 23.2,
-        "end": 26.8,
+        "start": 31.5,
+        "end": 35.9,
         "motion": "stack",
         "lines": [
           "ÎMPREUNĂ."

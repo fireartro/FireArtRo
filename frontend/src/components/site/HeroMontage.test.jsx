@@ -14,7 +14,7 @@ const activate = () => {
   act(() => jest.advanceTimersByTime(2000));
 };
 const timeUpdate = (video, time) => {
-  Object.defineProperty(video, 'duration', { configurable: true, value: 30 });
+  Object.defineProperty(video, 'duration', { configurable: true, value: 40 });
   video.currentTime = time;
   act(() => video.dispatchEvent(new Event('timeupdate')));
 };
@@ -113,21 +113,21 @@ test('nudges a suspended metadata-only preload without spending the initial buff
   expect(video.classList.contains('hero-montage__video--visible')).toBe(true);
 });
 
-test('loads only the first film after the poster, and preloads the next at 25 seconds', () => {
+test('loads only the first film after the poster, and preloads the next at 35 seconds', () => {
   expect(container.querySelector('video')).toBeNull();
   activate();
   const video = container.querySelector('video');
   expect(video.getAttribute('src')).toContain('wide-1.mp4');
-  timeUpdate(video, 24.9);
+  timeUpdate(video, 34.9);
   expect(container.querySelectorAll('video')).toHaveLength(1);
-  timeUpdate(video, 25);
+  timeUpdate(video, 35);
   expect([...container.querySelectorAll('video')].map(item => item.dataset.filmIndex)).toEqual(['0', '1']);
 });
 
 test('uses the loaded second film when the first finishes', async () => {
   activate();
   const first = container.querySelector('video');
-  timeUpdate(first, 25);
+  timeUpdate(first, 35);
   const next = container.querySelector('[data-film-index="1"]');
   Object.defineProperty(next, 'readyState', { configurable: true, value: 4 });
   await act(async () => first.dispatchEvent(new Event('ended')));
@@ -139,7 +139,7 @@ test('uses the loaded second film when the first finishes', async () => {
 test('explicitly starts the next film when the browser only preloaded metadata', async () => {
   activate();
   const first = container.querySelector('video');
-  timeUpdate(first, 25);
+  timeUpdate(first, 35);
   const next = container.querySelector('[data-film-index="1"]');
   Object.defineProperty(next, 'readyState', { configurable: true, value: 1 });
   HTMLMediaElement.prototype.play.mockClear();
@@ -161,7 +161,7 @@ test('starts loading the next film at EOF even when no preload timeupdate was de
 test('recovers when the next film play promise stays pending instead of freezing on the previous frame', async () => {
   activate();
   const first = container.querySelector('video');
-  timeUpdate(first, 25);
+  timeUpdate(first, 35);
   const next = container.querySelector('[data-film-index="1"]');
   let networkRecovered = false;
   HTMLMediaElement.prototype.play.mockImplementation(function play() {
@@ -181,7 +181,7 @@ test('recovers when the next film play promise stays pending instead of freezing
 test('preserves a slow next-film request beyond the watchdog and advances only once', async () => {
   activate();
   const first = container.querySelector('video');
-  timeUpdate(first, 25);
+  timeUpdate(first, 35);
   const next = container.querySelector('[data-film-index="1"]');
   Object.defineProperty(next, 'networkState', { configurable: true, value: 2 });
   let finishDownload;
@@ -214,7 +214,7 @@ test.each(['focus', 'online', 'pageshow'])('recovers active playback on %s even 
 test('pauses all mounted films at pagehide and recovers only the active one on pageshow', async () => {
   activate();
   const first = container.querySelector('video');
-  timeUpdate(first, 25);
+  timeUpdate(first, 35);
   const next = container.querySelector('[data-film-index="1"]');
   HTMLMediaElement.prototype.pause.mockClear();
   act(() => window.dispatchEvent(new Event('pagehide')));
@@ -230,7 +230,7 @@ test('pauses all mounted films at pagehide and recovers only the active one on p
 test('keeps the current film when a preloaded film fails and retries that media element', async () => {
   activate();
   const first = container.querySelector('video');
-  timeUpdate(first, 25);
+  timeUpdate(first, 35);
   const next = container.querySelector('[data-film-index="1"]');
   await act(async () => next.dispatchEvent(new Event('error')));
   expect(container.querySelector('[data-film-index="0"]')).toBe(first);
@@ -259,7 +259,7 @@ test('plays all three films in order and loops with at most two media elements',
   activate();
   for (const index of [1, 2, 0, 1]) {
     const current = container.querySelector('video');
-    timeUpdate(current, 25);
+    timeUpdate(current, 35);
     expect(container.querySelectorAll('video')).toHaveLength(2);
     const next = container.querySelector(`[data-film-index="${index}"]`);
     Object.defineProperty(next, 'readyState', { configurable: true, value: 4 });
@@ -272,7 +272,7 @@ test('plays all three films in order and loops with at most two media elements',
 test('cancels pending media retries when the player is unmounted', async () => {
   activate();
   const first = container.querySelector('video');
-  timeUpdate(first, 25);
+  timeUpdate(first, 35);
   const next = container.querySelector('[data-film-index="1"]');
   act(() => next.dispatchEvent(new Event('error')));
   act(() => root.unmount());
@@ -314,7 +314,7 @@ test('resumes the exact current frame on rotation even between timeupdate events
 test('rotation immediately after a chapter handoff keeps the new chapter', async () => {
   activate();
   const first = container.querySelector('video');
-  timeUpdate(first, 25);
+  timeUpdate(first, 35);
   await act(async () => first.dispatchEvent(new Event('ended')));
   const second = container.querySelector('video');
   second.currentTime = 0.08;

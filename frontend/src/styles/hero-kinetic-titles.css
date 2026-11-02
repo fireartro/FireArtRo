@@ -34,7 +34,7 @@
 }
 
 .hero-kinetic__cue[data-motion="stack"] { font-size: .88em; }
-.hero-kinetic__cue[data-motion="stack"] .hero-kinetic__lead { color: #d9ff00; }
+.hero-kinetic__cue[data-motion="stack"] .hero-kinetic__lead { color: #78b8ff; }
 
 .hero-kinetic__line {
   position: relative;

@@ -3,7 +3,7 @@
 export function selectHeroDelivery(width, height, dpr = 1, connection = {}, format = 'wide') {
   if (connection.saveData || ['slow-2g', '2g', '3g'].includes(connection.effectiveType)) return 'hd';
   const physicalPixels = Math.max(width, height) * Math.max(1, dpr);
-  if (physicalPixels > 3000 && format !== 'portrait') return 'uhd';
+  if (physicalPixels >= 3200 && format !== 'portrait') return 'uhd';
   if (physicalPixels > 2000) return 'retina';
   return 'hd';
 }
