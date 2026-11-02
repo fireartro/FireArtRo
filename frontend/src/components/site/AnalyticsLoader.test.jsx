@@ -93,8 +93,8 @@ test("does not contact Google without consent, outside production, or in Admin",
   expect(document.getElementById("fireartro-ga4-script")).toBeNull();
 });
 
-test.each(["GT-BOOTSTRAP123", "G-BOOTSTRAP123"])(
-  "loads the linked Google tag %s while configuring and disabling the existing GA4 destination",
+test.each(["GT-BOOTSTRAP123", "G-LINKED123"])(
+  "configures linked Google tag %s and routes every explicit event to the existing GA4 destination",
   async tagId => {
     process.env.REACT_APP_GA_TAG_ID = tagId;
     consent(true);
@@ -104,17 +104,49 @@ test.each(["GT-BOOTSTRAP123", "G-BOOTSTRAP123"])(
       .toBe(`https://www.googletagmanager.com/gtag/js?id=${tagId}`);
     const configurations = window.dataLayer.filter(entry => entry[0] === "config");
     expect(configurations).toHaveLength(1);
-    expect(configurations[0][1]).toBe("G-ABC123XYZ");
+    expect(configurations[0][1]).toBe(tagId);
     expect(window["ga-disable-G-ABC123XYZ"]).toBe(false);
-    expect(window[`ga-disable-${tagId}`]).toBeUndefined();
+    expect(window[`ga-disable-${tagId}`]).toBe(true);
+
+    act(() => container.querySelector("button").click());
+    clickContact("tel:+40787602144");
+    act(() => trackQuoteAccepted());
+    const events = window.dataLayer.filter(entry => entry[0] === "event");
+    expect(events.map(entry => entry[1])).toEqual([
+      "page_view", "page_view", "contact_click", "generate_lead",
+    ]);
+    expect(events.map(entry => entry[2].send_to)).toEqual([
+      "G-ABC123XYZ", "G-ABC123XYZ", "G-ABC123XYZ", "G-ABC123XYZ",
+    ]);
 
     await act(async () => window.dispatchEvent(new CustomEvent("fireartro-cookie-consent-updated", {
       detail: { analytics: false },
     })));
     expect(window["ga-disable-G-ABC123XYZ"]).toBe(true);
-    expect(window[`ga-disable-${tagId}`]).toBeUndefined();
+    expect(window[`ga-disable-${tagId}`]).toBe(true);
+    clickContact("tel:+40787602144");
+    act(() => trackQuoteAccepted());
+    expect(window.dataLayer.filter(entry => entry[0] === "event")).toHaveLength(4);
   },
 );
+
+test("blocks a routing tag's own stream before inserting the Google script", async () => {
+  process.env.REACT_APP_GA_TAG_ID = "G-LINKED123";
+  consent(true);
+  const flagsAtScriptInsertion = [];
+  const appendChild = document.head.appendChild.bind(document.head);
+  const spy = jest.spyOn(document.head, "appendChild").mockImplementation(node => {
+    if (node.id === "fireartro-ga4-script") flagsAtScriptInsertion.push({
+      routingDisabled: window["ga-disable-G-LINKED123"],
+      destinationDisabled: window["ga-disable-G-ABC123XYZ"],
+    });
+    return appendChild(node);
+  });
+  try {
+    await render();
+    expect(flagsAtScriptInsertion).toEqual([{ routingDisabled: true, destinationDisabled: false }]);
+  } finally { spy.mockRestore(); }
+});
 
 test.each(["GTM-ABC123XYZ", "GT-BOOTSTRAP123&l=other", "GT-"])(
   "does not load Google when the explicitly configured tag ID is invalid: %s",
@@ -149,6 +181,7 @@ test("loads GA4 only after analytics consent and records SPA page views once", a
   const script = document.getElementById("fireartro-ga4-script");
   expect(script).not.toBeNull();
   expect(script.src).toBe("https://www.googletagmanager.com/gtag/js?id=G-ABC123XYZ");
+  expect(window["ga-disable-G-ABC123XYZ"]).toBe(false);
   const consentDefaults = window.dataLayer.filter((entry) => entry[0] === "consent" && entry[1] === "default");
   expect(consentDefaults).toHaveLength(1);
   expect(consentDefaults[0][2]).toEqual({
@@ -159,12 +192,12 @@ test("loads GA4 only after analytics consent and records SPA page views once", a
   });
   const initialViews = window.dataLayer.filter((entry) => entry[0] === "event" && entry[1] === "page_view");
   expect(initialViews).toHaveLength(1);
-  expect(initialViews[0][2]).toEqual(expect.objectContaining({ page_path: "/" }));
+  expect(initialViews[0][2]).toEqual(expect.objectContaining({ page_path: "/", send_to: "G-ABC123XYZ" }));
 
   act(() => container.querySelector("button").click());
   const views = window.dataLayer.filter((entry) => entry[0] === "event" && entry[1] === "page_view");
   expect(views).toHaveLength(2);
-  expect(views[1][2]).toEqual(expect.objectContaining({ page_path: "/pachete" }));
+  expect(views[1][2]).toEqual(expect.objectContaining({ page_path: "/pachete", send_to: "G-ABC123XYZ" }));
 });
 
 test("stops future measurement when analytics consent is withdrawn", async () => {
@@ -238,7 +271,7 @@ test("delegates contact clicks and confirmed leads with only fixed non-personal 
   clickContact("https://wa.me/40787602144?text=Private");
   clickContact("https://wa.me.evil.test/");
   act(() => trackQuoteAccepted());
-  const pageContext = { page_location: "https://fireart.ro/contact", page_referrer: "" };
+  const pageContext = { send_to: "G-ABC123XYZ", page_location: "https://fireart.ro/contact", page_referrer: "" };
   expect(businessEvents().map(entry => [entry[1], entry[2]])).toEqual([
     ["contact_click", { ...pageContext, channel: "phone" }],
     ["contact_click", { ...pageContext, channel: "email" }],
@@ -259,8 +292,8 @@ test("business events use the current sanitized page after SPA navigation", asyn
   clickContact("tel:+40787602144");
   act(() => trackQuoteAccepted());
   expect(businessEvents().map(entry => [entry[1], entry[2]])).toEqual([
-    ["contact_click", { channel: "phone", page_location: "https://fireart.ro/pachete", page_referrer: "" }],
-    ["generate_lead", { method: "quote_form", page_location: "https://fireart.ro/pachete", page_referrer: "" }],
+    ["contact_click", { send_to: "G-ABC123XYZ", channel: "phone", page_location: "https://fireart.ro/pachete", page_referrer: "" }],
+    ["generate_lead", { send_to: "G-ABC123XYZ", method: "quote_form", page_location: "https://fireart.ro/pachete", page_referrer: "" }],
   ]);
 });
 
@@ -309,10 +342,10 @@ test("StrictMode leaves one contact listener and ignores arbitrary analytics sig
     detail: { name: "arbitrary_event", email: "private@example.com" },
   })));
   act(() => window.dispatchEvent(new CustomEvent(ANALYTICS_EVENT, {
-    detail: { name: "generate_lead", email: "private@example.com" },
+    detail: { name: "generate_lead", email: "private@example.com", send_to: "G-OTHERDESTINATION" },
   })));
   expect(businessEvents().map(entry => [entry[1], entry[2]])).toEqual([
-    ["contact_click", { channel: "phone", page_location: "https://fireart.ro/", page_referrer: "" }],
-    ["generate_lead", { method: "quote_form", page_location: "https://fireart.ro/", page_referrer: "" }],
+    ["contact_click", { send_to: "G-ABC123XYZ", channel: "phone", page_location: "https://fireart.ro/", page_referrer: "" }],
+    ["generate_lead", { send_to: "G-ABC123XYZ", method: "quote_form", page_location: "https://fireart.ro/", page_referrer: "" }],
   ]);
 });
