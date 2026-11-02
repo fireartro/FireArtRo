@@ -81,6 +81,23 @@ test("production verifier accepts the complete public contract", async () => {
   });
 });
 
+test('production verifier accepts nonempty compiled styles embedded in server HTML', async () => {
+  const body = validResponses['/'].body.replace('<link rel="stylesheet" href="/static/css/main.synthetic.css">',
+    '<style data-href="/static/css/main.synthetic.css">#root { display: block; }</style>');
+  await withServer({ ...validResponses, '/': { type: 'text/html', body } }, async requests => {
+    await assert.doesNotReject(verifyProduction());
+    assert.ok(requests.some(request => request.url === '/static/css/main.synthetic.css'));
+  });
+});
+
+test('production verifier rejects an empty embedded compiled stylesheet', async () => {
+  const body = validResponses['/'].body.replace('<link rel="stylesheet" href="/static/css/main.synthetic.css">',
+    '<style data-href="/static/css/main.synthetic.css">  </style>');
+  await withServer({ ...validResponses, '/': { type: 'text/html', body } }, async () => {
+    await assert.rejects(verifyProduction(), /stylesheet.*empty/i);
+  });
+});
+
 for (const endpoint of ['/api/content', '/api/content/revision']) {
   test(`production verifier fails for a missing anonymous publication at ${endpoint}`, async () => {
     await withServer({ ...validResponses, [endpoint]: { ...json({ detail: 'PRIVATE_PROVIDER_DIAGNOSTIC' }), status: 404 } }, async () => {
