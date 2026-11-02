@@ -150,6 +150,7 @@ def test_google_reviews_are_normalized_and_empty_text_is_omitted():
     assert url.endswith("/v1/places/ChIJFireArtRo")
     assert options["headers"]["X-Goog-Api-Key"] == "google-secret"
     assert "reviews" in options["headers"]["X-Goog-FieldMask"]
+    assert options["params"] == {"languageCode": "ro"}
 
 
 def test_one_provider_failure_does_not_hide_the_other_or_expose_secrets():
@@ -243,3 +244,19 @@ def test_google_failure_does_not_reuse_a_previous_google_snapshot():
 
     assert client.get("/api/reviews").json()["providers"][0]["id"] == "google"
     assert client.get("/api/reviews").json() == {"providers": []}
+
+
+def test_empty_reviews_are_distinguished_from_provider_failure_in_private_health():
+    import asyncio
+    fake = FakeAsyncClient(google=FakeResponse({"reviews": []}))
+    client, service = public_client(GOOGLE_ENV, fake)
+    assert client.get("/api/reviews").json() == {"providers": []}
+    state = asyncio.run(service.integration_health())
+    assert state["google"]["configured"] is True
+    assert state["google"]["healthy"] is True
+    assert state["google"]["review_count"] == 0
+    assert state["facebook"]["review_count"] is None
+    fake.google = FakeResponse({}, status_code=403)
+    failed = asyncio.run(service.integration_health())
+    assert failed["google"]["healthy"] is False
+    assert failed["google"]["review_count"] is None

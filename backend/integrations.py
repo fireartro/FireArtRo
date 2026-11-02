@@ -144,19 +144,17 @@ class IntegrationsService:
             )
 
     async def _review_states(self, refresh):
-        fallback = {
-            "google": IntegrationState(
-                configured=bool(_present(self.env.get("GOOGLE_PLACES_API_KEY", "")) and _present(self.env.get("GOOGLE_PLACE_ID", ""))),
-                message="Necesită configurare.",
-            ),
-            "facebook": IntegrationState(
-                configured=bool(_present(self.env.get("META_PAGE_ID", "")) and _present(self.env.get("META_PAGE_ACCESS_TOKEN", ""))),
-                message="Necesită configurare.",
-            ),
-        }
-        for state in fallback.values():
-            if state.configured:
-                state.message = "Configurat"
+        fallback = {}
+        for provider, names in {
+            "google": ("GOOGLE_PLACES_API_KEY", "GOOGLE_PLACE_ID"),
+            "facebook": ("META_PAGE_ID", "META_PAGE_ACCESS_TOKEN"),
+        }.items():
+            missing = [name for name in names if not _present(self.env.get(name, ""))]
+            message = "Configurat"
+            if missing:
+                verb = "Lipsește" if len(missing) == 1 else "Lipsesc"
+                message = f"{verb} {', '.join(missing)} în Vercel."
+            fallback[provider] = IntegrationState(configured=not missing, message=message)
         if self.reviews_service is None:
             return fallback
         try:
@@ -173,12 +171,16 @@ class IntegrationsService:
             configured = default.configured and bool(value.get("configured"))
             healthy = value.get("healthy") if configured and isinstance(value.get("healthy"), bool) else None
             checked_at = value.get("checked_at") if configured and isinstance(value.get("checked_at"), datetime) else None
+            message = default.message
+            if healthy is True:
+                message = "Conectat, fără recenzii cu text disponibile." if value.get("review_count") == 0 else ""
+            elif healthy is False:
+                message = "Furnizorul nu răspunde. Verifică accesul API, permisiunile și cotele."
             result[provider] = IntegrationState(
                 configured=configured,
                 healthy=healthy,
                 checked_at=checked_at,
-                message=("" if healthy is True else "Eroare temporară" if healthy is False
-                         else "Configurat" if configured else "Necesită configurare."),
+                message=message,
             )
         return result
 

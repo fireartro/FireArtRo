@@ -58,3 +58,14 @@ test("disabled settings do not request external review data", async () => {
   expect(global.fetch).not.toHaveBeenCalled();
   expect(container.textContent).toBe("");
 });
+
+test("Facebook source links identify Facebook rather than Google Maps", async () => {
+  global.fetch.mockResolvedValue({ ok: true, json: async () => ({ providers: [{
+    id: "facebook", href: "https://www.facebook.com/FireArtRo/reviews",
+    reviews: [{ ...review, provider: "facebook", url: "https://www.facebook.com/review/123", author_url: "", author_photo_url: "" }],
+  }] }) });
+  await render();
+  const source = container.querySelector("[data-review-card] .fa-page-reviews__source");
+  expect(source.getAttribute("aria-label")).toBe("Vezi recenzia originală pe Facebook");
+  expect(container.textContent).not.toContain("Google Maps");
+});

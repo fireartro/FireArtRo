@@ -140,7 +140,7 @@ export const ADMIN_MODULES = {
     id(), text("name", "Nume"), text("eventType", "Tip eveniment"), textarea("quote", "Recenzie"),
     select("source", "Sursă", ["client", "google", "facebook", "other"]),
     checkbox("replaceable", "Conținut demonstrativ"),
-  ], { titleKey: "name", subtitleKey: "eventType" }), "Feedback publicat responsabil"),
+  ], { titleKey: "name", subtitleKey: "eventType" }), "Arhivă de testimoniale manuale. Benzile de pe site folosesc integrarea Google/Facebook, configurată în Starea integrărilor și Setări recenzii."),
   partners: moduleDefinition(collection("partners", "Parteneri", {
     id: "partner", name: "", logoPlaceholder: "", logoMediaId: "", replaceable: false,
   }, [
@@ -151,7 +151,7 @@ export const ADMIN_MODULES = {
     checkbox("enabled", "Afișează recenziile"), text("heading", "Titlu"),
     textarea("description", "Descriere"), checkbox("googleEnabled", "Google"),
     checkbox("facebookEnabled", "Facebook"), number("maxItems", "Număr maxim", { min: 1, max: 20 }),
-  ]), "Afișare și surse publice; fără credențiale"),
+  ]), "Afișare Google/Facebook. Google Places furnizează cel mult 5 recenzii; numărul maxim poate limita afișarea, fără să extindă rezultatele sursei. Cheile și tokenurile se configurează numai în Vercel."),
   cookieSettings: moduleDefinition(object("cookieSettings", "Cookies", [
     text("title", "Titlu"), textarea("summary", "Rezumat"),
     text("necessaryLabel", "Titlu strict necesare"), textarea("necessaryDescription", "Descriere strict necesare"),

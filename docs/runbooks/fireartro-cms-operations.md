@@ -51,6 +51,8 @@ Un proces întrerupt poate lăsa protecția fail-closed activă. Simptomul este 
 
 ## Recenzii externe
 
+Procedura actuală, starea conturilor și pașii proprietarului: [activarea recenziilor](fireartro-reviews-activation.md).
+
 - Google apare numai când există atât `GOOGLE_PLACES_API_KEY`, cât și `GOOGLE_PLACE_ID`.
 - Recenziile Google sunt cerute proaspăt pentru fiecare răspuns public; nu se pune conținutul Places într-un cache comun. Cardurile păstrează atribuirea autorului, avatarul când este oferit și linkul individual către Google Maps.
 - Cheia Google Places rămâne numai în variabilele server-side. Restricționează cheia la Places API (New), nu o pune în `REACT_APP_*` și nu activa facturarea automat prin cod.

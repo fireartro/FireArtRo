@@ -123,3 +123,26 @@ def test_unconfigured_or_unavailable_services_return_only_safe_states():
     assert state.google.healthy is None
     assert state.facebook.configured is False
     assert "secret" not in state.model_dump_json()
+
+
+def test_reviews_name_only_missing_configuration_and_never_credential_values():
+    service = IntegrationsService(Database(), None, environment(
+        GOOGLE_PLACES_API_KEY="", GOOGLE_PLACE_ID="existing-private-place-id",
+        META_PAGE_ID="", META_PAGE_ACCESS_TOKEN="existing-private-meta-token",
+    ))
+    state = asyncio.run(service.status())
+    assert state.google.message == "Lipsește GOOGLE_PLACES_API_KEY în Vercel."
+    assert state.facebook.message == "Lipsește META_PAGE_ID în Vercel."
+    assert "existing-private" not in state.model_dump_json()
+    missing = asyncio.run(IntegrationsService(Database(), None, {}).status())
+    assert missing.google.message == "Lipsesc GOOGLE_PLACES_API_KEY, GOOGLE_PLACE_ID în Vercel."
+    assert missing.facebook.message == "Lipsesc META_PAGE_ID, META_PAGE_ACCESS_TOKEN în Vercel."
+
+
+def test_reviews_explain_empty_results_without_mistaking_them_for_outage():
+    class EmptyReviews:
+        async def integration_health(self, *, refresh=False):
+            return {"google": {"configured": True, "healthy": True, "review_count": 0}}
+    state = asyncio.run(IntegrationsService(Database(), EmptyReviews(), environment()).status())
+    assert state.google.healthy is True
+    assert state.google.message == "Conectat, fără recenzii cu text disponibile."

@@ -115,6 +115,7 @@ async def fetch_google_reviews(client, api_key: str, place_id: str) -> Optional[
             "X-Goog-Api-Key": api_key,
             "X-Goog-FieldMask": GOOGLE_FIELDS,
         },
+        params={"languageCode": "ro"},
     )
     response.raise_for_status()
     payload = response.json()
@@ -247,7 +248,11 @@ class ReviewsService:
                     self._cached_facebook = None
                     self._facebook_cache_expires_at = 0.0
                 continue
-            self._provider_health[provider_id] = {"healthy": True, "checked_at": checked_at}
+            self._provider_health[provider_id] = {
+                "healthy": True,
+                "checked_at": checked_at,
+                "review_count": len(result["reviews"]) if result else 0,
+            }
             if provider_id == "facebook":
                 self._cached_facebook = result
                 self._facebook_cache_expires_at = now_value + self.ttl_seconds
@@ -279,6 +284,7 @@ class ReviewsService:
                 "configured": is_configured,
                 "healthy": self._provider_health.get(provider, {}).get("healthy") if is_configured else None,
                 "checked_at": self._provider_health.get(provider, {}).get("checked_at") if is_configured else None,
+                "review_count": self._provider_health.get(provider, {}).get("review_count") if is_configured else None,
             }
             for provider, is_configured in configured.items()
         }

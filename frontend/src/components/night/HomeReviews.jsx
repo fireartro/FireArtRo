@@ -58,7 +58,7 @@ function ReviewCard({ review, provider, clone = false }) {
         </span>
         {date ? <time dateTime={review.published_at}>{date}</time> : null}
       </footer>
-      {review.url ? <a className="fa-page-reviews__source" href={review.url} target="_blank" rel="noopener noreferrer" tabIndex={clone ? -1 : undefined} aria-label="Vezi recenzia originală pe Google Maps">
+      {review.url ? <a className="fa-page-reviews__source" href={review.url} target="_blank" rel="noopener noreferrer" tabIndex={clone ? -1 : undefined} aria-label={`Vezi recenzia originală pe ${provider.label}`}>
         Vezi recenzia <ArrowUpRight aria-hidden="true" />
       </a> : null}
     </blockquote>
