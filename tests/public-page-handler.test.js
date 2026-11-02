@@ -7,6 +7,25 @@ const template = '<!doctype html><html lang="ro"><head><title>Old</title><meta n
 const result = { pathname: '/pachete', html: '<main><h1>Pachete</h1><a href="/contact">Contact</a></main>', meta: {title: 'Pachete & oferte', description: 'Descriere "corectă"', path: '/pachete', schema: {'@context':'https://schema.org','@type':'Service', name:'Pachete'}}, data:{publication:{revision_id:'public',content:{text:'</script><script>alert(1)</script>'}}} };
 const response = () => ({headers:{},setHeader(k,v){this.headers[k.toLowerCase()]=v;},status(n){this.statusCode=n;return this;},end(body){this.body=body;},send(body){this.body=body;}});
 
+test('warms only the selected route scripts without executing or duplicating them', async () => {
+  const handler = createPublicPageHandler({ readData: async () => ({}), render: async () => result,
+    readTemplate: async () => template, readAssets: async () => ({ routeScripts: {
+      '/pachete': ['/static/js/packages.abc123.chunk.js', '/static/js/packages.abc123.chunk.js'],
+      '/galerie': ['/static/js/gallery.def456.chunk.js'],
+    } }) });
+  const res = response(); await handler({method:'GET',url:'/pachete',headers:{}},res);
+  assert.equal(res.statusCode, 200);
+  assert.equal((res.body.match(/href="\/static\/js\/packages.abc123.chunk.js"/g) || []).length, 1);
+  assert.match(res.body, /rel="preload" as="script"[^>]*fetchpriority="low"/);
+  assert.doesNotMatch(res.body, /gallery.def456|src="\/static\/js\/packages/);
+});
+
+test('script preloads cannot target external or traversing paths', () => {
+  for (const script of ['https://evil.test/code.js', '/static/js/../private.js', '/api/admin.js']) {
+    assert.throws(() => publicPageDocument(template, result, {scripts:[script]}), /Invalid public script/);
+  }
+});
+
 test('inlines trusted compiled CSS in cascade order and marks it loaded for the client runtime', () => {
   const source = template.replace('</head>', '<link rel="stylesheet" href="/static/css/main.css"></head>');
   const html = publicPageDocument(source, result, {styles:['/static/css/main.css','/static/css/route.css'],
