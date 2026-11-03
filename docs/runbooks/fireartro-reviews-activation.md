@@ -11,6 +11,25 @@ Stare verificată în Chrome la 2 noiembrie 2026. Acest document nu conține che
 - Admin → Setări recenzii controlează afișarea și limita; Google Places întoarce cel mult cinci recenzii. Arhiva de testimoniale manuale nu alimentează benzile externe.
 - Proiect Cloud existent: `vital-charger-508519-f0` / **FireArtRo Google Reviews**. Places API (New) este deja activ. Nu crea un proiect sau un profil Business duplicat.
 
+## Protecția consumului de recenzii — 4 noiembrie 2026
+
+Gateway-ul aplică limite înainte de fiecare apel nou către Google sau Facebook:
+
+- cel mult 10 apeluri pe minut pentru același client și furnizor;
+- cel mult 60 de apeluri pe minut și 1.000 într-o zi pentru fiecare furnizor, cumulate între toate instanțele;
+- un singur apel în curs pentru fiecare furnizor, cu un lease Mongo de 15 secunde și termen absolut de 5 secunde pentru cererea externă;
+- pauză comună de 30 de secunde după o eroare a furnizorului.
+
+Ferestrele sunt glisante și sunt verificate în cod; ștergerea TTL nu resetează prematur cotele. Colecția `review_provider_budgets` conține cel mult două documente, cu timpi, identificatori HMAC ai clienților și metadate de lease/backoff. Nu stochează adrese IP în clar, chei sau conținut Google. Indexul TTL pe `expires_at` este creat la pornire.
+
+Cererile simultane din același event loop reutilizează numai apelul aflat în curs. Rezultatul Google nu este păstrat după încheierea taskului. Alte instanțe/event loop-uri sunt protejate de același lease și aceleași cote în Mongo. Anularea unui vizitator nu închide clientul HTTP folosit de ceilalți. `force=True` și verificarea din Admin folosesc aceeași protecție.
+
+Dacă un furnizor funcționează, răspunsul său rămâne vizibil când celălalt este blocat. Dacă nu există date disponibile și o cotă/lease/pauză împiedică apelul, gateway-ul întoarce HTTP 429 cu `Retry-After`. Dacă protecția comună nu este disponibilă, întoarce HTTP 503 fără apel extern. Ambele răspunsuri au `Cache-Control: no-store, private`. Fără credențiale de furnizor, răspunsul rămâne HTTP 200 cu `providers: []`. Facebook își păstrează cache-ul scurt existent.
+
+În Google Cloud verifică separat cota strictă a metodei Places Details din proiectul existent și restricția cheii la Places API (New). O cotă externă de cel mult 60 de cereri/minut este un al doilea prag, independent de plafonul glisant de 1.000/zi din aplicație. Nu activa facturare, trial-uri sau chei noi pentru această verificare. Alertele de buget nu opresc consumul. Limitele aplicației nu dovedesc că aceste setări externe sunt deja aplicate; consemnează separat verificarea live.
+
+Verificare live în Chrome la 4 noiembrie 2026: proiectul afișează „This project has no billing account”. Pagina cotelor Places redirecționează către Maps onboarding și cere „Verify your account to use Maps APIs and services”, cu telefon și date de plată. Cotele externe și restricțiile cheilor nu au putut fi inspectate/aplicate prin această pagină; nu s-au activat facturare, trial-uri sau chei.
+
 ## Pașii proprietarului
 
 1. **Google Business:** profilul existent apare neconfirmat. Google oferă „Trimite un videoclip al companiei”, cu locația, echipamentul și dovada gestionării. Proprietarul trebuie să facă filmarea reală prin fluxul Google: https://business.google.com/locations . Nu trimite o filmare de spectacol sau un montaj drept dovadă a administrării.
