@@ -49,3 +49,13 @@ test('the real hero source map only names existing compatible static video files
     }
   }
 });
+
+test('dedicated AVIF crops retain the exact dimensions of the existing WebP presets', () => {
+  const presets = require('../frontend/src/data/responsivePresetImages.json');
+  for (const [original, preset] of Object.entries(presets)) {
+    assert.ok(fs.existsSync(path.join(publicRoot, original)), original);
+    assert.equal(fs.statSync(path.join(publicRoot, preset.src)).size, preset.bytes, preset.src);
+  }
+  assert.equal(presets['/media/optimized/pachet-artificii-noapte-640-20261102.webp'].width, 640);
+  assert.equal(presets['/media/optimized/pachet-artificii-noapte-640-20261102.webp'].height, 960);
+});
