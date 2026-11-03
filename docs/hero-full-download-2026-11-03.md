@@ -3,7 +3,7 @@
 The homepage keeps its three complete films. On constrained connections,
 native `canplay`/readyState describes a buffer, not the complete file; entering
 the homepage on that signal allowed repeated network stalls. The startup
-overlay now waits for a complete first-chapter download and decodable frames.
+overlay now waits for a complete first-chapter download and native metadata.
 
 `src/lib/heroDownloadCache.js` is a small universal module shared by React and
 the early startup script. The build copies the exact tested implementation to
@@ -15,7 +15,10 @@ The transfer order is:
 2. Consume its entire response body, reject non-200/partial responses and
    unexpected media types, validate Content-Length when available, then create
    its local Blob URL. No playable URL exists before complete body receipt.
-3. Decode the local film; dismiss loading and start playback from the beginning.
+3. Wait for the local film's metadata; dismiss loading and start playback from
+   the beginning. Mobile browsers can defer decoding frames until play() after
+   the reveal, so native HAVE_FUTURE_DATA is not a prerequisite for entry once
+   the complete validated file is local.
 4. The first `playing` event queues chapter2, then chapter3. Only one media
    fetch runs at a time. Repeated player events reuse the same requests/Blobs.
 5. Switch at a chapter ending only when the next complete file is ready. If
@@ -25,6 +28,10 @@ The transfer order is:
 The existing loading line reports actual first-file download progress. Poster,
 eight-second timeout and manual skip cannot bypass the default montage's
 complete-file gate. A transfer error offers retry and keeps chapter ordering.
+If a mobile playback restriction also defers metadata, a deliberate start
+button is available only after the entire first file has downloaded. Its
+click requests muted inline playback directly within the user gesture and
+releases the overlay. It cannot bypass a pending or failed download.
 Custom CMS videos, interior pages, reduced motion and explicit data saving
 retain their appropriate existing startup behavior.
 
