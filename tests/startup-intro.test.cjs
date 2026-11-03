@@ -102,6 +102,19 @@ test('ready first video releases all input by 1.5 seconds', () => {
  assert.equal(run.intro.isConnected,false);assert.equal(run.root.inert,false);assert.equal(run.tasks.size,0);
 });
 
+test('a loaded and painted native hero cover releases the reveal while its film buffers', () => {
+  const run = start();
+  run.media.playback = 'video';
+  run.media.video = { readyState: 0, paused: true,
+    poster: '/media/optimized/hero-wide-960-20261102.webp', dataset: { heroPosterReady: 'true' } };
+  run.window.__fireartIntro.routeReady('/');
+  run.advance(1299);
+  assert.equal(run.intro.isConnected, true);
+  run.advance(201);
+  assert.equal(run.intro.isConnected, false);
+  assert.equal(run.root.inert, false);
+});
+
 test('a video ready at 1.4 seconds still releases by the 1.5 second deadline', () => {
  const run=start();run.media.video={readyState:0,paused:true};
  run.window.__fireartIntro.routeReady('/');run.advance(1400);
