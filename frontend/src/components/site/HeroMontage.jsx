@@ -52,6 +52,8 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
   const [activeSlot, setActiveSlot] = useState(0);
   const [playingSlot, setPlayingSlot] = useState(() => typeof document !== 'undefined'
     && document.querySelector('#acasa video[data-hero-initial-film]')?.dataset.heroPrimed === 'true' ? 0 : null);
+  const [initialPosterReady, setInitialPosterReady] = useState(() => typeof document !== 'undefined'
+    && document.querySelector('#acasa video[data-hero-initial-film]')?.dataset.heroPosterReady === 'true');
   const [pageVisible, setPageVisible] = useState(() => typeof document === 'undefined' || document.visibilityState !== 'hidden');
   const [inView, setInView] = useState(true);
   const [autoplayEligible, setAutoplayEligible] = useState(true);
@@ -153,7 +155,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
     if (!video) return undefined;
     if (video.hasAttribute('data-hero-initial-film') && !video.poster) {
       const poster = stageRef.current?.querySelector('picture img')?.currentSrc;
-      if (poster) video.poster = poster;
+      if (poster) { video.poster = poster; setInitialPosterReady(true); }
     }
     if (video.hasAttribute('data-hero-initial-film') && video.getAttribute('src') !== currentSource) {
       video.src = currentSource;
@@ -365,7 +367,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
             data-media-variant={format}
             data-media-quality={delivery}
             data-film-index={index}
-            className={`hero-media-surface hero-media-video hero-montage__video absolute inset-0 h-full w-full object-cover${enabled && slot === activeSlot && playingSlot === slot ? ' hero-montage__video--visible' : ''}`}
+            className={`hero-media-surface hero-media-video hero-montage__video absolute inset-0 h-full w-full object-cover${enabled && slot === activeSlot && (playingSlot === slot || (initial && initialPosterReady)) ? ' hero-montage__video--visible' : ''}`}
           />
         );
       })}

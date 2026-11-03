@@ -87,6 +87,16 @@ test('takes over an early buffered first element without replacing or resetting 
   expect(HTMLMediaElement.prototype.load).not.toHaveBeenCalled();
 });
 
+test('paints the existing native poster while the first video is still buffering', () => {
+  const image = container.querySelector('picture img');
+  Object.defineProperty(image, 'currentSrc', { configurable: true, value: 'https://fireart.ro/media/optimized/hero-wide-960-20261102.webp' });
+  activate();
+  const first = container.querySelector('video');
+  expect(first.readyState).toBe(0);
+  expect(first.poster).toBe(image.currentSrc);
+  expect(first.classList.contains('hero-montage__video--visible')).toBe(true);
+});
+
 test('mounts the first film on 3g and permits deliberate entry before buffering completes', () => {
   const previous = Object.getOwnPropertyDescriptor(navigator, 'connection');
   Object.defineProperty(navigator, 'connection', { configurable: true, value: { effectiveType: '3g' } });
