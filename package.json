@@ -11,7 +11,7 @@
     "verify:production": "node scripts/verify-production.mjs"
   },
   "dependencies": {
-    "@vercel/blob": "2.8.0",
-    "mongodb": "7.6.0"
+    "@vercel/blob": "2.8.2",
+    "mongodb": "7.7.0"
   }
 }
