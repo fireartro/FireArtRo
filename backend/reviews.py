@@ -8,8 +8,11 @@ from typing import Mapping, Optional
 from urllib.parse import quote, urlparse
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+
+from auth import request_ip
+from review_budget import MongoReviewBudget, ReviewBudgetError
 
 
 logger = logging.getLogger(__name__)
@@ -188,6 +191,7 @@ class ReviewsService:
         http_client=None,
         ttl_seconds: int = 900,
         now=monotonic,
+        budget=None,
     ):
         self.env = env
         self.http_client = http_client
@@ -196,19 +200,23 @@ class ReviewsService:
         self._cached_facebook = None
         self._facebook_cache_expires_at = 0.0
         self._provider_health = {}
+        self.budget = budget if budget is not None else MongoReviewBudget(
+            None, env.get("ADMIN_SESSION_SECRET", ""),
+        )
+        self._inflight = {}
 
-    def _provider_jobs(self, client):
+    def _provider_jobs(self):
         jobs = []
 
         google_key = _clean_text(self.env.get("GOOGLE_PLACES_API_KEY"))
         google_place_id = _clean_text(self.env.get("GOOGLE_PLACE_ID"))
         if google_key and google_place_id:
-            jobs.append(("google", lambda: fetch_google_reviews(client, google_key, google_place_id)))
+            jobs.append(("google", lambda client: fetch_google_reviews(client, google_key, google_place_id)))
 
         meta_page_id = _clean_text(self.env.get("META_PAGE_ID"))
         meta_token = _clean_text(self.env.get("META_PAGE_ACCESS_TOKEN"))
         if meta_page_id and meta_token:
-            jobs.append(("facebook", lambda: fetch_facebook_reviews(
+            jobs.append(("facebook", lambda client: fetch_facebook_reviews(
                     client,
                     meta_page_id,
                     meta_token,
@@ -217,8 +225,46 @@ class ReviewsService:
 
         return jobs
 
-    async def _fetch_snapshot(self, client, now_value: float, *, force: bool = False) -> dict:
-        jobs = self._provider_jobs(client)
+    def _forget_inflight(self, key, task):
+        if self._inflight.get(key) is task:
+            del self._inflight[key]
+        if not task.cancelled():
+            task.exception()  # Also consume failures if every HTTP waiter left.
+
+    async def _run_provider(self, provider, job, client_ip):
+        token = await self.budget.reserve(provider, client_ip)
+        failed = True
+        try:
+            if self.http_client is not None:
+                result = await asyncio.wait_for(job(self.http_client), timeout=PROVIDER_TIMEOUT_SECONDS)
+            else:
+                # The task, not its first HTTP waiter, owns this client. Leaving
+                # that request cannot close a connection another waiter uses.
+                async with httpx.AsyncClient(timeout=PROVIDER_TIMEOUT_SECONDS) as client:
+                    result = await asyncio.wait_for(job(client), timeout=PROVIDER_TIMEOUT_SECONDS)
+            failed = False
+            return result
+        finally:
+            # A disconnected waiter must not cancel the shared provider task.
+            # If storage fails here, the existing lease expires conservatively.
+            try:
+                await self.budget.complete(provider, token, failed=failed)
+            except ReviewBudgetError:
+                logger.warning("Review provider budget completion unavailable")
+
+    async def _provider_result(self, provider, job, client_ip):
+        # Tasks belong to one runtime loop. Other loops/instances use the same
+        # Mongo lease, rather than awaiting a foreign-loop future.
+        key = (asyncio.get_running_loop(), provider)
+        task = self._inflight.get(key)
+        if task is None or task.done():
+            task = asyncio.create_task(self._run_provider(provider, job, client_ip))
+            self._inflight[key] = task
+            task.add_done_callback(lambda done: self._forget_inflight(key, done))
+        return await asyncio.shield(task)
+
+    async def _fetch_snapshot(self, now_value: float, *, force=False, client_ip="internal") -> dict:
+        jobs = self._provider_jobs()
         if not jobs:
             return {"providers": []}
 
@@ -235,13 +281,16 @@ class ReviewsService:
                 results_by_provider[provider_id] = self._cached_facebook
                 continue
             pending_ids.append(provider_id)
-            pending.append(job())
+            pending.append(self._provider_result(provider_id, job, client_ip))
 
         results = await asyncio.gather(*pending, return_exceptions=True) if pending else []
         providers = []
+        budget_errors = []
         checked_at = datetime.now(timezone.utc)
         for provider_id, result in zip(pending_ids, results):
             if isinstance(result, Exception):
+                if isinstance(result, ReviewBudgetError):
+                    budget_errors.append(result)
                 logger.warning("Review provider %s is unavailable", provider_id)
                 self._provider_health[provider_id] = {"healthy": False, "checked_at": checked_at}
                 if provider_id == "facebook":
@@ -261,16 +310,14 @@ class ReviewsService:
             result = results_by_provider.get(provider_id)
             if result:
                 providers.append(result)
+        if not providers and budget_errors:
+            # Keep a functioning sibling provider visible; otherwise preserve
+            # explicit throttle/unavailable semantics instead of an empty 200.
+            raise max(budget_errors, key=lambda error: error.status_code)
         return {"providers": providers}
 
-    async def get_snapshot(self, *, force=False) -> dict:
-        now_value = self.now()
-        if self.http_client is not None:
-            snapshot = await self._fetch_snapshot(self.http_client, now_value, force=force)
-        else:
-            async with httpx.AsyncClient(timeout=PROVIDER_TIMEOUT_SECONDS) as client:
-                snapshot = await self._fetch_snapshot(client, now_value, force=force)
-        return snapshot
+    async def get_snapshot(self, *, force=False, client_ip="internal") -> dict:
+        return await self._fetch_snapshot(self.now(), force=force, client_ip=client_ip)
 
     async def integration_health(self, *, refresh=False) -> dict:
         configured = {
@@ -278,7 +325,10 @@ class ReviewsService:
             "facebook": bool(_clean_text(self.env.get("META_PAGE_ID")) and _clean_text(self.env.get("META_PAGE_ACCESS_TOKEN"))),
         }
         if any(configured.values()):
-            await self.get_snapshot(force=refresh)
+            try:
+                await self.get_snapshot(force=refresh)
+            except ReviewBudgetError:
+                pass  # Sanitized health metadata, never bypass the shared guard.
         return {
             provider: {
                 "configured": is_configured,
@@ -294,9 +344,9 @@ def create_reviews_router(service: ReviewsService) -> APIRouter:
     router = APIRouter(prefix="/api")
 
     @router.get("/reviews")
-    async def get_public_reviews():
+    async def get_public_reviews(request: Request):
         return JSONResponse(
-            content=await service.get_snapshot(),
+            content=await service.get_snapshot(client_ip=request_ip(request)),
             headers={"Cache-Control": "no-store, private"},
         )
 

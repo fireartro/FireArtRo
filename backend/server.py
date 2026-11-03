@@ -39,6 +39,7 @@ from content_migrations import (
     migrate_owner_euid,
 )
 from reviews import ReviewsService, create_reviews_router
+from review_budget import MongoReviewBudget
 from auth import (
     AuthError,
     AUTH_UNAVAILABLE,
@@ -193,6 +194,10 @@ quote_rate_limiter = MongoQuoteRateLimiter(
     db.quote_rate_limits if db is not None else None,
     os.environ.get("ADMIN_SESSION_SECRET", ""),
 )
+reviews_budget = MongoReviewBudget(
+    db.review_provider_budgets if db is not None else None,
+    os.environ.get("ADMIN_SESSION_SECRET", ""),
+)
 turnstile_verifier = TurnstileVerifier.from_env(os.environ)
 media_repository = MongoMediaRepository(db)
 media_service = MediaService(media_repository, VercelBlobClient())
@@ -211,6 +216,7 @@ async def ensure_indexes():
     await inbound_repository.create_indexes()
     await inbound_reply_repository.create_indexes()
     await quote_rate_limiter.create_indexes()
+    await reviews_budget.create_indexes()
     await media_repository.create_indexes()
 
 
@@ -635,7 +641,7 @@ app.include_router(
     create_sitemap_router(blog_service, database_available=lambda: db is not None)
 )
 
-reviews_service = ReviewsService(os.environ)
+reviews_service = ReviewsService(os.environ, budget=reviews_budget)
 app.include_router(create_reviews_router(reviews_service))
 integration_service = IntegrationsService(db, reviews_service, os.environ)
 app.state.integration_service = integration_service
