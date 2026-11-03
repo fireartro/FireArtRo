@@ -59,6 +59,12 @@ Gallery thumbnails use derivatives; the lightbox continues to use the
 original photo. Only the first two cards load eagerly. All image names,
 descriptions and old redirects from the Romanian SEO migration remain.
 
+Homepage callers with an explicit source set retain their existing reviewed
+responsive presets, including the dedicated portrait crops for package
+cards. `responsivePresetImages.json` maps those exact WebP files to AVIF
+at identical dimensions. Raw-source gallery/page media uses the original
+composition in both formats; it does not opt into homepage-specific crops.
+
 ```powershell
 python scripts/build-responsive-images.py
 ```
@@ -68,7 +74,7 @@ same AVIF files. WebP remains available for browsers without AVIF support.
 
 ## Verification
 
-527 frontend tests, 81 API tests and 48 artifact checks passed locally,
+531 frontend tests, 81 API tests and 49 artifact checks passed locally,
 including early selection against the real source map, long buffering,
 light-source errors, original-photo integrity, custom URL preservation and
 derivative presence/size. The production build passed. A read-only review

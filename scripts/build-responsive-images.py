@@ -17,10 +17,20 @@ VERSION = '20261103'
 
 
 def build_posters():
-    for original in (PUBLIC / 'media/optimized').glob('spectacol-artificii-*.webp'):
+    presets = {}
+    files = list((PUBLIC / 'media/optimized').glob('*.webp')) + list((PUBLIC / 'media').glob('promovare-*.webp'))
+    for original in files:
         with Image.open(original) as image:
-            target = original.with_name(original.stem.replace('20261102', VERSION) + '.avif')
+            name = original.stem.replace('20261102', VERSION)
+            if not name.endswith(VERSION):
+                name += '-' + VERSION
+            target = PUBLIC / 'media/optimized' / (name + '.avif')
             image.save(target, quality=65, speed=6, subsampling='4:2:0', max_threads=2)
+            presets['/' + original.relative_to(PUBLIC).as_posix()] = {
+                'src': '/' + target.relative_to(PUBLIC).as_posix(), 'width': image.width,
+                'height': image.height, 'bytes': target.stat().st_size,
+            }
+    (ROOT / 'frontend/src/data/responsivePresetImages.json').write_text(json.dumps(presets, separators=(',', ':')) + '\n', encoding='utf-8')
 
 
 def add_catalogue_versions(items):

@@ -34,3 +34,14 @@ test.each(['/uploads/owner-photo.webp', '/media/gallery/spectacol-drone-ploiesti
   expect(container.querySelector('img').getAttribute('srcset')).toBeNull();
   act(() => root.unmount());
 });
+
+test('gallery cards use the original composition while homepage presets remain opt-in', () => {
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  const src = '/media/gallery/fireartro-artificii-noapte-spectacol-110.webp';
+  act(() => root.render(<ResponsiveImage src={src} alt="Fotografie întreagă" />));
+  expect(container.querySelector('source').srcset).toContain('/media/responsive/fireartro-artificii-noapte-spectacol-110-640-20261103.avif');
+  expect(container.querySelector('source').srcset).not.toContain('pachet-artificii');
+  expect(container.querySelector('img').srcset).not.toContain('pachet-artificii');
+  act(() => root.unmount());
+});
