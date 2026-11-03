@@ -6,7 +6,7 @@ const path = require('node:path');
 const source = readFileSync(path.resolve(__dirname, '../frontend/public/startup-intro.js'), 'utf8');
 const heroSources = require('../frontend/src/data/heroDelivery.json');
 
-function start({ reduced = false, active = true, connection = {}, firstFilm = null, width = 1440, height = 900, dpr = 1 } = {}) {
+function start({ reduced = false, active = true, connection = {}, firstFilm = null, width = 1440, height = 900, dpr = 1, downloadState = 'ready' } = {}) {
   let now = 0;
   let nextId = 1;
   const tasks = new Map();
@@ -51,20 +51,23 @@ function start({ reduced = false, active = true, connection = {}, firstFilm = nu
   };
   const motion = { matches: reduced, addEventListener, removeEventListener };
   const window = { __fireartIntroStarted: 0, innerWidth: width, innerHeight: height, devicePixelRatio: dpr, location: { reload() { window.reloaded = true; } }, matchMedia: () => motion, addEventListener, removeEventListener, dispatchEvent: event => events.get(event.type)?.(event) };
+  const downloads = { get: () => ({ status: downloadState }), subscribe: () => () => {}, retry() { downloads.retried = true; },
+    prepare(sources) { downloads.sources = sources; return { then(callback) { if (downloadState === 'ready') callback('blob:complete-first-film'); return { catch() {} }; } }; } };
+  window.__fireartCreateHeroDownloads = () => downloads;
   vm.runInNewContext(source, {
     window, document, navigator: { connection }, Event, performance: { now: () => now },
     setTimeout: (fn, delay) => timer(fn, delay), clearTimeout: id => tasks.delete(id),
     setInterval: (fn, delay) => timer(fn, delay, true), clearInterval: id => tasks.delete(id),
     requestAnimationFrame: () => 0, cancelAnimationFrame: () => {}
   });
-  return { window, intro, root, media, html, button, tasks, events, advance };
+  return { window, intro, root, media, html, button, tasks, events, advance, downloads };
 }
 
 function initialFilm() {
   const sources = Object.fromEntries(Object.entries(heroSources).map(([format, qualities]) => [format,
     Object.fromEntries(Object.entries(qualities).map(([quality, files]) => [quality, files[0]]))]));
-  return { dataset: {}, readyState: 4, canPlayType: () => 'probably',
-    getAttribute: () => JSON.stringify(sources), classList: { add() {} },
+  return { dataset: {heroCompleteRequired:'true'}, readyState: 4, canPlayType: () => 'probably',
+    getAttribute: name => JSON.stringify(name === 'data-hero-film-sources' ? heroSources : sources), classList: { add() {} },
     addEventListener() {}, removeEventListener() {} };
 }
 
@@ -81,7 +84,9 @@ for (const [width, height, dpr, connection, expected] of [
   test(`early buffer uses the same player rendition: ${expected}`, () => {
     const firstFilm = initialFilm();
     start({ firstFilm, width, height, dpr, connection });
-    assert.ok(firstFilm.src.includes(expected));
+    assert.ok(firstFilm.dataset.heroSource.includes(expected));
+    assert.equal(firstFilm.src,'blob:complete-first-film');
+    assert.equal(firstFilm.dataset.heroDownloadState,'ready');
     assert.equal(firstFilm.preload, 'auto');
     assert.equal(firstFilm.dataset.heroPrimed, 'true');
     assert.equal(firstFilm.poster, '/media/optimized/test-selected-poster.webp');
@@ -104,6 +109,29 @@ test('ready first video releases all input by 1.5 seconds', () => {
  const run=start();run.media.video={readyState:4,paused:false};
  run.window.__fireartIntro.routeReady('/');run.advance(1500);
  assert.equal(run.intro.isConnected,false);assert.equal(run.root.inert,false);assert.equal(run.tasks.size,0);
+});
+
+test('the complete montage stays behind loading beyond eight seconds despite native future frames or a painted cover', () => {
+  const firstFilm=initialFilm();
+  const run=start({firstFilm,downloadState:'loading',connection:{effectiveType:'3g'}});
+  run.media.playback='video';run.media.video=firstFilm;
+  firstFilm.poster='/cover.avif';firstFilm.dataset.heroPosterReady='true';
+  run.window.__fireartIntro.routeReady('/');run.advance(30000);
+  assert.equal(run.intro.isConnected,true);assert.equal(run.root.inert,true);
+  assert.equal(run.button.hidden,true);assert.equal(firstFilm.src,undefined);
+  run.events.get('click')();
+  assert.equal(run.downloads.retried,true);assert.equal(run.intro.isConnected,true);
+  firstFilm.dataset.heroDownloadState='ready';run.advance(200);
+  assert.equal(run.intro.isConnected,false);assert.equal(run.root.inert,false);
+});
+
+test('an incomplete montage download offers retry rather than entering the site after an error', () => {
+  const firstFilm=initialFilm();const run=start({firstFilm,downloadState:'error'});
+  run.media.playback='video';run.media.video=firstFilm;
+  run.window.__fireartIntro.routeReady('/');run.advance(15000);
+  assert.equal(run.intro.isConnected,true);assert.equal(run.button.hidden,false);
+  assert.match(run.button.textContent,/Reîncearcă/);
+  run.events.get('click')();assert.equal(run.downloads.retried,true);
 });
 
 test('a loaded and painted native hero cover releases the reveal while its film buffers', () => {

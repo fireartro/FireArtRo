@@ -39,6 +39,9 @@ export function isHeroIntroLoading(windowLike) {
 }
 
 export function canStartHeroVideo(video, windowLike) {
+  if (video.dataset?.heroCompleteRequired === 'true') {
+    return video.dataset.heroDownloadState === 'ready' && !isHeroIntroLoading(windowLike);
+  }
   // Do not consume the small initial buffer behind the loading overlay.
   // HAVE_FUTURE_DATA is sufficient to advance, including browsers which
   // deliberately buffer in segments and never promise canplaythrough.
@@ -48,6 +51,7 @@ export function canStartHeroVideo(video, windowLike) {
 const primingVideos = new WeakSet();
 
 export function primeHeroVideoBuffer(video, windowLike) {
+  if (video.dataset?.heroCompleteRequired === 'true') return;
   // preload is only a hint (notably on mobile). A suspended metadata-only
   // request needs play() to ask for data, but must not spend its tiny buffer
   // behind the intro. Never load()/detach the source to recover this case.

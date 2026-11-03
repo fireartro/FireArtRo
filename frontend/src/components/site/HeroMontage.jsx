@@ -6,17 +6,23 @@ import { canPlayHeroVideo, canStartHeroVideo, getHeroAutoplayPolicy, isHeroIntro
 import { getNextFilmIndex, selectMontageFormat, shouldPreloadNextFilm } from './heroMontagePlayback';
 import { selectHeroDelivery } from './heroDelivery';
 import heroSources from '@/data/heroDelivery.json';
+import createHeroDownloads from '@/lib/heroDownloadCache';
 import { watchHeroFrames } from './heroFrameWatch';
 import '../../styles/hero-montage.css';
 
 const films = { wide: heroSources.wide.hd, portrait: heroSources.portrait.hd };
 const initialSources = JSON.stringify(Object.fromEntries(Object.entries(heroSources).map(([format, sources]) =>
   [format, Object.fromEntries(Object.entries(sources).map(([quality, files]) => [quality, files[0]]))])));
+const completeSources = JSON.stringify(heroSources);
+const pageDownloads = () => typeof window === 'undefined' ? null
+  : window.__fireartHeroDownloads || (window.__fireartHeroDownloads = createHeroDownloads());
 const readFormat = () => typeof window === 'undefined'
   ? 'wide'
   : selectMontageFormat(window.innerWidth, window.innerHeight);
 
 function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayheadRef, onDeliveryError, onDecoderStall, onLongBuffer }) {
+  const [downloads] = useState(pageDownloads);
+  const [, updateDownloads] = useState(0);
   const stageRef = useRef(null);
   const videoRefs = useRef([null, null]);
   const activeVideoRef = useRef(null);
@@ -28,6 +34,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
   const activeSlotRef = useRef(0);
   const retryTimers = useRef([null, null]);
   const retryAttempts = useRef([0, 0]);
+  const decodeFailures = useRef([0, 0]);
   const resumeAt = useRef([playheadRef.current.time > 0 ? playheadRef.current.time : null, null]);
   const mounted = useRef(true);
   const playbackAllowed = useRef(true);
@@ -47,15 +54,23 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
     && document.querySelector('#acasa video[data-hero-initial-film]')?.dataset.heroPosterReady === 'true');
   const [pageVisible, setPageVisible] = useState(() => typeof document === 'undefined' || document.visibilityState !== 'hidden');
   const [inView, setInView] = useState(true);
-  const [autoplayEligible, setAutoplayEligible] = useState(true);
+  const [autoplayEligible, setAutoplayEligible] = useState(() => typeof window === 'undefined' || getHeroAutoplayPolicy(window));
   const [videoSupported, setVideoSupported] = useState(true);
   const visible = pageVisible && inView;
   const enabled = autoplayEligible && videoSupported;
   activeSlotRef.current = activeSlot;
   playbackAllowed.current = visible && enabled && !lifecycleHidden.current;
   const currentFilmIndex = slotIndices[activeSlot];
-  const filmSource = index => heroSources[format][delivery][index];
+  const playlist = heroSources[format][delivery];
+  const filmSource = index => playlist[index];
   const currentSource = filmSource(currentFilmIndex);
+  const currentDownload = downloads?.get(currentSource);
+  const currentBlob = currentDownload?.status === 'ready' ? currentDownload.url : undefined;
+  useEffect(() => downloads?.subscribe(() => updateDownloads(value => value + 1)), [downloads]);
+  useEffect(() => {
+    if (!enabled || !canPlayHeroVideo(document.createElement('video'))) { downloads.clear(); return; }
+    downloads.prepare(playlist, playheadRef.current.index).catch(() => {});
+  }, [downloads, playlist, enabled, playheadRef]);
   // Read the media element immediately before a format/quality change. A
   // timeupdate event can lag the displayed frame by a quarter of a second.
   capturePlayheadRef.current = () => {
@@ -146,8 +161,9 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
       const poster = stageRef.current?.querySelector('picture img')?.currentSrc;
       if (poster) { video.poster = poster; setInitialPosterReady(true); }
     }
-    if (video.hasAttribute('data-hero-initial-film') && video.getAttribute('src') !== currentSource) {
-      video.src = currentSource;
+    if (!currentBlob) return undefined;
+    if (video.getAttribute('src') !== currentBlob) {
+      video.src = currentBlob;
     }
     video.preload = 'auto';
     const startPlayback = () => {
@@ -160,16 +176,16 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
     else video.pause();
     window.addEventListener('fireart:intro-dismissed', startPlayback);
     return () => window.removeEventListener('fireart:intro-dismissed', startPlayback);
-  }, [activated, activeSlot, visible, enabled, currentSource]);
+  }, [activated, activeSlot, visible, enabled, currentBlob]);
 
   useEffect(() => {
     const video = videoRefs.current[activeSlot];
     if (!activated || !visible || !enabled || !video) return undefined;
-    return watchHeroFrames(video, onDecoderStall, () => playbackAllowed.current
+    return watchHeroFrames(video, onDecoderStall, () => currentBlob && playbackAllowed.current
       && !pendingSwitch.current && !isHeroIntroLoading(window), () => {
       if (delivery !== 'light') onLongBuffer();
     });
-  }, [activated, activeSlot, visible, enabled, delivery, onDecoderStall, onLongBuffer]);
+  }, [activated, activeSlot, visible, enabled, delivery, currentBlob, onDecoderStall, onLongBuffer]);
 
   const retryVideo = useCallback((slot, reload = true) => {
     const video = videoRefs.current[slot];
@@ -200,6 +216,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
     const nextSlot = 1 - activeSlot;
     const nextVideo = videoRefs.current[nextSlot];
     if (!nextVideo) return;
+    if (downloads.get(playlist[Number(nextVideo.dataset.filmIndex)]).status !== 'ready') return;
     if (nextVideo.error) { retryVideo(nextSlot); return; }
     starting.current = true;
     const attempt = ++switchAttempt.current;
@@ -245,7 +262,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
       if (!finishAttempt()) return;
       if (mounted.current && playbackAllowed.current) retryVideo(nextSlot, false);
     });
-  }, [activeSlot, clearRetry, retryVideo, playheadRef]);
+  }, [activeSlot, clearRetry, retryVideo, playheadRef, downloads, playlist]);
   switchRef.current = trySwitch;
 
   recoverRef.current = () => {
@@ -286,11 +303,19 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
     if (shouldPreloadNextFilm(video.currentTime, video.duration || selectHeroMontageTitles(currentFilmIndex, format).duration, true)) requestNext();
   }, [activated, requestNext, visible, currentFilmIndex, playheadRef, format]);
 
-  const onEnded = useCallback(() => {
+  const onEnded = useCallback(event => {
     requestNext();
+    const nextIndex = getNextFilmIndex(currentFilmIndex, films[format].length);
+    if (downloads.get(playlist[nextIndex]).status !== 'ready') {
+      // Never hand off to a partial film. A weak connection may need longer
+      // than one chapter to finish the next; replay the complete local film.
+      event.currentTarget.currentTime = 0;
+      if (playbackAllowed.current) event.currentTarget.play().catch(() => {});
+      return;
+    }
     pendingSwitch.current = true;
     trySwitch();
-  }, [requestNext, trySwitch]);
+  }, [requestNext, trySwitch, currentFilmIndex, format, playlist, downloads]);
 
   const onNextReady = useCallback(slot => {
     clearRetry(slot);
@@ -322,10 +347,14 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
           <video
             key={`${format}-${slot}-${index}`}
             ref={element => { videoRefs.current[slot] = element; if (slot === activeSlot) activeVideoRef.current = element; }}
-            src={initial ? undefined : filmSource(index)}
+            src={initial ? undefined : downloads?.get(filmSource(index)).url}
             suppressHydrationWarning={initial}
             data-hero-initial-film={initial ? 'true' : undefined}
             data-hero-initial-sources={initial ? initialSources : undefined}
+            data-hero-film-sources={initial ? completeSources : undefined}
+            data-hero-complete-required="true"
+            data-hero-source={filmSource(index)}
+            data-hero-download-state={downloads?.get(filmSource(index)).status || 'idle'}
             autoPlay={activated && slot === activeSlot && visible && typeof window !== 'undefined' && !isHeroIntroLoading(window)}
             muted
             playsInline
@@ -348,11 +377,22 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
             }}
             onPlaying={event => {
               if (!playbackAllowed.current || !canStartHeroVideo(event.currentTarget, window)) event.currentTarget.pause();
-              else if (slot === activeSlot) setPlayingSlot(slot);
+              else if (slot === activeSlot) {
+                setPlayingSlot(slot);
+                downloads.preloadFollowing(index);
+                requestNext();
+              }
             }}
             onTimeUpdate={slot === activeSlot ? onTimeUpdate : undefined}
             onEnded={slot === activeSlot ? onEnded : undefined}
-            onError={() => ['retina', 'uhd'].includes(delivery) ? onDeliveryError() : retryVideo(slot)}
+            onError={event => {
+              if (['retina', 'uhd'].includes(delivery)) { onDeliveryError(); return; }
+              if ([2, 3, 4].includes(event.currentTarget.error?.code)) {
+                if (decodeFailures.current[slot]++ >= 2) { setVideoSupported(false); return; }
+                resumeAt.current[slot] = event.currentTarget.currentTime;
+                downloads.reload(filmSource(index)).catch(() => {});
+              } else retryVideo(slot);
+            }}
             data-media-variant={format}
             data-media-quality={delivery}
             data-film-index={index}
@@ -371,6 +411,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
 }
 
 export default function HeroMontage() {
+  useEffect(() => () => pageDownloads()?.clear(), []);
   const [decoderGeneration, setDecoderGeneration] = useState(0);
   const [format, setFormat] = useState(readFormat);
   const playheadRef = useRef({ index: 0, time: 0 });

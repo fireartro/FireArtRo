@@ -34,7 +34,9 @@ for (const [name,width,height,deviceScaleFactor] of sizes) {
     page.on('pageerror', error => errors.push(error.message));
     await enter(page);
     await expect(active(page)).toHaveCSS('object-fit','cover');
-    const state=await active(page).evaluate(v => ({src:v.currentSrc,w:v.videoWidth,h:v.videoHeight,t:v.currentTime,quality:v.dataset.mediaQuality}));
+    const state=await active(page).evaluate(v => ({src:v.dataset.heroSource,w:v.videoWidth,h:v.videoHeight,t:v.currentTime,quality:v.dataset.mediaQuality}));
+    expect(await active(page).evaluate(v=>v.currentSrc)).toMatch(/^blob:/);
+    await expect(active(page)).toHaveAttribute('data-hero-download-state','ready');
     const portrait=height>width;
     expect(state.src).toContain(heroSources[portrait?'portrait':'wide'][state.quality][0]);
     // Windows WebKit rounds its display-sized decode surface to whole pixels.
@@ -126,7 +128,7 @@ test('three real 40-second chapters switch, loop and retain the playhead on rota
   expect(handoffs).toEqual([1,2,0].map(index=>({chapter:String(index),opacity:1})));
   await seek(page,12.3);
   await page.setViewportSize({width:1024,height:768});
-  await expect.poll(()=>active(page).evaluate(v=>v.currentSrc)).toMatch(/(?:hero-film-wide-1|film-spectacol-panoramic-1)/);
+  await expect.poll(()=>active(page).evaluate(v=>v.dataset.heroSource)).toMatch(/(?:hero-film-wide-1|film-spectacol-panoramic-1)/);
   await expect.poll(()=>active(page).evaluate(v=>v.readyState>=2&&!v.paused)).toBe(true);
   const time=await active(page).evaluate(v=>v.currentTime);
   expect(time).toBeGreaterThanOrEqual(12.3);
@@ -166,7 +168,7 @@ test('4K media failure falls back to real HD media',async({browser})=>{
   // WebKit loads media through its native media stack, outside page.route.
   // An actual missing file makes every engine exercise the same network error.
   await active(page).evaluate(v=>{v.src='/media/qa-missing-uhd.mp4';v.load();});
-  await expect.poll(()=>active(page).evaluate(v=>v.currentSrc)).toContain('film-spectacol-panoramic-1-hd');
+  await expect.poll(()=>active(page).evaluate(v=>v.dataset.heroSource)).toContain('film-spectacol-panoramic-1-hd');
   await expect(active(page)).toHaveAttribute('data-media-quality','hd');
   await expect.poll(()=>active(page).evaluate(v=>v.readyState>=2&&!v.paused)).toBe(true);
   const state=await active(page).evaluate(v=>({ratio:v.videoWidth/v.videoHeight,time:v.currentTime}));
