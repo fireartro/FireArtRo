@@ -134,6 +134,38 @@ test('an incomplete montage download offers retry rather than entering the site 
   run.events.get('click')();assert.equal(run.downloads.retried,true);
 });
 
+test('a complete film releases a metadata-only mobile decoder without waiting for playback behind the overlay', () => {
+  const firstFilm=initialFilm();firstFilm.readyState=1;
+  const run=start({firstFilm,downloadState:'ready',width:390,height:844,dpr:3});
+  run.media.playback='video';run.media.video=firstFilm;
+  run.window.__fireartIntro.routeReady('/');run.advance(1500);
+  assert.equal(run.intro.isConnected,false);
+  assert.equal(run.root.inert,false);
+});
+
+test('mobile metadata never bypasses a pending complete-file download', () => {
+  const firstFilm=initialFilm();firstFilm.readyState=1;
+  const run=start({firstFilm,downloadState:'loading',width:390,height:844,dpr:3});
+  run.media.playback='video';run.media.video=firstFilm;
+  run.window.__fireartIntro.routeReady('/');run.advance(60000);
+  assert.equal(run.intro.isConnected,true);
+  assert.equal(run.root.inert,true);
+});
+
+test('a fully downloaded film offers a direct start gesture when mobile media loading is suspended', () => {
+  const firstFilm=initialFilm();firstFilm.readyState=0;
+  let played=0;firstFilm.play=()=>{played+=1;return Promise.resolve();};
+  const run=start({firstFilm,downloadState:'ready',width:390,height:844});
+  run.media.playback='video';run.media.video=firstFilm;
+  run.window.__fireartIntro.routeReady('/');run.advance(3000);
+  assert.equal(run.intro.isConnected,true);
+  assert.equal(run.button.hidden,false);
+  run.events.get('click')();
+  assert.equal(played,1);
+  assert.equal(run.intro.isConnected,false);
+  assert.equal(run.root.inert,false);
+});
+
 test('a loaded and painted native hero cover releases the reveal while its film buffers', () => {
   const run = start();
   run.media.playback = 'video';

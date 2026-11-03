@@ -191,8 +191,16 @@
             if (video.dataset.heroDownloadState === 'error') {
                 skip.textContent = 'Reîncearcă încărcarea ↗';
                 skip.hidden = false;
+            } else if (video.dataset.heroDownloadState === 'ready') {
+                // Some mobile playback restrictions suspend even metadata
+                // until a gesture. This is offered only for a complete file.
+                skip.textContent = 'Pornește spectacolul ↗';
+                skip.hidden = false;
             } else skip.hidden = true;
-            if (video.dataset.heroDownloadState === 'ready' && video.readyState >= 3 && !video.error) {
+            // The full validated Blob is already local. Mobile Safari may
+            // preload only metadata until play() is requested after reveal;
+            // waiting for HAVE_FUTURE_DATA here deadlocks that request.
+            if (video.dataset.heroDownloadState === 'ready' && video.readyState >= 1 && !video.error) {
                 intro.dataset.mediaReady = 'true';
                 finish();
             }
@@ -219,6 +227,12 @@
     const completeFilmPending = () => completeFilmRequired() && currentFirstVideo().dataset.heroDownloadState !== 'ready';
     const onSkip = () => {
         if (completeFilmPending()) { window.__fireartHeroDownloads?.retry(); return; }
+        if (completeFilmRequired()) {
+            const video = currentFirstVideo();
+            video.muted = true;
+            video.playsInline = true;
+            video.play().catch(() => {});
+        }
         if (routeStarted === null) window.location.reload();
         else finish(true);
     };
