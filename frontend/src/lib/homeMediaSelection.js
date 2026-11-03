@@ -1,5 +1,6 @@
 import catalogue from '@/data/importedGalleryItems.json';
 import { isGalleryVisible } from './categoryNavigation';
+import { romanianImageUrl } from './publicImageMetadata';
 
 export const HOME_PACKAGE_IMAGE_IDS = {
   'Artificii de noapte': 'gallery-import-110',
@@ -13,7 +14,7 @@ const galleryImageIds = {
   'Drone show': 'gallery-import-drone-021',
 };
 const originals = new Map(catalogue.map(item => [item.id, item]));
-const pathOf = src => { try { return new URL(src, 'https://fireart.ro').pathname; } catch { return src; } };
+const pathOf = src => { try { return new URL(romanianImageUrl(src), 'https://fireart.ro').pathname; } catch { return src; } };
 
 export function selectHomeGallery(slides, items) {
   const byId = new Map(items.map(item => [item.id, item]));

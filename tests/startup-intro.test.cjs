@@ -106,7 +106,7 @@ test('a loaded and painted native hero cover releases the reveal while its film 
   const run = start();
   run.media.playback = 'video';
   run.media.video = { readyState: 0, paused: true,
-    poster: '/media/optimized/hero-wide-960-20261102.webp', dataset: { heroPosterReady: 'true' } };
+    poster: '/media/optimized/spectacol-artificii-panoramic-960-20261102.webp', dataset: { heroPosterReady: 'true' } };
   run.window.__fireartIntro.routeReady('/');
   run.advance(1299);
   assert.equal(run.intro.isConnected, true);

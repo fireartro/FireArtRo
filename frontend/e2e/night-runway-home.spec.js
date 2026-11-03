@@ -6,7 +6,7 @@ publishedContent.partners = Array.from({ length: 12 }, (_, index) => {
   return { id: `partner-${index + 1}`, name, logoPlaceholder: name, logoMediaId: "", replaceable: true };
 });
 const galleryPhotos = [
-  { id: "qa-drone", category: "Drone show", src: "/media/gallery/fireartro-drone-show-focsani-dji-0768-enhanced-nr.webp" },
+  { id: "qa-drone", category: "Drone show", src: "/media/gallery/spectacol-drone-focsani-fireartro-036.webp" },
   { id: "qa-night", category: "Artificii de noapte", src: "/media/gallery/fireartro-artificii-noapte-spectacol-091.webp" },
   { id: "qa-day", category: "Artificii de zi", src: "/media/gallery/fireartro-artificii-zi-festival-biserica.webp" },
 ];

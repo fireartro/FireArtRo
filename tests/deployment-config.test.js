@@ -25,16 +25,16 @@ test('versioned hero films and posters receive the existing immutable media poli
   for (const asset of [
     '/media/hero-film-wide-1.mp4?v=20260926-r6',
     '/media/hero-film-portrait-3.mp4?v=20260926-r6',
-    '/media/hero-film-wide.webp?v=20260926-r6',
-    '/media/hero-film-portrait.webp?v=20260926-r6',
+    '/media/coperta-film-artificii-panoramic.webp?v=20260926-r6',
+    '/media/coperta-film-artificii-portret.webp?v=20260926-r6',
     '/media/fireart-hero-wide.mp4?v=synthetic',
   ]) assert.equal(await mediaCachePolicy(asset), 'public, max-age=31536000, immutable', asset);
 });
 
 test('unversioned and unrelated mutable media remain revalidatable', async () => {
   for (const asset of [
-    '/media/hero-film-wide-1.mp4', '/media/hero-film-portrait.webp',
-    '/media/hero-film-wide.webp?v=', '/media/hero-film-wide.webp?preview=1',
+    '/media/hero-film-wide-1.mp4', '/media/coperta-film-artificii-portret.webp',
+    '/media/coperta-film-artificii-panoramic.webp?v=', '/media/coperta-film-artificii-panoramic.webp?preview=1',
     '/media/fireart-hero-wide.mp4', '/media/gallery-photo.webp?v=synthetic',
   ]) assert.equal(await mediaCachePolicy(asset), 'public, max-age=86400, stale-while-revalidate=604800', asset);
 });
