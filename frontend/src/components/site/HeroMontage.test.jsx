@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import HeroMontage from './HeroMontage';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-let container, root, originalWidth, originalHeight, originalVisibility, originalDpr;
+let container, root, originalWidth, originalHeight, originalVisibility, originalDpr, downloadNotify;
 const resize = (width, height) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: height });
@@ -30,6 +30,11 @@ beforeEach(() => {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
+  window.__fireartHeroDownloads = {
+    get: src => ({ status: 'ready', url: `blob:https://fireart.ro${src}` }),
+    prepare: jest.fn(() => Promise.resolve()), preloadFollowing: jest.fn(), reload: jest.fn(() => Promise.resolve()),
+    subscribe: listener => { downloadNotify = listener; return () => {}; }, clear: jest.fn(),
+  };
   jest.spyOn(HTMLMediaElement.prototype, 'canPlayType').mockReturnValue('probably');
   jest.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
   jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
@@ -47,6 +52,7 @@ afterEach(() => {
   jest.useRealTimers();
   jest.restoreAllMocks();
   delete document.documentElement.dataset.fireartIntro;
+  delete window.__fireartHeroDownloads;
 });
 
 test('buffers the first film and starts with future frames without a canplaythrough promise', () => {
@@ -63,6 +69,9 @@ test('buffers the first film and starts with future frames without a canplaythro
   expect(HTMLMediaElement.prototype.load).not.toHaveBeenCalled();
   Object.defineProperty(first, 'readyState', { configurable: true, value: 3 });
   act(() => first.dispatchEvent(new Event('loadeddata')));
+  expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+  delete document.documentElement.dataset.fireartIntro;
+  act(() => window.dispatchEvent(new Event('fireart:intro-dismissed')));
   expect(HTMLMediaElement.prototype.play.mock.instances).toContain(first);
 });
 
@@ -77,7 +86,7 @@ test('exposes a source-less first element for early buffering before activation'
 
 test('takes over an early buffered first element without replacing or resetting its source', () => {
   const first = container.querySelector('video');
-  first.src = JSON.parse(first.dataset.heroInitialSources).wide.hd;
+  first.src = window.__fireartHeroDownloads.get(JSON.parse(first.dataset.heroInitialSources).wide.hd).url;
   first.currentTime = 0.25;
   const assignSource = jest.spyOn(first, 'src', 'set');
   activate();
@@ -116,14 +125,14 @@ test('mounts the first film on 3g and permits deliberate entry before buffering 
   }
 });
 
-test('nudges a suspended metadata-only preload without spending the initial buffer or resetting its source', async () => {
+test('keeps the complete local film paused behind the intro without priming a network stream', async () => {
   document.documentElement.dataset.fireartIntro = 'loading';
   activate();
   const video = container.querySelector('video');
   Object.defineProperty(video, 'readyState', { configurable: true, value: 1 });
   Object.defineProperty(video, 'networkState', { configurable: true, value: 1 });
   await act(async () => video.dispatchEvent(new Event('suspend')));
-  expect(HTMLMediaElement.prototype.play.mock.instances).toContain(video);
+  expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
   HTMLMediaElement.prototype.pause.mockClear();
   Object.defineProperty(video, 'readyState', { configurable: true, value: 2 });
   act(() => video.dispatchEvent(new Event('loadeddata')));
@@ -135,8 +144,42 @@ test('nudges a suspended metadata-only preload without spending the initial buff
   HTMLMediaElement.prototype.play.mockClear();
   act(() => video.dispatchEvent(new Event('canplaythrough')));
   act(() => video.dispatchEvent(new Event('playing')));
+  expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+  delete document.documentElement.dataset.fireartIntro;
+  act(() => window.dispatchEvent(new Event('fireart:intro-dismissed')));
   expect(HTMLMediaElement.prototype.play.mock.instances).toContain(video);
-  expect(video.classList.contains('hero-montage__video--visible')).toBe(true);
+});
+
+test('starts background downloads on first playback and loops the cached film until the next file is complete', async () => {
+  let secondReady = false;
+  window.__fireartHeroDownloads.get = src => src.includes('-2-') && !secondReady
+    ? { status: 'loading' } : { status: 'ready', url: `blob:https://fireart.ro${src}` };
+  activate();
+  const first = container.querySelector('video');
+  expect(window.__fireartHeroDownloads.preloadFollowing).not.toHaveBeenCalled();
+  act(() => first.dispatchEvent(new Event('playing')));
+  expect(window.__fireartHeroDownloads.preloadFollowing).toHaveBeenCalledWith(0);
+  const second = container.querySelector('[data-film-index="1"]');
+  expect(second.hasAttribute('src')).toBe(false);
+  first.currentTime = 40;
+  await act(async () => first.dispatchEvent(new Event('ended')));
+  expect(first.currentTime).toBe(0);
+  expect(container.querySelector('.hero-montage__video--visible')).toBe(first);
+  act(() => { secondReady = true; downloadNotify(); });
+  expect(second.getAttribute('src')).toMatch(/^blob:/);
+  Object.defineProperty(second, 'readyState', { configurable: true, value: 4 });
+  await act(async () => first.dispatchEvent(new Event('ended')));
+  expect(container.querySelector('.hero-montage__video--visible')).toBe(second);
+});
+
+test('redownloads a failed local Blob with a bounded recovery policy', () => {
+  activate();
+  const video = container.querySelector('video');
+  Object.defineProperty(video, 'error', { configurable: true, value: { code: 3 } });
+  for (let i = 0; i < 3; i += 1) act(() => video.dispatchEvent(new Event('error')));
+  expect(window.__fireartHeroDownloads.reload).toHaveBeenCalledTimes(2);
+  expect(window.__fireartHeroDownloads.reload).toHaveBeenCalledWith(video.dataset.heroSource);
+  expect(container.querySelector('[data-hero-playback]').dataset.heroPlayback).toBe('poster');
 });
 
 test('loads only the first film after the poster, and preloads the next at 35 seconds', () => {

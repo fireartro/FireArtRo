@@ -20,8 +20,10 @@
     const skip = intro.querySelector('button');
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const firstHero = document.querySelector?.('video[data-hero-initial-film]');
+    let stopDownloadUpdates;
+    let earlyDownloadActive = true;
     const markPrimed = () => {
-        if (!firstHero || firstHero.readyState < 3 || motion.matches || navigator.connection?.saveData) return;
+        if (!firstHero || firstHero.dataset.heroDownloadState !== 'ready' || firstHero.readyState < 3 || motion.matches || navigator.connection?.saveData) return;
         firstHero.dataset.heroPrimed = 'true';
         firstHero.classList.add('hero-montage__video--visible');
         firstHero.removeEventListener('canplay', markPrimed);
@@ -56,8 +58,32 @@
                 firstHero.dataset.mediaVariant = format;
                 firstHero.dataset.mediaQuality = quality;
                 firstHero.addEventListener('canplay', markPrimed);
-                firstHero.src = source;
-                markPrimed();
+                const plans = JSON.parse(firstHero.getAttribute('data-hero-film-sources') || '{}');
+                const playlist = plans[format]?.[quality] || [source];
+                const downloads = window.__fireartHeroDownloads || (window.__fireartHeroDownloads = window.__fireartCreateHeroDownloads());
+                firstHero.dataset.heroSource = source;
+                const updateDownload = () => {
+                    if (!earlyDownloadActive) return;
+                    const current = document.getElementById('acasa')?.querySelector('video') || firstHero;
+                    const state = downloads.get(current.dataset.heroSource || source);
+                    current.dataset.heroDownloadState = state.status;
+                    const line = intro.querySelector('.fireart-intro__line');
+                    if (line) {
+                        const percent = state.total ? Math.min(100, Math.floor(100 * state.loaded / state.total)) : null;
+                        line.textContent = state.status === 'error' ? 'Reîncercăm încărcarea.'
+                            : state.status === 'ready' ? 'Spectacolul e pregătit.'
+                            : `Se încarcă primul clip${percent === null ? '…' : `. ${percent}%`}`;
+                    }
+                    window.dispatchEvent(new Event('fireart:hero-download'));
+                };
+                stopDownloadUpdates = downloads.subscribe(updateDownload);
+                downloads.prepare(playlist).then(blobUrl => {
+                    if (!earlyDownloadActive || firstHero.isConnected === false || firstHero.dataset.heroSource !== source) return;
+                    firstHero.dataset.heroDownloadState = 'ready';
+                    firstHero.src = blobUrl;
+                    markPrimed();
+                }).catch(() => {});
+                updateDownload();
             }
         } catch { /* React retains its ordinary source-selection fallback. */ }
     }
@@ -118,6 +144,8 @@
         footage?.removeEventListener('canplay', playFootage);
         footage?.removeEventListener?.('playing', hidePoster);
         firstHero?.removeEventListener('canplay', markPrimed);
+        earlyDownloadActive = false;
+        stopDownloadUpdates?.();
         window.removeEventListener('pageshow', onPageShow);
         document.removeEventListener('visibilitychange', onVisibility);
         motion.removeEventListener?.('change', onMotion);
@@ -157,6 +185,19 @@
         const posterOnly = motion.matches || connection?.saveData || playback === 'poster';
         const expectsVideo = playback === 'video' && !posterOnly;
         const elapsed = performance.now() - routeStarted;
+        // A native readyState/canplay event only describes a small buffer.
+        // The default montage must finish its complete file download first.
+        if (video?.dataset?.heroCompleteRequired === 'true' && !posterOnly) {
+            if (video.dataset.heroDownloadState === 'error') {
+                skip.textContent = 'Reîncearcă încărcarea ↗';
+                skip.hidden = false;
+            } else skip.hidden = true;
+            if (video.dataset.heroDownloadState === 'ready' && video.readyState >= 3 && !video.error) {
+                intro.dataset.mediaReady = 'true';
+                finish();
+            }
+            return;
+        }
         // HAVE_FUTURE_DATA means playback can advance. Mobile browsers can
         // buffer a healthy stream without ever promising canplaythrough.
         const videoReady = video && video.readyState >= 3 && !video.error;
@@ -172,8 +213,16 @@
             finish();
         }
     };
-    const onSkip = () => routeStarted === null ? window.location.reload() : finish(true);
-    const onPageShow = event => { if (event.persisted) finish(true); };
+    const currentFirstVideo = () => document.getElementById('acasa')?.querySelector('video') || firstHero;
+    const completeFilmRequired = () => homepage && currentFirstVideo()?.dataset?.heroCompleteRequired === 'true'
+        && !motion.matches && !navigator.connection?.saveData;
+    const completeFilmPending = () => completeFilmRequired() && currentFirstVideo().dataset.heroDownloadState !== 'ready';
+    const onSkip = () => {
+        if (completeFilmPending()) { window.__fireartHeroDownloads?.retry(); return; }
+        if (routeStarted === null) window.location.reload();
+        else finish(true);
+    };
+    const onPageShow = event => { if (event.persisted && !completeFilmPending()) finish(true); };
     // Slow networks do not force an unfinished page into view. Offer a retry
     // if the app itself has not mounted; this is never an automatic reload.
     const safetyTimer = setTimeout(() => {
@@ -192,10 +241,10 @@
             clearTimeout(safetyTimer);
             // A failed/blocked media request must never keep the page inert.
             // The hero retains its poster and continues its own recovery.
-            stalledTimer = setTimeout(() => finish(), 8000);
+            if (!completeFilmRequired()) stalledTimer = setTimeout(() => finish(), 8000);
             skip.textContent = 'Intră pe site ↗';
             skip.hidden = true;
-            skipTimer = setTimeout(() => { if (!closed) skip.hidden = false; }, Math.max(0, minimumDuration - (performance.now() - started)));
+            if (!completeFilmRequired()) skipTimer = setTimeout(() => { if (!closed) skip.hidden = false; }, Math.max(0, minimumDuration - (performance.now() - started)));
             checkMedia();
             if (!closed && !leaving) mediaTimer = setInterval(checkMedia, 100);
         },
