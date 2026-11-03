@@ -64,7 +64,7 @@ Files: AdminLayout.jsx, AdminDashboard.jsx, AdminContentEditor.jsx, AdminField.j
 
 ### Task 5: Responsive preview and end-to-end persistence
 
-Files: AdminPreview.jsx, related preview route if needed, App routing, admin preview tests, e2e/admin-workspace.spec.js, local QA harness.
+Files: AdminPreview.jsx, related preview route if needed, App routing, admin preview tests, Playwright CLI browser QA scripts (local output), local QA harness.
 
 - [x] Verify responsive preview uses the selected viewport rather than only a narrow div while media queries still read the outer desktop viewport. Fix this with an authenticated isolated iframe preview when required; transfer draft only to the same-origin verified child, never query strings or storage.
 - [x] Test 320/390/768/1280/1920 widths, changing a homepage selection, per-device positioning, saving/reloading, undo, full preview and a local publication/restore.
