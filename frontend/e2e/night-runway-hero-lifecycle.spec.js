@@ -174,7 +174,7 @@ test.describe("hero video lifecycle", () => {
     const fallback = page.locator("[data-testid='hero-section'] .hero-media-webp");
     await expect(fallback).toBeVisible({ timeout: 12_000 });
     await expect(fallback).toHaveCSS("object-fit", "cover");
-    await expect(fallback).toHaveAttribute("src", /fireart-hero-tablet-portrait\.webp/);
+    await expect(fallback).toHaveAttribute("src", /coperta-artificii-tableta-vertical-fireartro\.webp/);
 
     const backdrop = await page.locator(".hero-video-stage").evaluate((stage) => (
       getComputedStyle(stage, "::before").backgroundImage

@@ -345,7 +345,7 @@ test("admin creates a draft, uploads its cover, publishes it, and deletes it", a
   await page.getByLabel("Categorie").fill("Noutăți");
   await page.getByLabel("Text alternativ").fill("Artificii albastre pe cer");
   await page.getByLabel("Imagine de copertă").setInputFiles(
-    "public/media/fireart-hero-poster.webp",
+    "public/media/coperta-spectacol-artificii-fireartro.webp",
   );
   await expect(page.getByText(/Imaginea a fost încărcată/)).toBeVisible();
 

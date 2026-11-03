@@ -8,8 +8,8 @@ export const INSTAGRAM = SOCIAL_LINKS.find((item) => item.id === "instagram")?.h
 export const FACEBOOK = SOCIAL_LINKS.find((item) => item.id === "facebook")?.href || "";
 export const YOUTUBE = SOCIAL_LINKS.find((item) => item.id === "youtube")?.href || "";
 
-export const LOGO_URL = "/media/fireart-logo.webp";
-export const LOGO_SRC_SET = "/media/fireart-logo-180.webp?v=20260906 180w, /media/fireart-logo-360.webp?v=20260906 360w, /media/fireart-logo.webp?v=20260906 720w";
+export const LOGO_URL = "/media/sigla-fireartro.webp";
+export const LOGO_SRC_SET = "/media/sigla-fireartro-180.webp?v=20260906 180w, /media/sigla-fireartro-360.webp?v=20260906 360w, /media/sigla-fireartro.webp?v=20260906 720w";
 
 export const buildWhatsappLink = (number, msg) =>
   number

@@ -2,7 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "git": {
-    "deploymentEnabled": { "dependabot/**": false }
+    "deploymentEnabled": {
+      "dependabot/**": false
+    }
   },
   "installCommand": "npm ci && cd frontend && corepack yarn install --frozen-lockfile",
   "buildCommand": "cd frontend && corepack yarn build",
@@ -22,7 +24,1111 @@
     }
   },
   "redirects": [
-    { "source": "/admin/", "destination": "/admin", "permanent": true }
+    {
+      "source": "/admin/",
+      "destination": "/admin",
+      "permanent": true
+    },
+    {
+      "source": "/media/cold-sparks-2.webp",
+      "destination": "/media/scantei-reci-efecte-speciale-2.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/cold-sparks-3.webp",
+      "destination": "/media/scantei-reci-efecte-speciale-3.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/cold-sparks.webp",
+      "destination": "/media/scantei-reci-efecte-speciale.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/corporate.webp",
+      "destination": "/media/eveniment-corporativ-fireartro.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/crowd-2.webp",
+      "destination": "/media/public-spectacol-artificii-2.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/crowd-3.webp",
+      "destination": "/media/public-spectacol-artificii-3.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/crowd.webp",
+      "destination": "/media/public-spectacol-artificii.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-hero-mobile-tall.webp",
+      "destination": "/media/coperta-artificii-telefon-inalt-fireartro.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-hero-mobile.webp",
+      "destination": "/media/coperta-artificii-telefon-fireartro.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-hero-poster.webp",
+      "destination": "/media/coperta-spectacol-artificii-fireartro.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-hero-tablet-landscape.webp",
+      "destination": "/media/coperta-artificii-tableta-orizontal-fireartro.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-hero-tablet-portrait.webp",
+      "destination": "/media/coperta-artificii-tableta-vertical-fireartro.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-hero-ultrawide.webp",
+      "destination": "/media/coperta-artificii-panorama-larga-fireartro.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-hero-wide.webp",
+      "destination": "/media/coperta-artificii-panoramic-fireartro.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-logo-180.webp",
+      "destination": "/media/sigla-fireartro-180.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-logo-360.webp",
+      "destination": "/media/sigla-fireartro-360.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-logo.webp",
+      "destination": "/media/sigla-fireartro.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-day-1152.webp",
+      "destination": "/media/promovare-artificii-zi-1152.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-day-768.webp",
+      "destination": "/media/promovare-artificii-zi-768.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-drone-1152.webp",
+      "destination": "/media/promovare-spectacol-drone-1152.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-drone-768.webp",
+      "destination": "/media/promovare-spectacol-drone-768.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-night-1152.webp",
+      "destination": "/media/promovare-artificii-noapte-1152.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-night-768.webp",
+      "destination": "/media/promovare-artificii-noapte-768.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-owner-day-1152.webp",
+      "destination": "/media/promovare-selectie-artificii-zi-1152.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-owner-day-768.webp",
+      "destination": "/media/promovare-selectie-artificii-zi-768.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-owner-drone-1152.webp",
+      "destination": "/media/promovare-selectie-spectacol-drone-1152.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-owner-drone-768.webp",
+      "destination": "/media/promovare-selectie-spectacol-drone-768.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-owner-effects-1152.webp",
+      "destination": "/media/promovare-selectie-efecte-speciale-1152.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-owner-effects-768.webp",
+      "destination": "/media/promovare-selectie-efecte-speciale-768.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-owner-night-1152.webp",
+      "destination": "/media/promovare-selectie-artificii-noapte-1152.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireart-promo-owner-night-768.webp",
+      "destination": "/media/promovare-selectie-artificii-noapte-768.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/fireworks-sky.webp",
+      "destination": "/media/artificii-pe-cer-fireartro.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-adam-show-img-7595.webp",
+      "destination": "/media/gallery/spectacol-drone-adam-show-fireartro-001.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-adam-show-img-7601.webp",
+      "destination": "/media/gallery/spectacol-drone-adam-show-fireartro-002.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-adam-show-img-7635.webp",
+      "destination": "/media/gallery/spectacol-drone-adam-show-fireartro-003.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-adam-show-img-7636-2.webp",
+      "destination": "/media/gallery/spectacol-drone-adam-show-fireartro-004.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-adam-show-img-7638-3.webp",
+      "destination": "/media/gallery/spectacol-drone-adam-show-fireartro-005.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-adam-show-img-7640.webp",
+      "destination": "/media/gallery/spectacol-drone-adam-show-fireartro-006.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-art-is-alive-artisalive1.webp",
+      "destination": "/media/gallery/spectacol-drone-art-is-alive-fireartro-007.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-art-is-alive-artisalive2.webp",
+      "destination": "/media/gallery/spectacol-drone-art-is-alive-fireartro-008.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-art-is-alive-artisalive3.webp",
+      "destination": "/media/gallery/spectacol-drone-art-is-alive-fireartro-009.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-art-is-alive-artisalive5.webp",
+      "destination": "/media/gallery/spectacol-drone-art-is-alive-fireartro-010.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-art-is-alive-artisalive6.webp",
+      "destination": "/media/gallery/spectacol-drone-art-is-alive-fireartro-011.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-art-is-alive-artisalive7.webp",
+      "destination": "/media/gallery/spectacol-drone-art-is-alive-fireartro-012.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-baia-mare-2-647cc414-02eb-48da-9d75-5061b2d34792-2.webp",
+      "destination": "/media/gallery/spectacol-drone-baia-mare-fireartro-013.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-baia-mare-2-8099aef2-6d00-4487-9840-49151dc63b5b.webp",
+      "destination": "/media/gallery/spectacol-drone-baia-mare-fireartro-014.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-baia-mare-2-c2c8c735-dd04-49b4-af8d-822c4a19fbd5.webp",
+      "destination": "/media/gallery/spectacol-drone-baia-mare-fireartro-015.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-baia-mare-2-img-8079.webp",
+      "destination": "/media/gallery/spectacol-drone-baia-mare-fireartro-016.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-baia-mare-2-img-8088.webp",
+      "destination": "/media/gallery/spectacol-drone-baia-mare-fireartro-017.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-baia-mare-2-img-8091.webp",
+      "destination": "/media/gallery/spectacol-drone-baia-mare-fireartro-018.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-baia-mare-img-5485-2.webp",
+      "destination": "/media/gallery/spectacol-drone-baia-mare-fireartro-019.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-baia-mare-img-5519-2.webp",
+      "destination": "/media/gallery/spectacol-drone-baia-mare-fireartro-020.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-baia-mare-img-5524-2.webp",
+      "destination": "/media/gallery/spectacol-drone-baia-mare-fireartro-021.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-baia-mare-img-5525-2.webp",
+      "destination": "/media/gallery/spectacol-drone-baia-mare-fireartro-022.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-baia-mare-img-5527-2.webp",
+      "destination": "/media/gallery/spectacol-drone-baia-mare-fireartro-023.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-baia-mare-img-5528-2.webp",
+      "destination": "/media/gallery/spectacol-drone-baia-mare-fireartro-024.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-damen-img-7327.webp",
+      "destination": "/media/gallery/spectacol-drone-damen-fireartro-025.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-damen-img-7328.webp",
+      "destination": "/media/gallery/spectacol-drone-damen-fireartro-026.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-damen-img-7329.webp",
+      "destination": "/media/gallery/spectacol-drone-damen-fireartro-027.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-damen-img-7330.webp",
+      "destination": "/media/gallery/spectacol-drone-damen-fireartro-028.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-damen-img-7331.webp",
+      "destination": "/media/gallery/spectacol-drone-damen-fireartro-029.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-damen-img-7337.webp",
+      "destination": "/media/gallery/spectacol-drone-damen-fireartro-030.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-focsani-cxe06479-enhanced-nr.webp",
+      "destination": "/media/gallery/spectacol-drone-focsani-fireartro-031.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-focsani-cxe06492-enhanced-nr.webp",
+      "destination": "/media/gallery/spectacol-drone-focsani-fireartro-032.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-focsani-cxe06527-enhanced-nr.webp",
+      "destination": "/media/gallery/spectacol-drone-focsani-fireartro-033.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-focsani-cxe06567-enhanced-nr.webp",
+      "destination": "/media/gallery/spectacol-drone-focsani-fireartro-034.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-focsani-cxe06598-enhanced-nr.webp",
+      "destination": "/media/gallery/spectacol-drone-focsani-fireartro-035.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-focsani-dji-0768-enhanced-nr.webp",
+      "destination": "/media/gallery/spectacol-drone-focsani-fireartro-036.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-galati-img-3192.webp",
+      "destination": "/media/gallery/spectacol-drone-galati-fireartro-037.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-galati-img-3193.webp",
+      "destination": "/media/gallery/spectacol-drone-galati-fireartro-038.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-galati-img-3194.webp",
+      "destination": "/media/gallery/spectacol-drone-galati-fireartro-039.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-galati-img-3195.webp",
+      "destination": "/media/gallery/spectacol-drone-galati-fireartro-040.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-galati-img-3201.webp",
+      "destination": "/media/gallery/spectacol-drone-galati-fireartro-041.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-galati-img-3202.webp",
+      "destination": "/media/gallery/spectacol-drone-galati-fireartro-042.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-halloween-img-5850.webp",
+      "destination": "/media/gallery/spectacol-drone-halloween-fireartro-043.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-halloween-img-5851.webp",
+      "destination": "/media/gallery/spectacol-drone-halloween-fireartro-044.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-halloween-img-5852.webp",
+      "destination": "/media/gallery/spectacol-drone-halloween-fireartro-045.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-halloween-img-5853.webp",
+      "destination": "/media/gallery/spectacol-drone-halloween-fireartro-046.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-halloween-img-5857.webp",
+      "destination": "/media/gallery/spectacol-drone-halloween-fireartro-047.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-halloween-img-5858.webp",
+      "destination": "/media/gallery/spectacol-drone-halloween-fireartro-048.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-hunedoara-1d9e6c1a-95d2-43f9-848f-86a276680795-3.webp",
+      "destination": "/media/gallery/spectacol-drone-hunedoara-fireartro-049.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-hunedoara-1fffa570-f050-451f-b5cd-d71478f61861-3.webp",
+      "destination": "/media/gallery/spectacol-drone-hunedoara-fireartro-050.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-hunedoara-87c787e2-0a08-403e-b05b-11946f936ae4-2.webp",
+      "destination": "/media/gallery/spectacol-drone-hunedoara-fireartro-051.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-hunedoara-b1d0dad8-bfee-4b2a-8e2b-6e16fcc64d08-3.webp",
+      "destination": "/media/gallery/spectacol-drone-hunedoara-fireartro-052.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-hunedoara-c247c675-dfad-4383-a36d-bacb3a4f9423-3.webp",
+      "destination": "/media/gallery/spectacol-drone-hunedoara-fireartro-053.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-hunedoara-img-6600-2.webp",
+      "destination": "/media/gallery/spectacol-drone-hunedoara-fireartro-054.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-iasi-img-8645.webp",
+      "destination": "/media/gallery/spectacol-drone-iasi-fireartro-061.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-iasi-img-8646.webp",
+      "destination": "/media/gallery/spectacol-drone-iasi-fireartro-062.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-iasi-img-8652.webp",
+      "destination": "/media/gallery/spectacol-drone-iasi-fireartro-063.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-iasi-img-8657.webp",
+      "destination": "/media/gallery/spectacol-drone-iasi-fireartro-064.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-iasi-img-8666.webp",
+      "destination": "/media/gallery/spectacol-drone-iasi-fireartro-065.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-iasi-img-8674.webp",
+      "destination": "/media/gallery/spectacol-drone-iasi-fireartro-066.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-iasi-revelion-img-7446.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-iasi-fireartro-055.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-iasi-revelion-img-7448.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-iasi-fireartro-056.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-iasi-revelion-img-7451.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-iasi-fireartro-057.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-iasi-revelion-img-7452.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-iasi-fireartro-058.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-iasi-revelion-img-7453.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-iasi-fireartro-059.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-iasi-revelion-img-7455.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-iasi-fireartro-060.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-massif-img-8516.webp",
+      "destination": "/media/gallery/spectacol-drone-massif-fireartro-067.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-massif-img-8517.webp",
+      "destination": "/media/gallery/spectacol-drone-massif-fireartro-068.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-massif-img-8518.webp",
+      "destination": "/media/gallery/spectacol-drone-massif-fireartro-069.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-massif-img-8519.webp",
+      "destination": "/media/gallery/spectacol-drone-massif-fireartro-070.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-massif-img-8520.webp",
+      "destination": "/media/gallery/spectacol-drone-massif-fireartro-071.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-massif-img-8521.webp",
+      "destination": "/media/gallery/spectacol-drone-massif-fireartro-072.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-mastercard-img-5097.webp",
+      "destination": "/media/gallery/spectacol-drone-mastercard-fireartro-073.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-mastercard-img-5098.webp",
+      "destination": "/media/gallery/spectacol-drone-mastercard-fireartro-074.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-mastercard-img-5099.webp",
+      "destination": "/media/gallery/spectacol-drone-mastercard-fireartro-075.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-mastercard-img-5103.webp",
+      "destination": "/media/gallery/spectacol-drone-mastercard-fireartro-076.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-mastercard-img-5104.webp",
+      "destination": "/media/gallery/spectacol-drone-mastercard-fireartro-077.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-mastercard-img-5105.webp",
+      "destination": "/media/gallery/spectacol-drone-mastercard-fireartro-078.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-militari-shopping-cxe03293-enhanced-nr.webp",
+      "destination": "/media/gallery/spectacol-drone-militari-shopping-fireartro-079.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-militari-shopping-cxe03307-enhanced-nr.webp",
+      "destination": "/media/gallery/spectacol-drone-militari-shopping-fireartro-080.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-militari-shopping-cxe03330-enhanced-nr.webp",
+      "destination": "/media/gallery/spectacol-drone-militari-shopping-fireartro-081.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-militari-shopping-img-1677.webp",
+      "destination": "/media/gallery/spectacol-drone-militari-shopping-fireartro-082.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-militari-shopping-img-1775.webp",
+      "destination": "/media/gallery/spectacol-drone-militari-shopping-fireartro-083.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-militari-shopping-img-1776.webp",
+      "destination": "/media/gallery/spectacol-drone-militari-shopping-fireartro-084.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-neversea-show-img-4343.webp",
+      "destination": "/media/gallery/spectacol-drone-neversea-fireartro-085.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-neversea-show-img-4350.webp",
+      "destination": "/media/gallery/spectacol-drone-neversea-fireartro-086.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-neversea-show-img-4351.webp",
+      "destination": "/media/gallery/spectacol-drone-neversea-fireartro-087.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-neversea-show-img-4366.webp",
+      "destination": "/media/gallery/spectacol-drone-neversea-fireartro-088.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-neversea-show-img-4367-2.webp",
+      "destination": "/media/gallery/spectacol-drone-neversea-fireartro-089.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-neversea-show-img-4368.webp",
+      "destination": "/media/gallery/spectacol-drone-neversea-fireartro-090.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-pepsi-image00004.webp",
+      "destination": "/media/gallery/spectacol-drone-pepsi-fireartro-091.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-pepsi-image000044.webp",
+      "destination": "/media/gallery/spectacol-drone-pepsi-fireartro-092.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-pepsi-image00005.webp",
+      "destination": "/media/gallery/spectacol-drone-pepsi-fireartro-093.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-pepsi-img-7043.webp",
+      "destination": "/media/gallery/spectacol-drone-pepsi-fireartro-094.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-pepsi-img-7046.webp",
+      "destination": "/media/gallery/spectacol-drone-pepsi-fireartro-095.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-pepsi-img-7050.webp",
+      "destination": "/media/gallery/spectacol-drone-pepsi-fireartro-096.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-ploiesti-2-1-15.webp",
+      "destination": "/media/gallery/spectacol-drone-ploiesti-fireartro-097.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-ploiesti-2-3-15.webp",
+      "destination": "/media/gallery/spectacol-drone-ploiesti-fireartro-098.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-ploiesti-2-p1012579.webp",
+      "destination": "/media/gallery/spectacol-drone-ploiesti-fireartro-099.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-ploiesti-2-p1012586.webp",
+      "destination": "/media/gallery/spectacol-drone-ploiesti-fireartro-100.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-ploiesti-2-p1012658.webp",
+      "destination": "/media/gallery/spectacol-drone-ploiesti-fireartro-101.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-ploiesti-2-p1012678.webp",
+      "destination": "/media/gallery/spectacol-drone-ploiesti-fireartro-102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-ploiesti-img-5076-2.webp",
+      "destination": "/media/gallery/spectacol-drone-ploiesti-fireartro-103.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-ploiesti-img-5078.webp",
+      "destination": "/media/gallery/spectacol-drone-ploiesti-fireartro-104.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-ploiesti-img-5079.webp",
+      "destination": "/media/gallery/spectacol-drone-ploiesti-fireartro-105.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-ploiesti-img-5081.webp",
+      "destination": "/media/gallery/spectacol-drone-ploiesti-fireartro-106.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-ploiesti-img-5084.webp",
+      "destination": "/media/gallery/spectacol-drone-ploiesti-fireartro-107.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-ploiesti-img-5086.webp",
+      "destination": "/media/gallery/spectacol-drone-ploiesti-fireartro-108.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-revelion-ior-img-9983-3.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-ior-fireartro-109.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-revelion-ior-img-9985-3.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-ior-fireartro-110.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-revelion-ior-img-9988-3.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-ior-fireartro-111.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-revelion-ior-img-9994-3.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-ior-fireartro-112.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-revelion-ior-img-9997-3.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-ior-fireartro-113.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-revelion-ior-img-9999-3.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-ior-fireartro-114.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-sifi-img-3733.webp",
+      "destination": "/media/gallery/spectacol-drone-sifi-fireartro-115.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-sifi-img-3735.webp",
+      "destination": "/media/gallery/spectacol-drone-sifi-fireartro-116.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-sifi-img-3736.webp",
+      "destination": "/media/gallery/spectacol-drone-sifi-fireartro-117.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-sifi-img-3737.webp",
+      "destination": "/media/gallery/spectacol-drone-sifi-fireartro-118.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-sifi-img-3738.webp",
+      "destination": "/media/gallery/spectacol-drone-sifi-fireartro-119.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-sifi-img-3740.webp",
+      "destination": "/media/gallery/spectacol-drone-sifi-fireartro-120.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-singureni-img-5443.webp",
+      "destination": "/media/gallery/spectacol-drone-singureni-fireartro-121.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-singureni-img-5444.webp",
+      "destination": "/media/gallery/spectacol-drone-singureni-fireartro-122.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-singureni-img-5446.webp",
+      "destination": "/media/gallery/spectacol-drone-singureni-fireartro-123.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-singureni-img-5447.webp",
+      "destination": "/media/gallery/spectacol-drone-singureni-fireartro-124.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-singureni-img-5449.webp",
+      "destination": "/media/gallery/spectacol-drone-singureni-fireartro-125.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-singureni-img-5450.webp",
+      "destination": "/media/gallery/spectacol-drone-singureni-fireartro-126.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-suceava-revelion-img-7306.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-suceava-fireartro-127.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-suceava-revelion-img-7311.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-suceava-fireartro-128.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-suceava-revelion-img-7312.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-suceava-fireartro-129.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-suceava-revelion-img-7314.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-suceava-fireartro-130.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-suceava-revelion-img-7315.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-suceava-fireartro-131.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-suceava-revelion-img-7316.webp",
+      "destination": "/media/gallery/spectacol-drone-revelion-suceava-fireartro-132.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-1-147609710.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-133.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-1-147609711.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-134.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-1-147609714.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-135.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-1-147609715.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-136.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-1-147609718.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-137.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-1-14760972.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-138.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-2-1-15.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-140.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-2-1492322.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-139.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-2-3-15.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-141.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-2-5-11.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-142.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-2-6drn.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-143.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-2-7-11.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-144.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-3-img-6653.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-145.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-3-img-6654.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-146.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-3-img-6656.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-147.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-3-img-6657.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-148.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-3-img-6658.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-149.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-targoviste-3-img-6659.webp",
+      "destination": "/media/gallery/spectacol-drone-targoviste-fireartro-150.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-untold-3e58e0a4-22b2-4079-9a9e-cb26db754e1c.webp",
+      "destination": "/media/gallery/spectacol-drone-untold-fireartro-151.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-untold-e99a15c4-48a8-46e8-ac09-d40a53f115fb.webp",
+      "destination": "/media/gallery/spectacol-drone-untold-fireartro-152.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-untold-flystack-4.webp",
+      "destination": "/media/gallery/spectacol-drone-untold-fireartro-153.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-untold-flystack-6.webp",
+      "destination": "/media/gallery/spectacol-drone-untold-fireartro-154.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-untold-flystack-9.webp",
+      "destination": "/media/gallery/spectacol-drone-untold-fireartro-155.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/gallery/fireartro-drone-show-untold-img-6900-2.webp",
+      "destination": "/media/gallery/spectacol-drone-untold-fireartro-156.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/hero-film-portrait.webp",
+      "destination": "/media/coperta-film-artificii-portret.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/hero-film-wide.webp",
+      "destination": "/media/coperta-film-artificii-panoramic.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/hybrid.webp",
+      "destination": "/media/spectacol-drone-si-artificii.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/hero-portrait-1080-20261102.webp",
+      "destination": "/media/optimized/spectacol-artificii-portret-1080-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/hero-portrait-480-20261102.webp",
+      "destination": "/media/optimized/spectacol-artificii-portret-480-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/hero-portrait-810-20261102.webp",
+      "destination": "/media/optimized/spectacol-artificii-portret-810-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/hero-wide-1440-20261102.webp",
+      "destination": "/media/optimized/spectacol-artificii-panoramic-1440-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/hero-wide-1920-20261102.webp",
+      "destination": "/media/optimized/spectacol-artificii-panoramic-1920-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/hero-wide-960-20261102.webp",
+      "destination": "/media/optimized/spectacol-artificii-panoramic-960-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/package-day-480-20261102.webp",
+      "destination": "/media/optimized/pachet-artificii-zi-480-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/package-day-640-20261102.webp",
+      "destination": "/media/optimized/pachet-artificii-zi-640-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/package-day-960-20261102.webp",
+      "destination": "/media/optimized/pachet-artificii-zi-960-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/package-drone-480-20261102.webp",
+      "destination": "/media/optimized/pachet-spectacol-drone-480-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/package-drone-640-20261102.webp",
+      "destination": "/media/optimized/pachet-spectacol-drone-640-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/package-drone-960-20261102.webp",
+      "destination": "/media/optimized/pachet-spectacol-drone-960-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/package-effects-480-20261102.webp",
+      "destination": "/media/optimized/pachet-efecte-speciale-480-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/package-effects-640-20261102.webp",
+      "destination": "/media/optimized/pachet-efecte-speciale-640-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/package-effects-960-20261102.webp",
+      "destination": "/media/optimized/pachet-efecte-speciale-960-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/package-night-480-20261102.webp",
+      "destination": "/media/optimized/pachet-artificii-noapte-480-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/package-night-640-20261102.webp",
+      "destination": "/media/optimized/pachet-artificii-noapte-640-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/optimized/package-night-960-20261102.webp",
+      "destination": "/media/optimized/pachet-artificii-noapte-960-20261102.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/team/fireart-team-placeholder.webp",
+      "destination": "/media/team/echipa-fireartro.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/team/team-person-01.webp",
+      "destination": "/media/team/echipa-membru-01.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/team/team-person-02.webp",
+      "destination": "/media/team/echipa-membru-02.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/team/team-person-03.webp",
+      "destination": "/media/team/echipa-membru-03.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/team/team-person-04.webp",
+      "destination": "/media/team/echipa-membru-04.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/team/team-photo-person-01.webp",
+      "destination": "/media/team/echipa-portret-persoana-01.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/team/team-photo-person-02.webp",
+      "destination": "/media/team/echipa-portret-persoana-02.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/team/team-photo-person-03.webp",
+      "destination": "/media/team/echipa-portret-persoana-03.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/team/team-photo-person-04.webp",
+      "destination": "/media/team/echipa-portret-persoana-04.webp",
+      "permanent": true
+    },
+    {
+      "source": "/media/wedding.webp",
+      "destination": "/media/artificii-nunta-fireartro.webp",
+      "permanent": true
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap.xml",
+      "permanent": true
+    }
   ],
   "rewrites": [
     {
@@ -91,7 +1197,10 @@
     {
       "source": "/admin",
       "headers": [
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
         {
           "key": "Content-Security-Policy",
           "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' https://challenges.cloudflare.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://img.youtube.com https://*.public.blob.vercel-storage.com https://*.googleusercontent.com; media-src 'self' blob: https://*.public.blob.vercel-storage.com; frame-src 'self' https://www.youtube-nocookie.com https://challenges.cloudflare.com; connect-src 'self' https://*.public.blob.vercel-storage.com https://challenges.cloudflare.com https://www.google-analytics.com https://region1.google-analytics.com; upgrade-insecure-requests"
@@ -118,7 +1227,13 @@
     },
     {
       "source": "/media/fireart-:asset*",
-      "has": [{ "type": "query", "key": "v", "value": ".+" }],
+      "has": [
+        {
+          "type": "query",
+          "key": "v",
+          "value": ".+"
+        }
+      ],
       "headers": [
         {
           "key": "Cache-Control",
@@ -128,7 +1243,61 @@
     },
     {
       "source": "/media/hero-film-:asset*",
-      "has": [{ "type": "query", "key": "v", "value": ".+" }],
+      "has": [
+        {
+          "type": "query",
+          "key": "v",
+          "value": ".+"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/media/coperta-:asset*",
+      "has": [
+        {
+          "type": "query",
+          "key": "v",
+          "value": ".+"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/media/promovare-:asset*",
+      "has": [
+        {
+          "type": "query",
+          "key": "v",
+          "value": ".+"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/media/sigla-:asset*",
+      "has": [
+        {
+          "type": "query",
+          "key": "v",
+          "value": ".+"
+        }
+      ],
       "headers": [
         {
           "key": "Cache-Control",
@@ -138,12 +1307,28 @@
     },
     {
       "source": "/media/optimized/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/media/startup-fireworks.mp4",
-      "has": [{ "type": "query", "key": "v", "value": ".+" }],
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "has": [
+        {
+          "type": "query",
+          "key": "v",
+          "value": ".+"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/fonts/(.*)",

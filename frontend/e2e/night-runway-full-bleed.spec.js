@@ -58,7 +58,7 @@ async function measureEdgeDetail(page, src) {
 
 test("ultrawide poster has real image detail at both outer edges", async ({ page }) => {
   await page.goto("/#acasa");
-  const detail = await measureEdgeDetail(page, "/media/fireart-hero-ultrawide.webp");
+  const detail = await measureEdgeDetail(page, "/media/coperta-artificii-panorama-larga-fireartro.webp");
 
   expect(detail.center).toBeGreaterThan(1);
   expect(detail.ratio).toBeGreaterThan(0.55);

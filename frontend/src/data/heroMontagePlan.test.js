@@ -10,7 +10,7 @@ test('each orientation has three 30-second films with one scene per frame', () =
       for (const scene of episode) {
         expect(['video', 'drone']).toContain(scene.type);
         expect(scene.sources).toBeUndefined();
-        if (scene.image) expect(scene.image).toMatch(/^\/media\/gallery\/fireartro-drone-show-/);
+        if (scene.image) expect(scene.image).toMatch(/^\/media\/gallery\/spectacol-drone-/);
       }
     }
   }

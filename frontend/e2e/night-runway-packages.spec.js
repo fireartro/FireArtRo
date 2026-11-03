@@ -153,7 +153,7 @@ test.describe("Night Runway package stage", () => {
           id: "fireworks-bronze-2026",
           title: "Bronze",
           category: "Artificii de noapte",
-          image: "/media/fireworks-sky.webp",
+          image: "/media/artificii-pe-cer-fireartro.webp",
           videoUrl: "",
         }],
       }));

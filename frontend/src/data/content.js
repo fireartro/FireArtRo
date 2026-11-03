@@ -22,43 +22,43 @@ import {
 /* ------------------------------------------------------------------ */
 /*  Cinematic media                                                    */
 /* ------------------------------------------------------------------ */
-export const HERO_POSTER = "/media/fireart-hero-wide.webp?v=20260913-cinema-v7";
+export const HERO_POSTER = "/media/coperta-artificii-panoramic-fireartro.webp?v=20260913-cinema-v7";
 
 export const HERO_MEDIA = {
   variants: {
     wide: {
       src: "/media/hero-film-wide-1.mp4?v=20261102-complete-effects-r6",
-      poster: "/media/fireart-hero-wide.webp?v=20260913-cinema-v7",
+      poster: "/media/coperta-artificii-panoramic-fireartro.webp?v=20260913-cinema-v7",
       width: 1920,
       height: 1080,
     },
     ultrawide: {
       src: "/media/hero-film-wide-1.mp4?v=20261102-complete-effects-r6",
-      poster: "/media/fireart-hero-ultrawide.webp?v=20260913-cinema-v7",
+      poster: "/media/coperta-artificii-panorama-larga-fireartro.webp?v=20260913-cinema-v7",
       width: 1920,
       height: 1080,
     },
     "tablet-landscape": {
       src: "/media/hero-film-wide-1.mp4?v=20261102-complete-effects-r6",
-      poster: "/media/fireart-hero-tablet-landscape.webp?v=20260913-cinema-v7",
+      poster: "/media/coperta-artificii-tableta-orizontal-fireartro.webp?v=20260913-cinema-v7",
       width: 1920,
       height: 1080,
     },
     "tablet-portrait": {
       src: "/media/hero-film-portrait-1.mp4?v=20261102-complete-effects-r6",
-      poster: "/media/fireart-hero-tablet-portrait.webp?v=20260913-cinema-v7",
+      poster: "/media/coperta-artificii-tableta-vertical-fireartro.webp?v=20260913-cinema-v7",
       width: 1080,
       height: 1920,
     },
     mobile: {
       src: "/media/hero-film-portrait-1.mp4?v=20261102-complete-effects-r6",
-      poster: "/media/fireart-hero-mobile.webp?v=20260913-cinema-v7",
+      poster: "/media/coperta-artificii-telefon-fireartro.webp?v=20260913-cinema-v7",
       width: 1080,
       height: 1920,
     },
     "mobile-tall": {
       src: "/media/hero-film-portrait-1.mp4?v=20261102-complete-effects-r6",
-      poster: "/media/fireart-hero-mobile-tall.webp?v=20260913-cinema-v7",
+      poster: "/media/coperta-artificii-telefon-inalt-fireartro.webp?v=20260913-cinema-v7",
       width: 1080,
       height: 1920,
     },
@@ -69,19 +69,19 @@ export const HERO_MEDIA = {
 
 // Curated cinematic stills (drone light shows · fireworks · cold sparks)
 export const MEDIA = {
-  fireworksSky: "/media/fireworks-sky.webp",
-  droneShow: "/media/gallery/fireartro-drone-show-baia-mare-img-5525-2.webp",
-  droneShow2: "/media/gallery/fireartro-drone-show-art-is-alive-artisalive7.webp",
-  droneShow3: "/media/gallery/fireartro-drone-show-baia-mare-img-5527-2.webp",
-  coldSparks: "/media/cold-sparks.webp",
-  coldSparks2: "/media/cold-sparks-2.webp",
-  coldSparks3: "/media/cold-sparks-3.webp",
-  crowd: "/media/crowd.webp",
-  crowd2: "/media/crowd-2.webp",
-  crowd3: "/media/crowd-3.webp",
-  wedding: "/media/wedding.webp",
-  corporate: "/media/corporate.webp",
-  hybrid: "/media/hybrid.webp",
+  fireworksSky: "/media/artificii-pe-cer-fireartro.webp",
+  droneShow: "/media/gallery/spectacol-drone-baia-mare-fireartro-022.webp",
+  droneShow2: "/media/gallery/spectacol-drone-art-is-alive-fireartro-012.webp",
+  droneShow3: "/media/gallery/spectacol-drone-baia-mare-fireartro-023.webp",
+  coldSparks: "/media/scantei-reci-efecte-speciale.webp",
+  coldSparks2: "/media/scantei-reci-efecte-speciale-2.webp",
+  coldSparks3: "/media/scantei-reci-efecte-speciale-3.webp",
+  crowd: "/media/public-spectacol-artificii.webp",
+  crowd2: "/media/public-spectacol-artificii-2.webp",
+  crowd3: "/media/public-spectacol-artificii-3.webp",
+  wedding: "/media/artificii-nunta-fireartro.webp",
+  corporate: "/media/eveniment-corporativ-fireartro.webp",
+  hybrid: "/media/spectacol-drone-si-artificii.webp",
 };
 
 export const IMG = {

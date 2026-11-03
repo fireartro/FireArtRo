@@ -17,7 +17,7 @@ export default function usePageMeta({
   title,
   description,
   path,
-  image = "/media/fireart-hero-poster.webp",
+  image = "/media/coperta-spectacol-artificii-fireartro.webp",
   schema,
   noindex = false,
 }) {

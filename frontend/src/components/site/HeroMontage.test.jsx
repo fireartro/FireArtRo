@@ -89,7 +89,7 @@ test('takes over an early buffered first element without replacing or resetting 
 
 test('paints the existing native poster while the first video is still buffering', () => {
   const image = container.querySelector('picture img');
-  Object.defineProperty(image, 'currentSrc', { configurable: true, value: 'https://fireart.ro/media/optimized/hero-wide-960-20261102.webp' });
+  Object.defineProperty(image, 'currentSrc', { configurable: true, value: 'https://fireart.ro/media/optimized/spectacol-artificii-panoramic-960-20261102.webp' });
   activate();
   const first = container.querySelector('video');
   expect(first.readyState).toBe(0);
@@ -314,7 +314,7 @@ test('switches format when a desktop window changes aspect ratio without changin
   resize(1000, 1200);
   activate();
   expect(container.querySelector('video').dataset.mediaVariant).toBe('portrait');
-  expect(container.querySelector('source[media="(orientation: portrait)"]').srcset).toContain('hero-portrait-810');
+  expect(container.querySelector('source[media="(orientation: portrait)"]').srcset).toContain('spectacol-artificii-portret-810');
 });
 
 test('does not restart a video on loadeddata after the page becomes hidden', () => {

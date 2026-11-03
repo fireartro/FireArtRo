@@ -1,5 +1,5 @@
 const CANONICAL_ORIGIN = 'https://fireart.ro';
-const DEFAULT_IMAGE = '/media/fireart-hero-poster.webp';
+const DEFAULT_IMAGE = '/media/coperta-spectacol-artificii-fireartro.webp';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',

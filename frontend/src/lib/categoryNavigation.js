@@ -1,5 +1,6 @@
 import revision from "@/data/ownerRevision.json";
 import importedGalleryItems from "@/data/importedGalleryItems.json";
+import { romanianImageUrl } from './publicImageMetadata';
 
 // Keep the reviewed exclusions effective for older CMS publications as well.
 // Location metadata is not a filter: the photograph itself was reviewed.
@@ -7,7 +8,7 @@ const hiddenMediaIds = new Set(revision.hiddenMediaIds);
 const restoredMediaIds = new Set(revision.restoredMediaIds);
 const mediaPath = (src) => {
   if (typeof src !== 'string' || !src) return '';
-  try { return new URL(src, 'https://fireart.ro').pathname; } catch { return ''; }
+  try { return new URL(romanianImageUrl(src), 'https://fireart.ro').pathname; } catch { return ''; }
 };
 const hiddenMediaPaths = new Set(importedGalleryItems
   .filter(item => hiddenMediaIds.has(item.id))

@@ -92,7 +92,7 @@ test.describe("FireArt homepage structural refactor", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByTestId("home-gallery").locator("[data-gallery-item] img").first())
-      .toHaveAttribute("src", /fireartro-drone-show-focsani-dji-0768-enhanced-nr\.webp/);
+      .toHaveAttribute("src", /spectacol-drone-focsani-fireartro-036\.webp/);
   });
 
   test("renders compact opposite-direction review rails only for verified provider data", async ({ page }) => {

@@ -1,4 +1,6 @@
 import { useManagedContentSnapshot } from '@/content/ManagedContentProvider';
+import { useMemo } from 'react';
+import { localizePublicImages } from '@/lib/publicImageMetadata';
 
 export const MANAGED_CONTENT_STORAGE_KEY = 'fireartro-managed-content-v1';
 
@@ -9,5 +11,6 @@ export function readManagedContent() {
 }
 export default function useManagedContent(key, fallback) {
   const { content } = useManagedContentSnapshot();
-  return content?.[key] ?? fallback;
+  const value = content?.[key] ?? fallback;
+  return useMemo(() => localizePublicImages(value), [value]);
 }

@@ -48,8 +48,8 @@ test("homepage gallery is substantial and requested sections use photographic at
 
   expect(metrics.cardRatio).toBeGreaterThanOrEqual(0.54);
   expect(metrics.cardRatio).toBeLessThanOrEqual(0.6);
-  expect(metrics.gallery).toContain("fireartro-drone-show-neversea-show-img-4351");
-  expect(metrics.packages).toContain("fireartro-drone-show-neversea-show-img-4351");
+  expect(metrics.gallery).toContain("spectacol-drone-neversea-fireartro-087");
+  expect(metrics.packages).toContain("spectacol-drone-neversea-fireartro-087");
   expect(new Set(metrics.imageOpacities).size).toBe(1);
   expect(new Set(metrics.imageFilters).size).toBe(1);
   expect(metrics.imageFilters[0]).toContain("blur");
@@ -90,7 +90,7 @@ test("keeps gallery, packages, and about on one continuous atmospheric layer", a
     };
   });
 
-  expect(state.rootImage).toContain("fireartro-drone-show-neversea-show-img-4351");
+  expect(state.rootImage).toContain("spectacol-drone-neversea-fireartro-087");
   expect(state.rootScrim).toContain("linear-gradient");
   expect(state.localBackgrounds).toEqual(["none", "none"]);
   expect(state.localImages).toEqual(["none", "none"]);
@@ -98,10 +98,10 @@ test("keeps gallery, packages, and about on one continuous atmospheric layer", a
 });
 
 for (const [route, selector, asset] of [
-  ["/contact", ".nr-contact-main", "fireartro-drone-show-neversea-show-img-4351.webp"],
-  ["/intrebari-frecvente", ".nr-faq-route", "fireartro-drone-show-neversea-show-img-4351.webp"],
-  ["/galerie", ".nr-gallery-page", "fireartro-drone-show-neversea-show-img-4351.webp"],
-  ["/pachete", ".nr-packages-page", "fireartro-drone-show-neversea-show-img-4351.webp"],
+  ["/contact", ".nr-contact-main", "spectacol-drone-neversea-fireartro-087.webp"],
+  ["/intrebari-frecvente", ".nr-faq-route", "spectacol-drone-neversea-fireartro-087.webp"],
+  ["/galerie", ".nr-gallery-page", "spectacol-drone-neversea-fireartro-087.webp"],
+  ["/pachete", ".nr-packages-page", "spectacol-drone-neversea-fireartro-087.webp"],
 ]) {
   test(`${route} uses its assigned atmospheric image behind content`, async ({ page }) => {
     await page.setViewportSize({ width: 1512, height: 982 });
@@ -128,5 +128,5 @@ test("keeps FAQ content transparent so its atmospheric photo stays visible", asy
   }));
 
   expect(state.contentBackground).toBe("rgba(0, 0, 0, 0)");
-  expect(state.atmosphere).toContain("fireartro-drone-show-neversea-show-img-4351");
+  expect(state.atmosphere).toContain("spectacol-drone-neversea-fireartro-087");
 });

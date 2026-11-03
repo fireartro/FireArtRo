@@ -25,7 +25,7 @@ const categories = ["Artificii de noapte", "Artificii de zi", "Show drone", "Efe
 const curatedSources = [
   "/media/gallery/fireartro-artificii-noapte-spectacol-110.webp",
   "/media/gallery/fireartro-artificii-zi-spectacol-003.webp?v=source-crop-20260828",
-  "/media/gallery/fireartro-drone-show-mastercard-img-5103.webp",
+  "/media/gallery/spectacol-drone-mastercard-fireartro-076.webp",
   "/media/gallery/fireartro-nunta-spectacol-019.webp",
 ];
 
