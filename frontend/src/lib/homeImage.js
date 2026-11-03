@@ -1,6 +1,11 @@
 // Only immutable bundled originals have derived sizes. Admin uploads and
 // versioned replacements retain their exact published URL.
 import { romanianImageUrl } from './publicImageMetadata';
+import responsiveImages from '@/data/responsiveImages.json';
+
+export function avifImageSrcSet(src) {
+  return responsiveImages[romanianImageUrl(src)]?.avif.map(item => `${item.src} ${item.width}w`).join(', ') || undefined;
+}
 const variants = {
   '/media/gallery/spectacol-drone-focsani-fireartro-036.webp': ['drone', 1800],
   '/media/gallery/fireartro-artificii-noapte-spectacol-091.webp': ['night', 1600],
@@ -27,7 +32,15 @@ export function homeImageProps(src) {
       sizes: '(max-width: 899px) 100vw, clamp(704px, 56vw, 1152px)' };
   }
   const variant = variants[src];
-  if (!variant) return { src };
+  if (!variant) {
+    const image = responsiveImages[src];
+    if (!image?.webp.length) return { src };
+    return {
+      src,
+      srcSet: image.webp.map(item => `${item.src} ${item.width}w`).concat(`${src} ${image.width}w`).join(', '),
+      sizes: '(max-width: 899px) 100vw, clamp(704px, 56vw, 1152px)',
+    };
+  }
   const [name, width] = variant;
   return {
     src,

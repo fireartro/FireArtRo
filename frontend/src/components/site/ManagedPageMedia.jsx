@@ -1,5 +1,6 @@
 import useManagedContent from "@/hooks/useManagedContent";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import ResponsiveImage from './ResponsiveImage';
 
 // Optional page media: an empty reference leaves the approved header untouched.
 export default function ManagedPageMedia({ mediaId }) {
@@ -10,7 +11,7 @@ export default function ManagedPageMedia({ mediaId }) {
   if (media.type === "video") {
     return <video src={media.src} poster={media.poster} controls playsInline preload="metadata" aria-label={media.alt} style={style} />;
   }
-  const image = <img src={media.type === "youtube" ? media.poster || media.thumbnail : media.src} alt={media.alt} decoding="async" style={style} />;
+  const image = <ResponsiveImage src={media.type === "youtube" ? media.poster || media.thumbnail : media.src} alt={media.alt} decoding="async" style={style} />;
   return media.type === "youtube"
     ? <a href={media.youtubeUrl} target="_blank" rel="noopener noreferrer">{image}</a>
     : image;

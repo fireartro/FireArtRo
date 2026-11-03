@@ -1,0 +1,41 @@
+{
+  "wide": {
+    "hd": [
+      "/media/film-spectacol-panoramic-1-hd-20261103.mp4",
+      "/media/film-spectacol-panoramic-2-hd-20261103.mp4",
+      "/media/film-spectacol-panoramic-3-hd-20261103.mp4"
+    ],
+    "light": [
+      "/media/film-spectacol-panoramic-1-usor-20261103.mp4",
+      "/media/film-spectacol-panoramic-2-usor-20261103.mp4",
+      "/media/film-spectacol-panoramic-3-usor-20261103.mp4"
+    ],
+    "retina": [
+      "/media/hero-film-wide-1-retina.mp4?v=20261102-complete-effects-r6",
+      "/media/hero-film-wide-2-retina.mp4?v=20261102-complete-effects-r6",
+      "/media/hero-film-wide-3-retina.mp4?v=20261102-complete-effects-r6"
+    ],
+    "uhd": [
+      "/media/hero-film-wide-1-uhd.mp4?v=20261102-complete-effects-r6",
+      "/media/hero-film-wide-2-uhd.mp4?v=20261102-complete-effects-r6",
+      "/media/hero-film-wide-3-uhd.mp4?v=20261102-complete-effects-r6"
+    ]
+  },
+  "portrait": {
+    "hd": [
+      "/media/film-spectacol-portret-1-hd-20261103.mp4",
+      "/media/film-spectacol-portret-2-hd-20261103.mp4",
+      "/media/film-spectacol-portret-3-hd-20261103.mp4"
+    ],
+    "light": [
+      "/media/film-spectacol-portret-1-usor-20261103.mp4",
+      "/media/film-spectacol-portret-2-usor-20261103.mp4",
+      "/media/film-spectacol-portret-3-usor-20261103.mp4"
+    ],
+    "retina": [
+      "/media/hero-film-portrait-1-retina.mp4?v=20261102-complete-effects-r6",
+      "/media/hero-film-portrait-2-retina.mp4?v=20261102-complete-effects-r6",
+      "/media/hero-film-portrait-3-retina.mp4?v=20261102-complete-effects-r6"
+    ]
+  }
+}

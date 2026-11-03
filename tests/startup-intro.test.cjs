@@ -4,6 +4,7 @@ const { readFileSync } = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const source = readFileSync(path.resolve(__dirname, '../frontend/public/startup-intro.js'), 'utf8');
+const heroSources = require('../frontend/src/data/heroDelivery.json');
 
 function start({ reduced = false, active = true, connection = {}, firstFilm = null, width = 1440, height = 900, dpr = 1 } = {}) {
   let now = 0;
@@ -60,19 +61,22 @@ function start({ reduced = false, active = true, connection = {}, firstFilm = nu
 }
 
 function initialFilm() {
-  const sources = Object.fromEntries(['wide', 'portrait'].map(format => [format,
-    Object.fromEntries(['hd', 'retina', 'uhd'].map(quality => [quality,
-      `/media/hero-film-${format}-1${quality === 'hd' ? '' : `-${quality}`}.mp4?v=test`]))]));
+  const sources = Object.fromEntries(Object.entries(heroSources).map(([format, qualities]) => [format,
+    Object.fromEntries(Object.entries(qualities).map(([quality, files]) => [quality, files[0]]))]));
   return { dataset: {}, readyState: 4, canPlayType: () => 'probably',
     getAttribute: () => JSON.stringify(sources), classList: { add() {} },
     addEventListener() {}, removeEventListener() {} };
 }
 
 for (const [width, height, dpr, connection, expected] of [
-  [390, 844, 1.75, {}, 'portrait-1.mp4'],
-  [390, 844, 3, {}, 'portrait-1-retina.mp4'],
+  [390, 844, 1.75, {}, 'film-spectacol-portret-1-hd-20261103.mp4'],
+  [390, 844, 3, {}, 'film-spectacol-portret-1-hd-20261103.mp4'],
+  [390, 844, 3, { downlink: 12 }, 'portrait-1-retina.mp4'],
+  [390, 844, 3, { downlink: 1.5, effectiveType: '4g' }, 'film-spectacol-portret-1-usor-20261103.mp4'],
+  [390, 844, 3, { downlink: 4 }, 'film-spectacol-portret-1-hd-20261103.mp4'],
+  [932, 430, 3, {}, 'film-spectacol-panoramic-1-hd-20261103.mp4'],
   [1920, 1080, 2, {}, 'wide-1-uhd.mp4'],
-  [1920, 1080, 2, { effectiveType: '3g' }, 'wide-1.mp4'],
+  [1920, 1080, 2, { effectiveType: '3g' }, 'film-spectacol-panoramic-1-usor-20261103.mp4'],
 ]) {
   test(`early buffer uses the same player rendition: ${expected}`, () => {
     const firstFilm = initialFilm();
@@ -82,8 +86,8 @@ for (const [width, height, dpr, connection, expected] of [
     assert.equal(firstFilm.dataset.heroPrimed, 'true');
     assert.equal(firstFilm.poster, '/media/optimized/test-selected-poster.webp');
     assert.equal(firstFilm.dataset.heroPosterReady, 'true');
-    assert.equal(firstFilm.dataset.mediaVariant, expected.startsWith('portrait') ? 'portrait' : 'wide');
-    assert.equal(firstFilm.dataset.mediaQuality, expected.includes('-uhd') ? 'uhd' : expected.includes('-retina') ? 'retina' : 'hd');
+    assert.equal(firstFilm.dataset.mediaVariant, expected.includes('portrait') || expected.includes('portret') ? 'portrait' : 'wide');
+    assert.equal(firstFilm.dataset.mediaQuality, expected.includes('-uhd') ? 'uhd' : expected.includes('-retina') ? 'retina' : expected.includes('-usor') ? 'light' : 'hd');
   });
 }
 

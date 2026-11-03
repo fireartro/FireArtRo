@@ -202,7 +202,7 @@ test('loading automatically opens when the browser never signals canplaythrough'
 });
 
 test('a stalled first film cannot trap the visitor and the loading footage keeps looping',async({page})=>{
- await page.route('**/media/hero-film-*.mp4*',route=>new Promise(resolve=>setTimeout(()=>resolve(route.abort()),12000)));
+ await page.route(/\/media\/(?:hero-film-|film-spectacol-).*\.mp4/,route=>new Promise(resolve=>setTimeout(()=>resolve(route.abort()),12000)));
  await page.goto('/',{waitUntil:'domcontentloaded'});
  const footage=page.locator('#fireart-intro video');
  await expect(footage).toHaveJSProperty('loop',true);

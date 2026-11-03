@@ -36,10 +36,15 @@
             const connection = navigator.connection || {};
             const pixels = Math.max(window.innerWidth, window.innerHeight) * (window.devicePixelRatio || 1);
             const slow = ['slow-2g', '2g', '3g'].includes(connection.effectiveType);
-            const quality = !slow && pixels >= 3200 && format !== 'portrait' ? 'uhd'
-                : !slow && pixels > 2000 ? 'retina' : 'hd';
+            const downlink = Number(connection.downlink);
+            const measured = Number.isFinite(downlink) && downlink > 0;
+            const constrained = slow || (measured && downlink <= 2.5);
+            const hd = (measured && downlink < 8) || (!measured && (format === 'portrait' || Math.min(window.innerWidth, window.innerHeight) < 600));
+            const quality = constrained ? 'light' : hd ? 'hd'
+                : pixels >= 3200 && format !== 'portrait' ? 'uhd'
+                : pixels > 2000 ? 'retina' : 'hd';
             const source = sources[format]?.[quality];
-            if (typeof source === 'string' && /^\/media\/hero-film-[a-z0-9-]+\.mp4\?v=[a-z0-9-]+$/.test(source)) {
+            if (typeof source === 'string' && /^(?:\/media\/hero-film-(?:wide|portrait)-[1-3]-(?:retina|uhd)\.mp4\?v=[a-z0-9-]+|\/media\/film-spectacol-(?:panoramic|portret)-[1-3]-(?:hd|usor)-\d{8}\.mp4)$/.test(source)) {
                 const heroPoster = document.querySelector('#acasa picture[data-hero-poster] img');
                 if (heroPoster?.currentSrc) {
                     firstHero.poster = heroPoster.currentSrc;

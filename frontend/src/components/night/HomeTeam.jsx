@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { TEAM_GROUP_IMAGE, TEAM_PLACEHOLDERS } from "@/data/homeExperience";
+import ResponsiveImage from '@/components/site/ResponsiveImage';
 
 const TEAM_COPY_LAYOUT = {
   production: {
@@ -126,7 +127,7 @@ export default function HomeTeam() {
           if (event.pointerType !== "touch") clearActivePerson();
         }}
       >
-        <img
+        <ResponsiveImage
           className="fa-team__base"
           src={TEAM_GROUP_IMAGE}
           alt="Echipa FireArtRo în zona de producție a unui spectacol nocturn"

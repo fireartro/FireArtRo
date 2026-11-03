@@ -5,27 +5,18 @@ import { selectHeroMontageTitles } from '@/data/heroMontageTitles';
 import { canPlayHeroVideo, canStartHeroVideo, getHeroAutoplayPolicy, isHeroIntroLoading, primeHeroVideoBuffer, scheduleHeroVideoPlayback } from './heroPlayback';
 import { getNextFilmIndex, selectMontageFormat, shouldPreloadNextFilm } from './heroMontagePlayback';
 import { selectHeroDelivery } from './heroDelivery';
+import heroSources from '@/data/heroDelivery.json';
 import { watchHeroFrames } from './heroFrameWatch';
 import '../../styles/hero-montage.css';
 
-const mediaVersion = '20261102-complete-effects-r6';
-const films = {
-  wide: [1, 2, 3].map(index => `/media/hero-film-wide-${index}.mp4?v=${mediaVersion}`),
-  portrait: [1, 2, 3].map(index => `/media/hero-film-portrait-${index}.mp4?v=${mediaVersion}`),
-};
-const retinaFilms = {
-  wide: [1, 2, 3].map(index => `/media/hero-film-wide-${index}-retina.mp4?v=${mediaVersion}`),
-  portrait: [1, 2, 3].map(index => `/media/hero-film-portrait-${index}-retina.mp4?v=${mediaVersion}`),
-};
-const initialSources = JSON.stringify(Object.fromEntries(['wide', 'portrait'].map(format => [format, {
-  hd: films[format][0], retina: retinaFilms[format][0],
-  uhd: films[format][0].replace('.mp4?', '-uhd.mp4?'),
-}])));
+const films = { wide: heroSources.wide.hd, portrait: heroSources.portrait.hd };
+const initialSources = JSON.stringify(Object.fromEntries(Object.entries(heroSources).map(([format, sources]) =>
+  [format, Object.fromEntries(Object.entries(sources).map(([quality, files]) => [quality, files[0]]))])));
 const readFormat = () => typeof window === 'undefined'
   ? 'wide'
   : selectMontageFormat(window.innerWidth, window.innerHeight);
 
-function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayheadRef, onDeliveryError, onDecoderStall }) {
+function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayheadRef, onDeliveryError, onDecoderStall, onLongBuffer }) {
   const stageRef = useRef(null);
   const videoRefs = useRef([null, null]);
   const activeVideoRef = useRef(null);
@@ -63,9 +54,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
   activeSlotRef.current = activeSlot;
   playbackAllowed.current = visible && enabled && !lifecycleHidden.current;
   const currentFilmIndex = slotIndices[activeSlot];
-  const filmSource = index => delivery === 'uhd'
-    ? films[format][index].replace('.mp4?', '-uhd.mp4?')
-    : delivery === 'retina' ? retinaFilms[format][index] : films[format][index];
+  const filmSource = index => heroSources[format][delivery][index];
   const currentSource = filmSource(currentFilmIndex);
   // Read the media element immediately before a format/quality change. A
   // timeupdate event can lag the displayed frame by a quarter of a second.
@@ -178,9 +167,9 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
     if (!activated || !visible || !enabled || !video) return undefined;
     return watchHeroFrames(video, onDecoderStall, () => playbackAllowed.current
       && !pendingSwitch.current && !isHeroIntroLoading(window), () => {
-      if (delivery !== 'hd') onDeliveryError();
+      if (delivery !== 'light') onLongBuffer();
     });
-  }, [activated, activeSlot, visible, enabled, delivery, onDecoderStall, onDeliveryError]);
+  }, [activated, activeSlot, visible, enabled, delivery, onDecoderStall, onLongBuffer]);
 
   const retryVideo = useCallback((slot, reload = true) => {
     const video = videoRefs.current[slot];
@@ -363,7 +352,7 @@ function HeroMontagePlayer({ format, delivery = 'hd', playheadRef, capturePlayhe
             }}
             onTimeUpdate={slot === activeSlot ? onTimeUpdate : undefined}
             onEnded={slot === activeSlot ? onEnded : undefined}
-            onError={() => delivery !== 'hd' ? onDeliveryError() : retryVideo(slot)}
+            onError={() => ['retina', 'uhd'].includes(delivery) ? onDeliveryError() : retryVideo(slot)}
             data-media-variant={format}
             data-media-quality={delivery}
             data-film-index={index}
@@ -391,6 +380,7 @@ export default function HeroMontage() {
     setDecoderGeneration(value => value + 1);
   }, []);
   const [forceHD, setForceHD] = useState(false);
+  const [forceLight, setForceLight] = useState(false);
   const [delivery, setDelivery] = useState(() => typeof window === 'undefined' ? 'hd'
     : selectHeroDelivery(window.innerWidth, window.innerHeight, window.devicePixelRatio, navigator.connection, readFormat()));
   useEffect(() => {
@@ -418,11 +408,16 @@ export default function HeroMontage() {
       window.removeEventListener('orientationchange', rotate);
     };
   }, []);
-  const quality = forceHD ? 'hd' : delivery;
+  const quality = forceLight ? 'light' : forceHD ? 'hd' : delivery;
   const fallBackToHD = useCallback(() => {
     capturePlayheadRef.current?.();
+    setForceLight(false);
     setForceHD(true);
   }, []);
+  const useLightDelivery = useCallback(() => {
+    capturePlayheadRef.current?.();
+    setForceLight(true);
+  }, []);
   return <HeroMontagePlayer key={`${format}-${quality}-${decoderGeneration}`} format={format} delivery={quality} onDecoderStall={recoverDecoder}
-    playheadRef={playheadRef} capturePlayheadRef={capturePlayheadRef} onDeliveryError={fallBackToHD} />;
+    playheadRef={playheadRef} capturePlayheadRef={capturePlayheadRef} onDeliveryError={fallBackToHD} onLongBuffer={useLightDelivery} />;
 }

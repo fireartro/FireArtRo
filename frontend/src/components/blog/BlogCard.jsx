@@ -1,4 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
+import ResponsiveImage from '@/components/site/ResponsiveImage';
 import { Link } from "react-router-dom";
 import { blogMediaUrl } from "@/lib/blogApi";
 import "@/styles/night-blog.css";
@@ -20,7 +21,7 @@ export default function BlogCard({ article, variant = "standard" }) {
     <article className={`fa-blog-card is-${variant}`} data-testid="blog-card">
       {cover && (
         <Link className="fa-blog-card__media" to={href} tabIndex={-1}>
-          <img
+          <ResponsiveImage
             src={cover}
             alt={article.cover_alt}
             loading="lazy"
