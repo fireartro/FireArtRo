@@ -155,10 +155,14 @@
         // HAVE_FUTURE_DATA means playback can advance. Mobile browsers can
         // buffer a healthy stream without ever promising canplaythrough.
         const videoReady = video && video.readyState >= 3 && !video.error;
+        // This exact cover is already loaded and painted by the native video.
+        // The mounted page can be used while its existing player buffers frames.
+        const nativeCoverReady = imageReady && video?.poster
+            && video?.dataset?.heroPosterReady === 'true';
         const stillReady = posterOnly && poster?.tagName === 'VIDEO' && poster.readyState >= 2;
         const posterFallback = imageReady && (posterOnly || (!expectsVideo && !video && elapsed > 1500) || video?.error || (video?.readyState >= 4 && elapsed > 1500));
         const mediaFailed = poster?.complete && !imageReady && (video?.error || (!expectsVideo && !video)) && elapsed > 1500;
-        if (videoReady || stillReady || posterFallback || mediaFailed) {
+        if (videoReady || nativeCoverReady || stillReady || posterFallback || mediaFailed) {
             intro.dataset.mediaReady = 'true';
             finish();
         }
