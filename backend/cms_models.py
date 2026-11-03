@@ -1,7 +1,7 @@
 """Strict, versioned content contract for the FireArtRo CMS.
 
-The models deliberately accept plain text and safe links only. Presentation,
-scripts, credentials, arbitrary HTML, and CSS remain code-owned.
+The models accept plain text, safe links and bounded image-placement settings.
+Scripts, credentials, arbitrary HTML, and CSS remain code-owned.
 """
 
 from __future__ import annotations
@@ -49,6 +49,35 @@ class StrictModel(BaseModel):
         validate_assignment=True,
         serialize_by_alias=True,
     )
+
+    @model_serializer(mode="wrap")
+    def omit_unconfigured_presentation(self, handler):
+        data = handler(self)
+        for key in ("imageFrame", "packageVisuals", "mediaSelection"):
+            if data.get(key, ...) is None:
+                data.pop(key, None)
+        return data
+
+
+class ImageFrame(StrictModel):
+    x: float = Field(default=50, ge=0, le=100, allow_inf_nan=False, strict=True)
+    y: float = Field(default=50, ge=0, le=100, allow_inf_nan=False, strict=True)
+    zoom: float = Field(default=1, ge=1, le=3, allow_inf_nan=False, strict=True)
+    fit: Literal["cover", "contain"] = "cover"
+    ratio: float | None = Field(default=None, ge=0.4, le=3, allow_inf_nan=False, strict=True)
+
+
+class ResponsiveImageFrame(StrictModel):
+    desktop: ImageFrame = Field(default_factory=ImageFrame)
+    tablet: ImageFrame | None = None
+    phone: ImageFrame | None = None
+
+
+class HomeCategoryVisual(StrictModel):
+    category: Literal["Artificii de zi", "Artificii de noapte", "Show drone", "Drone + artificii",
+                      "Efecte speciale", "Corporate / Festival"]
+    mediaId: str = Field(min_length=1, max_length=80, pattern=ID_PATTERN)
+    imageFrame: ResponsiveImageFrame | None = None
 
 
 def _safe_web_url(value: str, *, allow_empty: bool = False) -> str:
@@ -270,6 +299,8 @@ class PromoSlide(StrictModel):
     youtubeUrl: str = Field(default="", max_length=500)
     ctaLabel: str = Field(min_length=1, max_length=80)
     ctaHref: str = Field(min_length=1, max_length=500)
+    imageFrame: ResponsiveImageFrame | None = None
+    mediaSelection: Literal["manual"] | None = None
 
     @field_validator("youtubeUrl")
     @classmethod
@@ -298,6 +329,14 @@ class HomePageContent(StrictModel):
     partners: SectionCopy
     brief: SectionCopy
     promoSlides: list[PromoSlide] = Field(default_factory=list, max_length=12)
+    packageVisuals: list[HomeCategoryVisual] | None = Field(default=None, max_length=6)
+
+    @model_validator(mode="after")
+    def unique_visual_categories(self):
+        categories = [item.category for item in self.packageVisuals or []]
+        if len(categories) != len(set(categories)):
+            raise ValueError("Fiecare categorie are o singură imagine pe prima pagină.")
+        return self
 
 
 class InteriorPageContent(StrictModel):
@@ -349,6 +388,7 @@ class MediaItem(StrictModel):
     width: int | None = Field(default=None, ge=1, le=32_000)
     height: int | None = Field(default=None, ge=1, le=32_000)
     aspectRatio: float | None = Field(default=None, gt=0, le=100)
+    imageFrame: ResponsiveImageFrame | None = None
 
     @field_validator("thumbnail", "poster", "src")
     @classmethod
@@ -409,6 +449,8 @@ class PackageItem(StrictModel):
     cta: str = Field(min_length=1, max_length=80)
     ctaHref: str = Field(min_length=1, max_length=500)
     imageMediaId: str = Field(default="", max_length=80, pattern=rf"^$|{ID_PATTERN}")
+    imageFrame: ResponsiveImageFrame | None = None
+    mediaSelection: Literal["manual"] | None = None
     highlights: list[str] = Field(default_factory=list, max_length=24)
     bonus: str = Field(default="", max_length=1200)
     videoUrl: str = Field(default="", max_length=500)
@@ -567,6 +609,7 @@ class SiteContent(StrictModel):
             self.faqPage.heroMediaId,
             self.blogPage.heroMediaId,
             *(slide.mediaId for slide in self.homePage.promoSlides),
+            *(visual.mediaId for visual in self.homePage.packageVisuals or []),
             *(package.imageMediaId for package in self.packages),
             *(partner.logoMediaId for partner in self.partners),
         ]

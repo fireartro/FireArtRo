@@ -10,8 +10,8 @@ const number = (key, label, options) => field("number", key, label, options);
 const checkbox = (key, label, options) => field("checkbox", key, label, options);
 const select = (key, label, options) => field("select", key, label, { options });
 const lines = (key, label, options) => field("lines", key, label, options);
-const mediaId = (key, label) => field("mediaId", key, label);
-const object = (key, label, fields) => field("object", key, label, { fields });
+const mediaId = (key, label, options) => field("mediaId", key, label, options);
+const object = (key, label, fields) => field("object", key, label, { fields, open:key === 'hero' });
 const collection = (key, label, template, fields, options = {}) =>
   field("collection", key, label, { template, fields, titleKey: "title", ...options });
 const moduleDefinition = (definition, description) => ({
@@ -84,6 +84,7 @@ export const ADMIN_MODULES = {
     ]),
     object("gallery", "Galerie", SECTION_FIELDS),
     object("packages", "Pachete", SECTION_FIELDS),
+    field("homeVisuals", "packageVisuals", "Imaginile categoriilor"),
     object("about", "Despre noi", [
       text("eyebrow", "Supratitlu"), text("title", "Titlu"), lines("body", "Paragrafe", { rows: 6 }),
     ]),
@@ -92,7 +93,7 @@ export const ADMIN_MODULES = {
     collection("promoSlides", "Cadre promovate", PROMO_SLIDE_TEMPLATE, [
       id(), select("type", "Tip", ["image", "video", "youtube", "promotion"]),
       text("title", "Titlu"), textarea("shortText", "Descriere"), text("badge", "Etichetă"),
-      mediaId("mediaId", "Media"), url("youtubeUrl", "Link YouTube"),
+      mediaId("mediaId", "Media", {framing:true}), field("imageFrame", "imageFrame", "Încadrarea acestui cadru", {sourceKey:'mediaId',surface:'home-gallery'}), url("youtubeUrl", "Link YouTube"),
       text("ctaLabel", "Text buton"), url("ctaHref", "Destinație buton"),
     ]),
   ]), "Texte, butoane și cadre de pe homepage"),
@@ -119,6 +120,7 @@ export const ADMIN_MODULES = {
     text("ctaLabel", "Text buton"), url("ctaHref", "Destinație buton"),
     number("width", "Lățime", { min: 1, nullable: true }), number("height", "Înălțime", { min: 1, nullable: true }),
     number("aspectRatio", "Raport de aspect", { min: 0.01, step: "any", nullable: true }),
+    field("imageFrame", "imageFrame", "Încadrarea imaginii în galerie", {surface:'gallery'}),
   ], { subtitleKey: "category", previewKey: "thumbnail" }), "Catalogul comun de imagini și videoclipuri"),
   packages: moduleDefinition(collection("packages", "Pachete", PACKAGE_TEMPLATE, [
     id(), text("title", "Nume pachet"), select("category", "Categorie", ["Artificii de zi", "Artificii de noapte", "Show drone", "Drone + artificii", "Efecte speciale", "Corporate / Festival"]),
@@ -127,7 +129,7 @@ export const ADMIN_MODULES = {
     number("droneCount", "Număr drone", { min: 0, nullable: true }),
     number("effectsCount", "Grupe de efecte", { min: 0, nullable: true }),
     text("badge", "Etichetă"), text("cta", "Text buton"), url("ctaHref", "Destinație buton"),
-    mediaId("imageMediaId", "Imagine proprie"), field("tags", "highlights", "Caracteristici"),
+    mediaId("imageMediaId", "Imagine proprie", {imageOnly:true,framing:true}), field("imageFrame", "imageFrame", "Încadrarea imaginii pachetului", {sourceKey:'imageMediaId',surface:'package'}), field("tags", "highlights", "Caracteristici"),
     textarea("bonus", "Bonus / elemente incluse"), url("videoUrl", "Video principal"),
     textarea("videoNote", "Notă video"), lines("moreVideoUrls", "Alte videoclipuri", { help: "Câte un link YouTube pe rând. După Publică, toate apar în lista de videoclipuri a pachetului, alături de videoul principal." }),
   ], { subtitleKey: "category" }), "Opțiuni și configurații comerciale"),

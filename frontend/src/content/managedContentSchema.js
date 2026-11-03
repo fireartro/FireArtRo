@@ -47,6 +47,11 @@ export function isSafeContentUrl(value, webOnly = false) {
 const schema = fromContract(contract).superRefine((content, ctx) => {
   const issue = (path, message) => ctx.addIssue({ code: 'custom', path, message });
   const mediaIds = new Set(content.mediaItems.map(item => item.id));
+  const visualCategories = new Set();
+  content.homePage.packageVisuals?.forEach((visual, index) => {
+    if (visualCategories.has(visual.category)) issue(['homePage', 'packageVisuals', index, 'category'], 'Categoria are deja o imagine aleasă.');
+    visualCategories.add(visual.category);
+  });
   const walk = (value, path = []) => {
     if (Array.isArray(value)) {
       const ids = value.map(item => item?.id).filter(id => id !== undefined);
@@ -75,6 +80,17 @@ export function validateManagedContent(content) {
   const result = schema.safeParse(content);
   // Match the backend serializer: an unknown capital must not alter old snapshots.
   if (result.success && !result.data.siteDetails.shareCapital) delete result.data.siteDetails.shareCapital;
+  if (result.success) {
+    // Omitted presentation metadata must not turn legacy snapshots into edits.
+    const clean = value => {
+      if (!value || typeof value !== 'object') return;
+      for (const [key, item] of Object.entries(value)) {
+        if (['imageFrame', 'packageVisuals', 'mediaSelection'].includes(key) && item === null) delete value[key];
+        else clean(item);
+      }
+    };
+    clean(result.data);
+  }
   return result.success ? { content: result.data, errors: [] } : { content: null,
     errors: result.error.issues.map(issue => ({ path: issue.path.join('.'), message: issue.code === 'custom' ? issue.message : 'Verifică valoarea și limitele acestui câmp.' })),
   };

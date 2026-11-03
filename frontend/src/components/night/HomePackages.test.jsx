@@ -55,6 +55,14 @@ const render = async (data = content) => act(async () => root.render(
 ));
 const rows = () => [...container.querySelectorAll(".fa-packages__category")];
 
+test('an explicit homepage image and responsive frame override the catalogue default', async () => {
+  const data = {...content, homePage: {...content.homePage, packageVisuals: [{category:'Artificii de noapte', mediaId:'night-photo',
+    imageFrame:{desktop:{x:25,y:40,zoom:1.2,fit:'cover'},phone:{x:70,y:50,zoom:1,fit:'contain',ratio:1}}}]}};
+  await render(data);
+  expect(rows()[0].querySelector('img').getAttribute('src')).toBe('/owned/package-only.webp');
+  expect(rows()[0].style.getPropertyValue('--frame-phone-x')).toBe('70%');
+});
+
 test("keeps CMS category order, native deep links and discovery copy without option counts", async () => {
   await render();
   expect(rows().map(row => row.dataset.packageCategory)).toEqual(categories);

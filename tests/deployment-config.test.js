@@ -102,6 +102,19 @@ test('the production CSP permits only the Cloudflare origin required by Turnstil
   assert.doesNotMatch(policy, /(?:^|\s)https:(?:\s|;|$)/);
 });
 
+test('only the admin can embed its same-origin authenticated responsive preview', async()=>{
+  const config=JSON.parse(await readFile(path.join(projectRoot,'vercel.json'),'utf8'));
+  const global=config.headers.find(rule=>rule.source === '/(.*)').headers;
+  assert.equal(global.find(item=>item.key === 'X-Frame-Options').value,'DENY');
+  const admin=config.headers.find(rule=>rule.source === '/admin');
+  assert.ok(admin,'The preview requires a route-scoped policy rather than broad public framing');
+  assert.equal(admin.headers.find(item=>item.key === 'X-Frame-Options').value,'SAMEORIGIN');
+  const policy=admin.headers.find(item=>item.key === 'Content-Security-Policy').value;
+  assert.match(policy,/frame-ancestors 'self'/);
+  assert.match(policy,/frame-src 'self'/);
+  assert.ok(!policy.includes("'unsafe-eval'"));
+});
+
 test('the production CSP permits only the exact GA4 script and collection origins', async () => {
   const config = JSON.parse(await readFile(path.join(projectRoot, 'vercel.json'), 'utf8'));
   const globalHeaders = config.headers.find(({ source }) => source === '/(.*)').headers;

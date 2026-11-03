@@ -9,6 +9,7 @@ import { buildCategoryRanges, getCategoryLabel, getCategoryPhoto, isGalleryVisib
 import { homeImageProps } from '@/lib/homeImage';
 import '@/styles/home-package-selector.css';
 import { HOME_PACKAGE_IMAGE_IDS } from '@/lib/homeMediaSelection';
+import { frameContainerStyle } from '@/lib/imageFrame';
 export { HOME_PACKAGE_IMAGE_IDS } from '@/lib/homeMediaSelection';
 
 const originals = new Map(catalogue.map(item => [item.id, item]));
@@ -17,7 +18,7 @@ const originals = new Map(catalogue.map(item => [item.id, item]));
 const GRID_IMAGE_SIZES = 'auto, (max-width: 599px) 100vw, (min-width: 1600px) and (min-height: 850px) 39vw, min(50vw, 551px)';
 const FULL_WIDTH_IMAGE_SIZES = 'auto, (min-width: 1600px) and (min-height: 850px) 78vw, min(100vw, 1120px)';
 
-export default function HomePackages() {
+export default function HomePackages({geometryOnly=false}) {
   const homePage = useManagedContent('homePage', CMS_DEFAULTS.homePage);
   const packages = useManagedContent('packages', CMS_DEFAULTS.packages);
   const mediaItems = useManagedContent('mediaItems', CMS_DEFAULTS.mediaItems);
@@ -27,11 +28,13 @@ export default function HomePackages() {
       const recommendedId = HOME_PACKAGE_IMAGE_IDS[range.category];
       const recommended = byId.get(recommendedId) || originals.get(recommendedId);
       const configured = byId.get(range.imageMediaId);
-      const image = recommended && isGalleryVisible(recommended) ? recommended : configured && isGalleryVisible(configured) ? configured : null;
+      const placement = homePage.packageVisuals?.find(item=>item.category === range.category);
+      const selected = byId.get(placement?.mediaId);
+      const image = selected?.type === 'image' ? selected : recommended && isGalleryVisible(recommended) ? recommended : configured && isGalleryVisible(configured) ? configured : null;
       return { ...range, label: getCategoryLabel(range.category), href: '/pachete?categorie=' + encodeURIComponent(range.category),
-        src: image?.src || getCategoryPhoto(range.category, byId) || MEDIA.fireworksSky };
+        imageFrame:placement?.imageFrame, src: image?.src || getCategoryPhoto(range.category, byId) || MEDIA.fireworksSky };
     });
-  }, [packages, mediaItems]);
+  }, [packages, mediaItems, homePage.packageVisuals]);
   const copy = homePage.packages;
 
   return <section className="fa-packages fa-packages--grid" data-testid="home-packages" data-home-scene="packages" aria-labelledby="fa-packages-title">
@@ -42,8 +45,8 @@ export default function HomePackages() {
       </header>
       <nav className="fa-packages__grid" aria-label="Game de spectacole">
         {scenes.map((scene, index) => <Link key={scene.category} to={scene.href} className="fa-packages__category"
-          data-package-category={scene.category} aria-label={'Vezi ' + scene.label}>
-          <img {...homeImageProps(scene.src)} sizes={scenes.length % 2 === 1 && index === scenes.length - 1 ? FULL_WIDTH_IMAGE_SIZES : GRID_IMAGE_SIZES} alt="" loading="lazy" decoding="async" />
+          data-package-category={scene.category} aria-label={'Vezi ' + scene.label} data-image-frame={scene.imageFrame ? 'card' : undefined} style={frameContainerStyle(scene.imageFrame,{minimum:true})}>
+          {!geometryOnly && <img className="image-frame-media" {...homeImageProps(scene.src)} sizes={scenes.length % 2 === 1 && index === scenes.length - 1 ? FULL_WIDTH_IMAGE_SIZES : GRID_IMAGE_SIZES} alt="" loading="lazy" decoding="async" />}
           <div className="fa-packages__caption">
             <h3>{scene.label}</h3>
             <p>{scene.description}</p>

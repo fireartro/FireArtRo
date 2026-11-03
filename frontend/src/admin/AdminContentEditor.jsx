@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ADMIN_MODULES, makeAdminItem } from './adminConfig';
 import { useAdminDraft } from './AdminDraftContext';
 import AdminField from './AdminField';
@@ -8,14 +8,23 @@ const technical = new Set(['id','width','height','aspectRatio']);
 
 export default function AdminContentEditor({ moduleKey }) {
   const definition = ADMIN_MODULES[moduleKey];
-  const { draft, update, undo } = useAdminDraft();
+  const { draft, update, undo, errors=[] } = useAdminDraft();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
   const [removal, setRemoval] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [category,setCategory]=useState('');
+  const [homeTab,setHomeTab]=useState('packageVisuals');
+  const errorPath=errors.find(error=>error.path?.startsWith('homePage.'))?.path;
+  useEffect(()=>{
+    if(moduleKey !== 'homePage' || !errorPath) return;
+    setHomeTab(errorPath.startsWith('homePage.packageVisuals') ? 'packageVisuals' : errorPath.startsWith('homePage.promoSlides') ? 'promoSlides' : 'copy');
+  },[moduleKey,errorPath]);
+  const inCurrentTab=field=>moduleKey !== 'homePage' || (homeTab === 'copy' ? !['packageVisuals','promoSlides'].includes(field.key) : field.key === homeTab);
   const items = definition.kind === 'collection' ? draft[moduleKey] : null;
   const title = item => item?.[definition.titleKey] || 'Fără nume';
-  const visible = items?.filter(item => `${title(item)} ${item[definition.subtitleKey] || ''}`.toLocaleLowerCase('ro-RO').includes(query.trim().toLocaleLowerCase('ro-RO')));
+  const categories=[...new Set(items?.map(item=>item.category).filter(Boolean) || [])];
+  const visible = items?.filter(item => (!category || item.category === category) && `${title(item)} ${item[definition.subtitleKey] || ''}`.toLocaleLowerCase('ro-RO').includes(query.trim().toLocaleLowerCase('ro-RO')));
   // A name edit can remove a record from the filter; never silently edit its neighbour.
   const current = selected ? items?.find(item => item.id === selected) : visible?.[0];
   const index = current ? items.indexOf(current) : -1;
@@ -34,22 +43,25 @@ export default function AdminContentEditor({ moduleKey }) {
   };
   return <section className="cms-panel">
     <header className="cms-panel-heading"><div><h1>{definition.label}</h1><p>{definition.description}</p></div><button className="admin-button" onClick={undo}>Anulează ultima modificare</button></header>
+    {moduleKey === 'homePage' && <nav className="cms-page-tabs" aria-label="Editează prima pagină">{[['packageVisuals','Imagini de categorii','Categorii'],['promoSlides','Galerie promovată','Galerie'],['copy','Texte și butoane','Texte și butoane']].map(([key,label,short])=><button type="button" key={key} aria-label={label} aria-pressed={homeTab === key} onClick={()=>setHomeTab(key)}>{short}</button>)}</nav>}
     <div className={items ? 'cms-collection' : ''} data-view={editing && current ? 'editor' : 'list'}>
       {items && <aside className="cms-collection-list"><label>Caută în {definition.label.toLowerCase()}<input value={query} onChange={event => search(event.target.value)} type="search" /></label>
-        <button className="admin-button" onClick={add}>Adaugă element</button>
+        {categories.length>1 && <label>Categorie<select aria-label="Filtrează colecția după categorie" value={category} onChange={event=>{setCategory(event.target.value);setSelected(null);setEditing(false);}}><option value="">Toate categoriile</option>{categories.map(value=><option key={value}>{value}</option>)}</select></label>}
+        <button className="admin-button is-primary" onClick={()=>{setCategory('');add();}}>Adaugă element</button>
         <small className="cms-collection-count">{visible.length} / {items.length} elemente</small>
         <ul className="cms-collection-results">{visible.map(item => <li key={item.id}><button
           className={`cms-collection-choice ${item === current ? 'is-active' : ''}`} aria-current={item === current ? 'true' : undefined} onClick={() => open(item)}>
           {thumbnail(item) && <img src={thumbnail(item)} alt="" loading="lazy" width="48" height="48"/>}<span><strong>{title(item)}</strong><small>{item[definition.subtitleKey]}</small></span></button></li>)}</ul>
         {!visible.length && <div className="cms-empty-state" role="status"><p>{items.length ? 'Niciun rezultat pentru această căutare.' : 'Nu există elemente.'}</p>{query && <button className="admin-button" onClick={()=>search('')}>Șterge căutarea</button>}</div>}
       </aside>}
-      <div className="cms-editor-fields" onFocusCapture={pinCurrent} onChangeCapture={pinCurrent}>{items && current && <><div className="cms-editor-title"><button className="admin-button cms-back-to-list" onClick={()=>setEditing(false)}>Înapoi la listă</button><h2>{title(current)}</h2></div><div className="cms-row-actions">
+      <div className={`cms-editor-fields${items ? '' : ' cms-editor-object'}`} onFocusCapture={pinCurrent} onChangeCapture={pinCurrent}>{items && current && <><div className="cms-editor-title"><button className="admin-button cms-back-to-list" onClick={()=>setEditing(false)}>Înapoi la listă</button><h2>{title(current)}</h2></div><div className="cms-row-actions">
         <button className="admin-button" disabled={!index} onClick={() => move(-1)} aria-label="Mută în sus">↑</button>
         <button className="admin-button" disabled={index === items.length - 1} onClick={() => move(1)} aria-label="Mută în jos">↓</button>
         <button className="admin-button" onClick={duplicate}>Duplică</button><button className="admin-button is-danger-quiet" onClick={() => setRemoval(true)}>Șterge</button>
       </div></>}
         {items && !current ? null : <div className="cms-form-grid">
-          {definition.fields.filter(field => !items || !technical.has(field.key)).map(field => <AdminField key={`${current?.id || moduleKey}-${field.key}`} field={field} path={`${moduleKey}${items ? `.${index}` : ''}.${field.key}`} />)}
+          {definition.fields.filter(field => inCurrentTab(field) && (!items || !technical.has(field.key)) && !field.key.startsWith('seo')).map(field => <AdminField key={`${current?.id || moduleKey}-${field.key}`} field={field} path={`${moduleKey}${items ? `.${index}` : ''}.${field.key}`} />)}
+          {definition.fields.some(field=>field.key.startsWith('seo')) && <details className="cms-technical-fields" open={errors.some(error=>error.path.startsWith(`${moduleKey}.seo`)) || undefined}><summary>Motoare de căutare · SEO</summary><div className="cms-form-grid">{definition.fields.filter(field=>field.key.startsWith('seo')).map(field=><AdminField key={field.key} field={field} path={`${moduleKey}.${field.key}`}/>)}</div></details>}
           {items && <details className="cms-technical-fields"><summary>Detalii tehnice</summary><div className="cms-form-grid">{definition.fields.filter(field=>technical.has(field.key)).map(field=><AdminField key={`${current.id}-${field.key}`} field={field} path={`${moduleKey}.${index}.${field.key}`}/>)}</div></details>}
         </div>}
       </div>

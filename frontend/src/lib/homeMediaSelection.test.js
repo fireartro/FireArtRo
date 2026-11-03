@@ -11,3 +11,9 @@ test('retains a unique custom CMS photograph and ignores a missing slide', () =>
   const image = { id: 'custom', src: '/custom.webp', type: 'image', category: 'Drone show' };
   expect(selectHomeGallery([{ type: 'image', mediaId: 'custom' }, { type: 'image', mediaId: 'missing' }], [image])).toEqual([{ type: 'image', mediaId: 'custom', media: image }]);
 });
+
+test('resetting a frame never replaces an explicitly selected gallery photograph',()=>{
+  const id=HOME_PACKAGE_IMAGE_IDS['Artificii de noapte'];
+  const slide={id:'chosen',type:'image',mediaId:id,mediaSelection:'manual',imageFrame:null};
+  expect(selectHomeGallery([slide],catalogue)[0].mediaId).toBe(id);
+});

@@ -5,6 +5,8 @@ import {CMS_DEFAULTS} from '@/data/cmsDefaults';
 import {AdminDraftProvider, useAdminDraft} from './AdminDraftContext';
 import AdminLayout from './AdminLayout';
 import AdminContentEditor from './AdminContentEditor';
+// Real viewport geometry is covered in browser QA; JSDOM has no layout engine.
+jest.mock('./AdminFrameGeometry',()=>()=>null);
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let mockContent;
@@ -23,7 +25,8 @@ const handleRequest = async (url, options = {}) => {
   throw new Error('Unexpected request: '+url);
 };
 const mockRequest = jest.fn(handleRequest);
-jest.mock('./AdminSessionContext',()=>({useAdminSession:()=>({status:'authenticated',admin:{username:'operator'},request:mockRequest,logout:()=>{}})}));
+const mockLogout=jest.fn();
+jest.mock('./AdminSessionContext',()=>({useAdminSession:()=>({status:'authenticated',admin:{username:'operator'},request:mockRequest,logout:mockLogout})}));
 let root;
 let container;
 beforeEach(()=>{jest.useFakeTimers();mockSaveError=null;window.matchMedia=()=>({matches:true,addEventListener:()=>{},removeEventListener:()=>{}});mockRequest.mockImplementation(handleRequest);global.fetch=jest.fn(async()=>({ok:true,status:200,json:async()=>({revision_id:'r1',published_at:'2026-09-27T10:00:00Z',content:CMS_DEFAULTS})}));mockContent=JSON.parse(JSON.stringify(CMS_DEFAULTS));mockVersion=0;container=document.createElement('div');document.body.appendChild(container);root=createRoot(container);});
@@ -32,6 +35,53 @@ function Loaded({children}) {return useAdminDraft().draft ? children : null;}
 const render = async element => act(async()=>root.render(<MemoryRouter><AdminDraftProvider><Loaded>{element}</Loaded></AdminDraftProvider></MemoryRouter>));
 const click = async text => {const button=[...container.querySelectorAll('button')].find(e=>e.textContent===text);expect(button).toBeDefined();await act(async()=>button.click());};
 const type = async (input,value) => act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));});
+
+test('image choice opens a searchable visual picker instead of a text-only ID menu',async()=>{
+  await render(<AdminContentEditor moduleKey="packages"/>);
+  const trigger=container.querySelector('button[aria-label="Alege Imagine proprie"]');
+  expect(trigger).not.toBeNull();
+  await act(async()=>trigger.click());
+  const dialog=document.querySelector('[role="dialog"]');
+  expect(dialog.querySelector('input[type="search"]')).not.toBeNull();
+  expect(dialog.querySelector('img')).not.toBeNull();
+});
+
+test('admin navigation can find an operational section without expanding every group',async()=>{
+  await render(<AdminLayout/>);
+  const search=container.querySelector('input[aria-label="Caută o secțiune"]');
+  expect(search).not.toBeNull();
+  await type(search,'mesaje');
+  expect(container.querySelector('.admin-sidebar').textContent).toContain('Mesaje');
+  expect(container.querySelector('.admin-sidebar').textContent).not.toContain('Pagina Galerie');
+});
+
+test('homepage puts image editing first and separates it from copy and promoted slides',async()=>{
+  await render(<AdminContentEditor moduleKey="homePage"/>);
+  expect(container.querySelector('.cms-home-visuals')).not.toBeNull();
+  expect(container.querySelector('input[name="homePage.hero.titleLead"]')).toBeNull();
+  await click('Texte și butoane');
+  expect(container.querySelector('.cms-home-visuals')).toBeNull();
+  expect(container.querySelector('input[name="homePage.hero.titleLead"]')).not.toBeNull();
+});
+
+test('cropping an automatic bundled fallback attaches its reference atomically and can undo both changes',async()=>{
+  mockContent.mediaItems=mockContent.mediaItems.filter(item=>item.id !== 'gallery-import-070');
+  mockContent.homePage.promoSlides=[{...mockContent.homePage.promoSlides[0],type:'image',mediaId:'gallery-import-110'}];
+  function DraftProbe(){return <output data-draft>{JSON.stringify(useAdminDraft().draft)}</output>;}
+  await render(<><AdminContentEditor moduleKey="homePage"/><DraftProbe/></>);
+  await click('Galerie');
+  const image=container.querySelector('.cms-image-frame img');
+  expect(image.getAttribute('src')).toContain('-070.webp');
+  const slider=container.querySelector('input[aria-label="Poziție orizontală"]');
+  await type(slider,'70');
+  await act(async()=>jest.advanceTimersByTime(700));
+  expect(mockContent.homePage.promoSlides[0].mediaId).toBe('gallery-import-070');
+  expect(mockContent.mediaItems.some(item=>item.id === 'gallery-import-070')).toBe(true);
+  await click('Anulează ultima modificare');
+  const undone=JSON.parse(container.querySelector('[data-draft]').textContent);
+  expect(undone.homePage.promoSlides[0].mediaId).toBe('gallery-import-110');
+  expect(undone.mediaItems.some(item=>item.id === 'gallery-import-070')).toBe(false);
+});
 
 test('one shared publication action and four accessible navigation groups retain operational modules',async()=>{
   await render(<AdminLayout/>);
@@ -101,6 +151,22 @@ test('mobile navigation is modal, closes with Escape and returns focus to its tr
   await act(async()=>dialog.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})));
   await act(async()=>jest.advanceTimersByTime(1));
   expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(document.activeElement).toBe(trigger);
+});
+
+test('mobile navigation retains an explicit sign-out action',async()=>{
+  await render(<AdminLayout/>);
+  await act(async()=>container.querySelector('[aria-label="Deschide secțiunile"]').click());
+  const logout=[...document.querySelector('[role="dialog"]').querySelectorAll('button')].find(button=>button.textContent === 'Ieși din cont');
+  expect(logout).toBeDefined();await act(async()=>logout.click());expect(mockLogout).toHaveBeenCalled();
+});
+
+test('preview returns focus to its trigger even when a browser does not focus clicked buttons',async()=>{
+  await render(<AdminLayout/>);
+  const trigger=container.querySelector('[aria-label="Previzualizează"]');
+  await act(async()=>trigger.click());
+  const close=[...document.querySelector('.cms-preview').querySelectorAll('button')].find(button=>button.textContent === 'Închide');
+  await act(async()=>close.click());
   expect(document.activeElement).toBe(trigger);
 });
 test('renaming under a search keeps the selected stable record instead of switching to another match',async()=>{

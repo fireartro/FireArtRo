@@ -1,0 +1,25 @@
+[data-image-frame] {
+  --frame-x: var(--frame-desktop-x, 50%);
+  --frame-y: var(--frame-desktop-y, 50%);
+  --frame-zoom: var(--frame-desktop-zoom, 1);
+  --frame-fit: var(--frame-desktop-fit, cover);
+  --frame-ratio: var(--frame-desktop-ratio, auto);
+  --frame-minimum: var(--frame-desktop-minimum);
+  --frame-height: var(--frame-desktop-height);
+}
+[data-image-frame] .image-frame-media {
+  object-fit: var(--frame-fit) !important;
+  object-position: var(--frame-x) var(--frame-y) !important;
+  transform: scale(var(--frame-zoom)) !important;
+  transform-origin: var(--frame-x) var(--frame-y);
+}
+.fa-packages__category[data-image-frame='card'] { aspect-ratio:var(--frame-ratio); min-height:var(--frame-minimum); }
+.nr-gallery-card[data-image-frame='mosaic'] { --image-default-ratio:var(--gallery-frame-ratio,var(--media-ratio)); aspect-ratio:var(--frame-ratio); }
+.fa-work__card figure[data-image-frame='gallery'] { height:var(--frame-height); aspect-ratio:var(--frame-ratio); }
+.nr-package-cinema .nr-package-stage__media[data-image-frame='package'] { --image-default-ratio:16/9; aspect-ratio:var(--frame-ratio); }
+@media (min-width: 600px) and (max-width: 1023px) {
+  [data-image-frame] { --frame-x:var(--frame-tablet-x,50%); --frame-y:var(--frame-tablet-y,50%); --frame-zoom:var(--frame-tablet-zoom,1); --frame-fit:var(--frame-tablet-fit,cover); --frame-ratio:var(--frame-tablet-ratio,auto); --frame-minimum:var(--frame-tablet-minimum); --frame-height:var(--frame-tablet-height); }
+}
+@media (max-width: 599px) {
+  [data-image-frame] { --frame-x:var(--frame-phone-x,50%); --frame-y:var(--frame-phone-y,50%); --frame-zoom:var(--frame-phone-zoom,1); --frame-fit:var(--frame-phone-fit,cover); --frame-ratio:var(--frame-phone-ratio,auto); --frame-minimum:var(--frame-phone-minimum); --frame-height:var(--frame-phone-height); }
+}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Play, Film } from 'lucide-react';
 import useReducedMotion from "@/hooks/useReducedMotion";
 import { collectPackageVideos } from '@/lib/categoryNavigation';
+import { frameContainerStyle } from '@/lib/imageFrame';
 import { readCookieConsent, COOKIE_CONSENT_UPDATED_EVENT, OPEN_COOKIE_SETTINGS_EVENT } from './CookieConsent';
 import '@/styles/package-video-playlist.css';
 
@@ -30,7 +31,7 @@ const hasVideoConsent = () => {
 function Poster({ src, fallback, alt, eager = false }) {
   const [failed, setFailed] = useState(0);
   if (failed > 1 || (!src && (!fallback || failed))) return <span className="nr-video-placeholder" aria-label={alt}><Film aria-hidden="true" /></span>;
-  return <img src={failed ? fallback : src || fallback} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(failed + 1)} />;
+  return <img className="image-frame-media" src={failed ? fallback : src || fallback} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(failed + 1)} />;
 }
 
 export default function PackageVideoPlayer({ item, fallback, label, changing }) {
@@ -93,13 +94,13 @@ export default function PackageVideoPlayer({ item, fallback, label, changing }) 
   };
 
   return <div className="nr-package-cinema">
-    <figure className="nr-package-stage__media" data-testid="package-media">
+    <figure className="nr-package-stage__media" data-testid="package-media" data-image-frame={!showPlayer && item.imageFrame ? 'package' : undefined} style={!showPlayer ? frameContainerStyle(item.imageFrame) : undefined}>
       {showPlayer ? source.type === 'youtube' ? <iframe
         key={activeUrl} src={`https://www.youtube-nocookie.com/embed/${source.id}?autoplay=${reduced ? 0 : 1}&rel=0&playsinline=1`}
         title={`Video demonstrativ pentru pachetul ${item.title}`}
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin"
       /> : <video key={activeUrl} src={source.src} controls autoPlay={!reduced} playsInline preload="metadata" onError={() => { setPlaying(false); setFailed(true); }} /> : <>
-        <Poster key={activeUrl || fallback} src={source?.poster} fallback={fallback} alt={`Previzualizare pentru ${item.title}`} eager />
+        <Poster key={`${activeUrl}-${fallback}`} src={item.mediaSelection === 'manual' && item.imageMediaId ? fallback : source?.poster} fallback={fallback} alt={`Previzualizare pentru ${item.title}`} eager />
         {canPlay && <button type="button" className="nr-package-video-trigger" onClick={() => choose(activeUrl, true)} aria-label={`Vezi videoclipul pachetului ${item.title}`}>
           <Play aria-hidden="true" fill="currentColor" /><span>{source.type === 'youtube' && !consent ? 'Activează videoclipul' : 'Vezi clipul'}</span>
         </button>}

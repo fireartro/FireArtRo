@@ -9,12 +9,13 @@ import useManagedContent from "@/hooks/useManagedContent";
 import { homeImageProps } from "@/lib/homeImage";
 import { createSettlingTicker } from "@/lib/settlingTicker";
 import { selectHomeGallery } from "@/lib/homeMediaSelection";
+import { frameContainerStyle } from '@/lib/imageFrame';
 
 gsap.registerPlugin(ScrollTrigger);
 const SHORT_DESKTOP_QUERY = "(min-width: 1200px) and (max-height: 640px) and (hover: hover) and (pointer: fine)";
 const GALLERY_IMAGE_SIZES = "auto, (max-width: 899px) 100vw, (min-width: 1600px) 78vw, min(64vw, 1344px)";
 
-export default function HomeGallery() {
+export default function HomeGallery({geometryOnly=false}) {
   const homePage = useManagedContent("homePage", CMS_DEFAULTS.homePage);
   const mediaItems = useManagedContent("mediaItems", CMS_DEFAULTS.mediaItems);
   const copy = homePage.gallery;
@@ -22,7 +23,7 @@ export default function HomeGallery() {
   const sectionRef = useRef(null);
   const reduceMotion = useReducedMotion();
   const [shortDesktop, setShortDesktop] = useState(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.(SHORT_DESKTOP_QUERY).matches));
-  const staticScene = reduceMotion || shortDesktop;
+  const staticScene = reduceMotion || (!geometryOnly && shortDesktop);
   useEffect(() => {
     const query = window.matchMedia?.(SHORT_DESKTOP_QUERY);
     if (!query) return undefined;
@@ -34,7 +35,7 @@ export default function HomeGallery() {
 
   useLayoutEffect(() => {
     const section = sectionRef.current;
-    if (!section || staticScene) return undefined;
+    if (!section || staticScene || geometryOnly) return undefined;
 
     let cleanupMotion = () => {};
 
@@ -258,7 +259,7 @@ export default function HomeGallery() {
       cleanupMotion();
       context.revert();
     };
-  }, [galleryItems, staticScene]);
+  }, [galleryItems, staticScene, geometryOnly]);
 
   return (
     <section
@@ -287,12 +288,13 @@ export default function HomeGallery() {
               <article
                 className="fa-work__card"
                 data-gallery-item
+                data-gallery-slide={item.id}
                 data-gallery-panel
                 key={item.id}
               >
                 <div className="fa-work__card-inner" data-gallery-lift>
-                  <figure>
-                    {item.type === "video" ? (
+                  <figure data-image-frame={item.imageFrame ? 'gallery' : undefined} style={frameContainerStyle(item.imageFrame,{height:true})}>
+                    {geometryOnly ? <span aria-hidden="true"/> : item.type === "video" ? (
                       <video src={item.media.src} poster={item.media.poster} controls playsInline preload="metadata" aria-label={item.media.alt} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : item.type === "youtube" ? (
                       <a href={item.youtubeUrl || item.media?.youtubeUrl} target="_blank" rel="noopener noreferrer" aria-label={item.ctaLabel}>
@@ -301,7 +303,7 @@ export default function HomeGallery() {
                       </a>
                     ) : (
                       <Link to={item.ctaHref} aria-label={item.ctaLabel} title={item.shortText}>
-                        <img {...homeImageProps(item.media.src)} sizes={GALLERY_IMAGE_SIZES} alt={item.media.alt} loading="lazy" decoding="async" />
+                        <img className="image-frame-media" {...homeImageProps(item.media.src)} sizes={GALLERY_IMAGE_SIZES} alt={item.media.alt} loading="lazy" decoding="async" />
                       </Link>
                     )}
                   </figure>

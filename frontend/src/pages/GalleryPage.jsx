@@ -1,5 +1,6 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { CANONICAL_SITE_URL } from "@/data/businessContent";
+import { frameContainerStyle, galleryFrameRatio as getGalleryFrameRatio } from '@/lib/imageFrame';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -16,13 +17,6 @@ import "@/styles/category-navigation.css";
 import ManagedPageMedia from "@/components/site/ManagedPageMedia";
 
 const GALLERY_CATEGORIES = ["Artificii de noapte", "Artificii de zi", "Drone show"];
-
-const getGalleryFrameRatio = (ratio) => {
-  if (!Number.isFinite(ratio) || ratio <= 0) return 4 / 3;
-  if (ratio < 0.6) return 3 / 4;
-  if (ratio > 2) return 16 / 10;
-  return ratio;
-};
 
 const interleaveByCategory = (items) => {
   const queues = GALLERY_CATEGORIES
@@ -266,8 +260,10 @@ export default function GalleryPage() {
                   className="nr-gallery-card"
                   data-testid="gallery-card"
                   data-media-id={item.id}
+                  data-image-frame={item.imageFrame ? 'mosaic' : undefined}
                   data-category={item.category}
                   style={{
+                    ...frameContainerStyle(item.imageFrame),
                     "--media-ratio": imageRatios[item.id] || item.aspectRatio || (item.featured ? 1.5 : 1.333),
                     "--gallery-frame-ratio": getGalleryFrameRatio(
                       imageRatios[item.id] || item.aspectRatio || (item.featured ? 1.5 : 1.333),
@@ -277,6 +273,7 @@ export default function GalleryPage() {
                 >
                   <button type="button" onClick={(event) => openPhoto(index, event.currentTarget)} aria-label={`Deschide ${item.title}`}>
                     <img
+                      className="image-frame-media"
                       src={item.thumbnail || item.src}
                       alt={item.alt}
                       loading={index < 8 ? 'eager' : 'lazy'}

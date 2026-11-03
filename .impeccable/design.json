@@ -1,0 +1,282 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-03T07:29:44.389263+00:00",
+  "title": "Design System: FireArtRo — Admin Operate",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Albastru de focus",
+        "canonical": "#84b9ff",
+        "tonalRamp": [
+          "#162c46",
+          "#193451",
+          "#1b528f",
+          "#275fa9",
+          "#477fbf",
+          "#5687c4",
+          "#84b9ff",
+          "#d5e8ff"
+        ]
+      },
+      "workspace-bg": {
+        "role": "neutral",
+        "displayName": "Fundal de lucru",
+        "canonical": "#0b1018",
+        "tonalRamp": [
+          "#070b11",
+          "#0b1018",
+          "#0e141e",
+          "#101722",
+          "#172131",
+          "#293447",
+          "#a3aec0",
+          "#f2f5fa"
+        ]
+      },
+      "saved": {
+        "role": "status",
+        "displayName": "Salvat",
+        "canonical": "#55d69e"
+      },
+      "pending": {
+        "role": "status",
+        "displayName": "În așteptare",
+        "canonical": "#f8bd62"
+      },
+      "invalid": {
+        "role": "status",
+        "displayName": "Invalid / conflict / eroare",
+        "canonical": "#ff8277"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Titlu de pagină",
+        "purpose": "27 px pe desktop; 25 px la cel mult 620 px."
+      },
+      "body": {
+        "displayName": "Text de lucru",
+        "purpose": "Inter moștenit în workspace; câmpurile trec la 16 px pe telefon."
+      },
+      "label": {
+        "displayName": "Etichetă de câmp",
+        "purpose": "Etichetă permanentă în română."
+      }
+    },
+    "shadows": [
+      {
+        "name": "appbar-hairline",
+        "value": "0 1px 0 rgba(18, 28, 33, .02)",
+        "purpose": "Tratamentul discret moștenit al barei superioare."
+      },
+      {
+        "name": "field-focus",
+        "value": "0 0 0 3px rgba(38,113,137,.1)",
+        "purpose": "Tratamentul de focus moștenit al câmpurilor; se adaugă conturului vizibil."
+      }
+    ],
+    "motion": [
+      {
+        "name": "button-state",
+        "value": "border-color .16s ease, background .16s ease, color .16s ease",
+        "purpose": "Feedback cromatic al butoanelor; dezactivat la prefers-reduced-motion."
+      },
+      {
+        "name": "preview-frame",
+        "value": "none",
+        "purpose": "Cadrul previzualizării nu animă lățimea."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "admin-phone-controls-max",
+        "value": "620px"
+      },
+      {
+        "name": "admin-list-editor-max",
+        "value": "900px"
+      },
+      {
+        "name": "admin-navigation-drawer-max",
+        "value": "1050px"
+      },
+      {
+        "name": "admin-sidebar-min",
+        "value": "1051px"
+      },
+      {
+        "name": "admin-framing-stack-max",
+        "value": "1100px"
+      },
+      {
+        "name": "admin-wide-min",
+        "value": "1600px"
+      },
+      {
+        "name": "public-image-tablet-min",
+        "value": "600px"
+      },
+      {
+        "name": "public-image-desktop-min",
+        "value": "1024px"
+      }
+    ],
+    "scope": {
+      "route": "/admin",
+      "surface": "Authenticated workspace and its working dialogs only.",
+      "excludes": [
+        "Public cinematic FireArtRo visual system",
+        "Authentication page visual system"
+      ],
+      "sources": [
+        "frontend/src/admin/admin-workspace.css",
+        "frontend/src/admin.css",
+        "frontend/src/styles/image-frame.css",
+        "frontend/src/admin/AdminLayout.jsx",
+        "frontend/src/admin/AdminImageFrame.jsx",
+        "frontend/src/admin/AdminPreview.jsx"
+      ],
+      "colorRampPolicy": "Ramps reuse eight existing source values; no generated colors or additional design primitives."
+    },
+    "focus": {
+      "value": "2px solid #84b9ff",
+      "offset": "3px"
+    },
+    "elevation": {
+      "appbar": 1000,
+      "overlay": 9990,
+      "dialog": 9991,
+      "mediaPickerAndDrawer": 9992,
+      "preview": 10000,
+      "previewHeader": 10001
+    },
+    "previewViewports": {
+      "desktop": {
+        "width": 1440,
+        "height": 900
+      },
+      "tablet": {
+        "width": 834,
+        "height": 1112
+      },
+      "phone": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Publicare",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Butonul existent din spațiul autentificat; demonstrația reproduce cascada actuală.",
+      "html": "<button type=\"button\" class=\"ds-button-primary\">Publică modificările</button>",
+      "css": ".ds-button-primary{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:8px 11px;border:1px solid #293447;border-radius:7px;font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;font-size:13px;font-weight:400;line-height:1.25;cursor:pointer;transition:border-color .16s ease,background .16s ease,color .16s ease;background:#275fa9;color:#fff;border-color:#477fbf;}.ds-button-primary:hover{background:#275fa9;border-color:#477fbf;}.ds-button-primary:focus-visible{outline:2px solid #84b9ff;outline-offset:3px;}.ds-button-primary:disabled{opacity:.45;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none;}}"
+    },
+    {
+      "name": "Acțiune secundară",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Butonul existent din spațiul autentificat; demonstrația reproduce cascada actuală.",
+      "html": "<button type=\"button\" class=\"ds-button-secondary\">Previzualizează</button>",
+      "css": ".ds-button-secondary{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:8px 11px;border:1px solid #293447;border-radius:7px;font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;font-size:13px;font-weight:400;line-height:1.25;cursor:pointer;transition:border-color .16s ease,background .16s ease,color .16s ease;background:#111b29;color:#f2f5fa;border-color:#293447;}.ds-button-secondary:hover{background:#1a2a40;border-color:#526d91;}.ds-button-secondary:focus-visible{outline:2px solid #84b9ff;outline-offset:3px;}.ds-button-secondary:disabled{opacity:.45;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none;}}"
+    },
+    {
+      "name": "Ștergere discretă",
+      "kind": "button",
+      "refersTo": "button-danger-quiet",
+      "description": "Butonul existent din spațiul autentificat; demonstrația reproduce cascada actuală.",
+      "html": "<button type=\"button\" class=\"ds-button-danger\">Șterge</button>",
+      "css": ".ds-button-danger{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:8px 11px;border:1px solid #293447;border-radius:7px;font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;font-size:13px;font-weight:400;line-height:1.25;cursor:pointer;transition:border-color .16s ease,background .16s ease,color .16s ease;background:#111b29;color:#f2f5fa;border-color:#293447;}.ds-button-danger:hover{background:#1a2a40;border-color:#526d91;}.ds-button-danger:focus-visible{outline:2px solid #84b9ff;outline-offset:3px;}.ds-button-danger:disabled{opacity:.45;cursor:not-allowed;}@media(prefers-reduced-motion:reduce){.ds-button-danger{transition:none;}}"
+    },
+    {
+      "name": "Câmp text",
+      "kind": "input",
+      "refersTo": "text-field",
+      "description": "Etichetă persistentă și focus vizibil; țintă de 44 px pe telefon.",
+      "html": "<label class=\"ds-field\">Titlu<input class=\"ds-input\" value=\"Artificii de noapte\" placeholder=\"Adaugă titlul\"></label>",
+      "css": ".ds-field{display:grid;gap:6px;width:100%;max-width:520px;color:#cdd5e7;font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;font-size:12px;font-weight:500;}.ds-input{min-width:0;min-height:38px;padding:9px 10px;border:1px solid #293447;border-radius:6px;background:#0b121c;color:#f2f5fa;font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;font-size:14px;line-height:1.4;transition:border-color .16s ease,box-shadow .16s ease;}.ds-input::placeholder{color:#8e9db4;}.ds-input:focus{border-color:#84b9ff;box-shadow:0 0 0 3px rgba(38,113,137,.1);}.ds-input:focus-visible{outline:2px solid #84b9ff;outline-offset:3px;}.ds-input[aria-invalid=true]{border-color:#ff8277;}@media(max-width:620px){.ds-input{min-height:44px;font-size:16px;}}@media(prefers-reduced-motion:reduce){.ds-input{transition:none;}}"
+    },
+    {
+      "name": "Navigare de secțiune",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Rânduri compacte; secțiunea curentă păstrează aria-current.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Secțiuni administrare\"><button type=\"button\" aria-current=\"page\">Prima pagină</button><button type=\"button\">Pachete</button><button type=\"button\">Galerie / media</button></nav>",
+      "css": ".ds-nav{width:208px;padding:14px 10px;background:#0e141e;font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;}.ds-nav button{display:flex;align-items:center;gap:9px;width:100%;min-height:36px;margin:2px 0;padding:8px 10px;border:0;border-radius:6px;background:transparent;color:#b8c5d9;font-family:inherit;font-size:13px;line-height:1.45;text-align:left;cursor:pointer;}.ds-nav button:hover{background:#151e31;}.ds-nav button[aria-current=page]{background:#162c46;color:#c7e0ff;}.ds-nav button:focus-visible{outline:2px solid #84b9ff;outline-offset:3px;}"
+    },
+    {
+      "name": "Alegerea dispozitivului",
+      "kind": "chip",
+      "refersTo": "device-choice",
+      "description": "Butoane de stare aria-pressed, cu ținte mai mari pe telefon.",
+      "html": "<div class=\"ds-devices\" role=\"group\" aria-label=\"Dispozitiv\"><button type=\"button\" aria-pressed=\"false\">Desktop</button><button type=\"button\" aria-pressed=\"false\">Tabletă</button><button type=\"button\" aria-pressed=\"true\">Telefon</button></div>",
+      "css": ".ds-devices{display:flex;gap:5px;max-width:520px;font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;}.ds-devices button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px 11px;border:1px solid #293447;border-radius:6px;background:#101b29;color:#becbdf;font-family:inherit;font-size:12px;line-height:1.45;cursor:pointer;}.ds-devices button[aria-pressed=true]{border-color:#5687c4;background:#193451;color:#d5e8ff;}.ds-devices button:focus-visible{outline:2px solid #84b9ff;outline-offset:3px;}@media(max-width:620px){.ds-devices{gap:4px;}.ds-devices button{flex:1;min-height:44px;padding:8px 6px;}}"
+    },
+    {
+      "name": "Rând de colecție",
+      "kind": "card",
+      "refersTo": "collection-row",
+      "description": "Nume și metadate în rândul selectat din listă; fără activ media fictiv.",
+      "html": "<button type=\"button\" class=\"ds-collection\" aria-current=\"true\"><span><strong>Artificii de noapte</strong><small>Pachete</small></span></button>",
+      "css": ".ds-collection{display:flex;align-items:center;gap:9px;width:234px;min-height:58px;padding:9px 7px;border:1px solid transparent;border-radius:7px;background:transparent;color:#f2f5fa;font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;line-height:1.45;text-align:left;cursor:pointer;}.ds-collection>span{display:grid;gap:3px;min-width:0;}.ds-collection strong,.ds-collection small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.ds-collection strong{font-size:13px;font-weight:550;}.ds-collection small{color:#a3aec0;font-size:11px;}.ds-collection:hover,.ds-collection[aria-current=true]{border-color:#293447;background:#162c46;}.ds-collection:focus-visible{outline:2px solid #84b9ff;outline-offset:3px;}@media(max-width:620px){.ds-collection{min-height:62px;}.ds-collection strong{font-size:14px;}}"
+    },
+    {
+      "name": "Alegere media",
+      "kind": "custom",
+      "refersTo": "media-choice",
+      "description": "Butonul vizual de deschidere a bibliotecii în starea fără material.",
+      "html": "<button type=\"button\" class=\"ds-media\" aria-label=\"Alege imaginea\"><span class=\"ds-media-placeholder\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\"></rect><circle cx=\"9\" cy=\"9\" r=\"2\"></circle><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\"></path></svg></span><span class=\"ds-media-copy\"><strong>Alege un material</strong><small>Deschide biblioteca de imagini</small></span></button>",
+      "css": ".ds-media{display:flex;align-items:center;gap:12px;width:100%;max-width:520px;min-width:0;padding:8px;border:1px solid #293447;border-radius:8px;background:#101a28;color:#f2f5fa;font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;line-height:1.45;text-align:left;cursor:pointer;}.ds-media-placeholder{display:grid;place-items:center;width:64px;height:48px;flex:0 0 auto;border-radius:4px;background:#1a293d;color:#9bc6ff;}.ds-media-copy{min-width:0;}.ds-media strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;}.ds-media small{display:block;margin-top:5px;color:#a3aec0;font-size:11px;}.ds-media:focus-visible{outline:2px solid #84b9ff;outline-offset:3px;}"
+    },
+    {
+      "name": "Reglaj de încadrare",
+      "kind": "custom",
+      "refersTo": "frame-controls",
+      "description": "Reglaj orizontal accesibil, cu valoare numerică tabulară.",
+      "html": "<label class=\"ds-frame-range\"><span>Poziție orizontală<output>50%</output></span><input type=\"range\" min=\"0\" max=\"100\" step=\"0.5\" value=\"50\" aria-label=\"Poziție orizontală\"></label>",
+      "css": ".ds-frame-range{display:grid;gap:3px;width:100%;max-width:520px;font-family:Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;line-height:1.45;}.ds-frame-range>span{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#d4ddeb;font-size:12px;}.ds-frame-range output{font-variant-numeric:tabular-nums;color:#a6ceff;}.ds-frame-range input{display:block;width:100%;min-height:28px;margin:3px 0 0;padding:0;border:0;accent-color:#80b5fc;background:transparent;cursor:pointer;}.ds-frame-range input:focus-visible{outline:2px solid #84b9ff;outline-offset:3px;}@media(max-width:620px){.ds-frame-range input{min-height:38px;}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Operate",
+    "overview": "Acest document descrie exclusiv spațiul de lucru autentificat de la `/admin`, inclusiv selectorul media, dialogurile de lucru și cadrul exterior al previzualizării. Nu redefinește stilurile site-ului public cinematic FireArtRo și nu autorizează un redesign public. Ecranul de autentificare are propriile tratamente și nu este modelul acestei suprafețe.\n\nDirecția confirmată păstrează identitatea întunecată și accentul albastru FireArtRo într-o interfață compactă, în română. Densitatea vine din ierarhia scurtă, separatoare și apropierea listei de editor. Fotografiile reale sunt conținut de ales și încadrat; suprafețele din jur rămân calme pentru a face selecția și starea draftului ușor de înțeles.",
+    "keyCharacteristics": [
+      "Suprafețe întunecate, mate, delimitate prin ton și borduri discrete.",
+      "Albastru pentru selecție, focus și acțiunea principală de publicare.",
+      "Listă și editor alăturate pe ecrane largi; un singur panou de colecție pe ecrane înguste.",
+      "Media vizuală și reglaje independente pentru Telefon, Tabletă și Desktop.",
+      "Draftul, previzualizarea și publicarea au stări explicite și distincte."
+    ],
+    "rules": [
+      {
+        "name": "The Accent With Meaning Rule",
+        "body": "Folosește albastrul pentru selecție, focus și acțiuni; nu îl extinde în suprafețe decorative sau gradiente ale editorului.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Breakpoint Systems Rule",
+        "body": "Pragurile interfeței de lucru nu aleg setările imaginii publice. `frontend/src/styles/image-frame.css` aplică Telefon sub 600 px, Tabletă de la 600 la 1023 px și Desktop de la 1024 px. Aceste limite sunt distincte de 620 / 900 / 1050 / 1100 px din admin.",
+        "section": "layout"
+      }
+    ],
+    "dos": [
+      "**Do** păstrează toate regulile acestui document în suprafața autentificată `/admin` și în portalurile ei.",
+      "**Do** folosește valorile extrase și componentele existente înainte de a introduce un nou tratament vizual.",
+      "**Do** păstrează etichete în română, starea draftului și focusul vizibil în orice densitate.",
+      "**Do** tratează pragurile navigării și pragurile încadrării media ca sisteme distincte.",
+      "**Do** păstrează selecția explicită a fotografiei și reglajele independente pe utilizare și dispozitiv.",
+      "**Do** verifică lista, editorul, selectorul media și previzualizarea cu tastatura și la 320, 390, 768, 1280 și 1920 px."
+    ],
+    "donts": [
+      "**Don't** aplica aceste suprafețe, scări sau rețete ca redesign al site-ului public cinematic FireArtRo.",
+      "**Don't** introduce gradiente decorative, sticlă decorativă, text uriaș, indicatori inventați sau animații care întârzie editarea în workspace.",
+      "**Don't** micșora toate coloanele de colecție pe telefon; păstrează alternanța listă / editor.",
+      "**Don't** ascunde acțiunile esențiale, materialul selectat sau starea salvării sub conținutul care derulează.",
+      "**Don't** înlocui automat imaginea aleasă sau modifica originalul când utilizatorul resetează încadrarea.",
+      "**Don't** prezenta un draft salvat sau o previzualizare ca publicare confirmată."
+    ]
+  }
+}
