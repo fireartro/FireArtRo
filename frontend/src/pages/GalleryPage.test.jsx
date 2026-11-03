@@ -45,8 +45,8 @@ test('defers offscreen thumbnails without delaying the first group or a selected
     await act(async () => root.render(<MemoryRouter><GalleryPage /></MemoryRouter>));
     const thumbnails = [...container.querySelectorAll('.nr-gallery-card img')];
     expect(thumbnails.length).toBeGreaterThan(20);
-    expect(thumbnails.slice(0, 8).every(img => img.getAttribute('loading') === 'eager')).toBe(true);
-    expect(thumbnails.slice(8).every(img => img.getAttribute('loading') === 'lazy')).toBe(true);
+    expect(thumbnails.slice(0, 2).every(img => img.getAttribute('loading') === 'eager')).toBe(true);
+    expect(thumbnails.slice(2).every(img => img.getAttribute('loading') === 'lazy')).toBe(true);
     await act(async () => container.querySelector('.nr-gallery-card button').click());
     const fullSize = document.querySelector('.nr-gallery-lightbox__media img');
     expect(fullSize).not.toBeNull();

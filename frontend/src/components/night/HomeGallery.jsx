@@ -7,6 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import useManagedContent from "@/hooks/useManagedContent";
 import { homeImageProps } from "@/lib/homeImage";
+import ResponsiveImage from "@/components/site/ResponsiveImage";
 import { createSettlingTicker } from "@/lib/settlingTicker";
 import { selectHomeGallery } from "@/lib/homeMediaSelection";
 import { frameContainerStyle } from '@/lib/imageFrame';
@@ -298,12 +299,12 @@ export default function HomeGallery({geometryOnly=false}) {
                       <video src={item.media.src} poster={item.media.poster} controls playsInline preload="metadata" aria-label={item.media.alt} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : item.type === "youtube" ? (
                       <a href={item.youtubeUrl || item.media?.youtubeUrl} target="_blank" rel="noopener noreferrer" aria-label={item.ctaLabel}>
-                        {item.media && <img src={item.media.poster || item.media.thumbnail} alt={item.media.alt} loading="lazy" decoding="async" />}
+                        {item.media && <ResponsiveImage src={item.media.poster || item.media.thumbnail} alt={item.media.alt} loading="lazy" decoding="async" />}
                         {!item.media && <span>{item.ctaLabel}</span>}
                       </a>
                     ) : (
                       <Link to={item.ctaHref} aria-label={item.ctaLabel} title={item.shortText}>
-                        <img className="image-frame-media" {...homeImageProps(item.media.src)} sizes={GALLERY_IMAGE_SIZES} alt={item.media.alt} loading="lazy" decoding="async" />
+                        <ResponsiveImage className="image-frame-media" {...homeImageProps(item.media.src)} sizes={GALLERY_IMAGE_SIZES} alt={item.media.alt} loading="lazy" decoding="async" />
                       </Link>
                     )}
                   </figure>

@@ -70,7 +70,7 @@
   grid-column: 1 / -1;
 }
 
-.fa-packages__category > img {
+.fa-packages__category .image-frame-media {
   position: absolute;
   z-index: -2;
   inset: 0;
@@ -164,7 +164,7 @@
     border-color: #8dd3ff80;
   }
 
-  .fa-packages__category:hover > img {
+  .fa-packages__category:hover .image-frame-media {
     transform: scale(1.035);
   }
 
@@ -241,12 +241,12 @@
 
 @media (prefers-reduced-motion: reduce) {
   .fa-packages__category,
-  .fa-packages__category > img,
+  .fa-packages__category .image-frame-media,
   .fa-packages__discover > svg {
     transition: none;
   }
 
-  .fa-packages__category:hover > img {
+  .fa-packages__category:hover .image-frame-media {
     transform: none;
   }
 }

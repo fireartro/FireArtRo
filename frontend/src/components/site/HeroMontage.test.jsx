@@ -72,7 +72,7 @@ test('exposes a source-less first element for early buffering before activation'
   expect(video.hasAttribute('data-hero-initial-film')).toBe(true);
   expect(video.getAttribute('preload')).toBe('none');
   expect(video.hasAttribute('src')).toBe(false);
-  expect(JSON.parse(video.dataset.heroInitialSources).portrait.hd).toContain('portrait-1.mp4');
+  expect(JSON.parse(video.dataset.heroInitialSources).portrait.hd).toContain('film-spectacol-portret-1-hd');
 });
 
 test('takes over an early buffered first element without replacing or resetting its source', () => {
@@ -105,7 +105,7 @@ test('mounts the first film on 3g and permits deliberate entry before buffering 
     act(() => root.render(<HeroMontage key="slow-connection" />));
     activate();
     const video = container.querySelector('video');
-    expect(video.getAttribute('src')).toContain('wide-1.mp4');
+    expect(video.getAttribute('src')).toContain('film-spectacol-panoramic-1-usor');
     expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
     delete document.documentElement.dataset.fireartIntro;
     act(() => window.dispatchEvent(new Event('fireart:intro-dismissed')));
@@ -143,7 +143,7 @@ test('loads only the first film after the poster, and preloads the next at 35 se
   expect(container.querySelector('video').hasAttribute('src')).toBe(false);
   activate();
   const video = container.querySelector('video');
-  expect(video.getAttribute('src')).toContain('wide-1.mp4');
+  expect(video.getAttribute('src')).toContain('film-spectacol-panoramic-1-hd');
   timeUpdate(video, 34.9);
   expect(container.querySelectorAll('video')).toHaveLength(1);
   timeUpdate(video, 35);
@@ -336,7 +336,7 @@ test('resumes the exact current frame on rotation even between timeupdate events
   activate();
   const portrait = container.querySelector('video');
   act(() => portrait.dispatchEvent(new Event('loadedmetadata')));
-  expect(portrait.getAttribute('src')).toContain('portrait-1.mp4');
+  expect(portrait.getAttribute('src')).toContain('film-spectacol-portret-1-hd');
   expect(portrait.currentTime).toBe(12.17);
 });
 
@@ -365,7 +365,7 @@ test('falls back from UHD to HD at the current frame and does not keep retrying 
   activate();
   const hd = container.querySelector('video');
   act(() => hd.dispatchEvent(new Event('loadedmetadata')));
-  expect(hd.getAttribute('src')).toContain('wide-1.mp4');
+  expect(hd.getAttribute('src')).toContain('film-spectacol-panoramic-1-hd');
   expect(hd.currentTime).toBe(14.27);
   resize(390, 844);
   activate();
@@ -380,4 +380,25 @@ test('does not remount the player when phone browser chrome changes only its hei
   resize(430, 840);
   expect(container.querySelector('video')).toBe(video);
   expect(video.currentTime).toBe(11);
+});
+
+test('falls back to the lightweight film after prolonged buffering without moving to a heavier source again', () => {
+  activate();
+  const first = container.querySelector('video');
+  first.currentTime = 5.25;
+  Object.defineProperty(first, 'readyState', { configurable: true, value: 2 });
+  Object.defineProperty(first, 'networkState', { configurable: true, value: 2 });
+  act(() => jest.advanceTimersByTime(9000));
+  activate();
+  const light = container.querySelector('video');
+  act(() => light.dispatchEvent(new Event('loadedmetadata')));
+  expect(light.dataset.mediaQuality).toBe('light');
+  expect(light.currentTime).toBe(5.25);
+  Object.defineProperty(light, 'readyState', { configurable: true, value: 2 });
+  Object.defineProperty(light, 'networkState', { configurable: true, value: 2 });
+  act(() => jest.advanceTimersByTime(12000));
+  expect(container.querySelector('video')).toBe(light);
+  act(() => light.dispatchEvent(new Event('error')));
+  expect(container.querySelector('video')).toBe(light);
+  expect(light.dataset.mediaQuality).toBe('light');
 });

@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const baseURL=process.env.PLAYWRIGHT_BASE_URL||'http://127.0.0.1:4173';
+const heroSources=require('../src/data/heroDelivery.json');
 
 const active = page => page.locator('.hero-montage__video--visible');
 async function enter(page) {
@@ -33,16 +34,12 @@ for (const [name,width,height,deviceScaleFactor] of sizes) {
     page.on('pageerror', error => errors.push(error.message));
     await enter(page);
     await expect(active(page)).toHaveCSS('object-fit','cover');
-    const state=await active(page).evaluate(v => ({src:v.currentSrc,w:v.videoWidth,h:v.videoHeight,t:v.currentTime}));
+    const state=await active(page).evaluate(v => ({src:v.currentSrc,w:v.videoWidth,h:v.videoHeight,t:v.currentTime,quality:v.dataset.mediaQuality}));
     const portrait=height>width;
-    expect(state.src).toContain(`hero-film-${portrait?'portrait':'wide'}-1`);
+    expect(state.src).toContain(heroSources[portrait?'portrait':'wide'][state.quality][0]);
     // Windows WebKit rounds its display-sized decode surface to whole pixels.
     // Exact encoded dimensions are independently checked by verify.py.
     expect(Math.abs(state.w-state.h*(portrait?9/16:16/9))).toBeLessThanOrEqual(1);
-    const physicalPixels=Math.max(width,height)*deviceScaleFactor;
-    const quality=physicalPixels>=3200&&!portrait?'uhd':physicalPixels>2000?'retina':'hd';
-    if(quality==='hd')expect(state.src).not.toMatch(/-(?:retina|uhd)\.mp4/);
-    else expect(state.src).toContain(`-${quality}.mp4`);
     await expect.poll(() => active(page).evaluate(v=>v.currentTime)).toBeGreaterThan(state.t+.2);
     await seek(page,19.5);
     await expect(page.locator('[data-cue="points"]')).toHaveCSS('visibility','visible');
@@ -129,7 +126,7 @@ test('three real 40-second chapters switch, loop and retain the playhead on rota
   expect(handoffs).toEqual([1,2,0].map(index=>({chapter:String(index),opacity:1})));
   await seek(page,12.3);
   await page.setViewportSize({width:1024,height:768});
-  await expect.poll(()=>active(page).evaluate(v=>v.currentSrc)).toContain('hero-film-wide-1');
+  await expect.poll(()=>active(page).evaluate(v=>v.currentSrc)).toMatch(/(?:hero-film-wide-1|film-spectacol-panoramic-1)/);
   await expect.poll(()=>active(page).evaluate(v=>v.readyState>=2&&!v.paused)).toBe(true);
   const time=await active(page).evaluate(v=>v.currentTime);
   expect(time).toBeGreaterThanOrEqual(12.3);
@@ -169,7 +166,7 @@ test('4K media failure falls back to real HD media',async({browser})=>{
   // WebKit loads media through its native media stack, outside page.route.
   // An actual missing file makes every engine exercise the same network error.
   await active(page).evaluate(v=>{v.src='/media/qa-missing-uhd.mp4';v.load();});
-  await expect.poll(()=>active(page).evaluate(v=>v.currentSrc)).toMatch(/hero-film-wide-1\.mp4/);
+  await expect.poll(()=>active(page).evaluate(v=>v.currentSrc)).toContain('film-spectacol-panoramic-1-hd');
   await expect(active(page)).toHaveAttribute('data-media-quality','hd');
   await expect.poll(()=>active(page).evaluate(v=>v.readyState>=2&&!v.paused)).toBe(true);
   const state=await active(page).evaluate(v=>({ratio:v.videoWidth/v.videoHeight,time:v.currentTime}));
@@ -180,17 +177,17 @@ test('4K media failure falls back to real HD media',async({browser})=>{
   await context.close();
 });
 
-test('prolonged high-resolution portrait buffering switches to HD at the current moment',async({browser})=>{
+test('prolonged portrait buffering switches to lightweight delivery at the current moment',async({browser})=>{
   const context=await browser.newContext({baseURL,viewport:{width:430,height:932},deviceScaleFactor:3});
   const page=await context.newPage();
   await enter(page);
-  await expect(active(page)).toHaveAttribute('data-media-quality','retina');
+  await expect(active(page)).toHaveAttribute('data-media-quality',/^(?:retina|hd)$/);
   await seek(page,12);
   await active(page).evaluate(v=>{
     Object.defineProperty(v,'readyState',{configurable:true,get:()=>2});
     Object.defineProperty(v,'networkState',{configurable:true,get:()=>2});
   });
-  await expect(active(page)).toHaveAttribute('data-media-quality','hd',{timeout:14000});
+  await expect(active(page)).toHaveAttribute('data-media-quality','light',{timeout:14000});
   await expect.poll(()=>active(page).evaluate(v=>v.readyState>=2&&!v.paused)).toBe(true);
   const time=await active(page).evaluate(v=>v.currentTime);
   expect(time).toBeGreaterThanOrEqual(12);

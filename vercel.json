@@ -1315,6 +1315,14 @@
       ]
     },
     {
+      "source": "/media/responsive/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/media/film-:asset*",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
       "source": "/media/startup-fireworks.mp4",
       "has": [
         {

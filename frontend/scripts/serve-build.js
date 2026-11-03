@@ -12,6 +12,7 @@ const ssrHandler = process.env.FIREART_SSR_PREVIEW === 'true'
   ? require('./seo-preview-handler.cjs')(contentOrigin) : null;
 
 const mimeTypes = {
+  ".avif": "image/avif",
   ".css": "text/css; charset=utf-8",
   ".gif": "image/gif",
   ".html": "text/html; charset=utf-8",

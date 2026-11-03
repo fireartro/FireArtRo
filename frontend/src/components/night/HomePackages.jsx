@@ -7,6 +7,7 @@ import useManagedContent from '@/hooks/useManagedContent';
 import { MEDIA } from '@/data/content';
 import { buildCategoryRanges, getCategoryLabel, getCategoryPhoto, isGalleryVisible } from '@/lib/categoryNavigation';
 import { homeImageProps } from '@/lib/homeImage';
+import ResponsiveImage from '@/components/site/ResponsiveImage';
 import '@/styles/home-package-selector.css';
 import { HOME_PACKAGE_IMAGE_IDS } from '@/lib/homeMediaSelection';
 import { frameContainerStyle } from '@/lib/imageFrame';
@@ -46,7 +47,7 @@ export default function HomePackages({geometryOnly=false}) {
       <nav className="fa-packages__grid" aria-label="Game de spectacole">
         {scenes.map((scene, index) => <Link key={scene.category} to={scene.href} className="fa-packages__category"
           data-package-category={scene.category} aria-label={'Vezi ' + scene.label} data-image-frame={scene.imageFrame ? 'card' : undefined} style={frameContainerStyle(scene.imageFrame,{minimum:true})}>
-          {!geometryOnly && <img className="image-frame-media" {...homeImageProps(scene.src)} sizes={scenes.length % 2 === 1 && index === scenes.length - 1 ? FULL_WIDTH_IMAGE_SIZES : GRID_IMAGE_SIZES} alt="" loading="lazy" decoding="async" />}
+          {!geometryOnly && <ResponsiveImage className="image-frame-media" {...homeImageProps(scene.src)} sizes={scenes.length % 2 === 1 && index === scenes.length - 1 ? FULL_WIDTH_IMAGE_SIZES : GRID_IMAGE_SIZES} alt="" loading="lazy" decoding="async" />}
           <div className="fa-packages__caption">
             <h3>{scene.label}</h3>
             <p>{scene.description}</p>

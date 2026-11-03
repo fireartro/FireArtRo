@@ -15,6 +15,7 @@ import { buildCategoryRanges, getCategoryLabel, isGalleryVisible } from "@/lib/c
 import "@/styles/night-gallery.css";
 import "@/styles/category-navigation.css";
 import ManagedPageMedia from "@/components/site/ManagedPageMedia";
+import ResponsiveImage from "@/components/site/ResponsiveImage";
 
 const GALLERY_CATEGORIES = ["Artificii de noapte", "Artificii de zi", "Drone show"];
 
@@ -272,11 +273,12 @@ export default function GalleryPage() {
                   }}
                 >
                   <button type="button" onClick={(event) => openPhoto(index, event.currentTarget)} aria-label={`Deschide ${item.title}`}>
-                    <img
+                    <ResponsiveImage
                       className="image-frame-media"
                       src={item.thumbnail || item.src}
+                      sizes="(max-width: 600px) calc(100vw - 48px), 320px"
                       alt={item.alt}
-                      loading={index < 8 ? 'eager' : 'lazy'}
+                      loading={index < 2 ? 'eager' : 'lazy'}
                       decoding="async"
                       onLoad={(event) => rememberRatio(item.id, event)}
                     />
