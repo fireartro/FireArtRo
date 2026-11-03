@@ -15,7 +15,7 @@ export const changedModules = (before, after) => after ? Object.keys(after).filt
 
 export function createDraftStore(request, getPublication = fetchPublishedContent) {
   let state = { draft: null, version: null, publishedContent: null, publishedRevisionId: null,
-    status: 'loading', dirty: false, errors: [], error: '', pendingUploads: 0 };
+    status: 'loading', dirty: false, errors: [], error: '', pendingUploads: 0, canUndo:false };
   let generation = 0;
   let operation = 0;
   let busy = false;
@@ -51,7 +51,7 @@ export function createDraftStore(request, getPublication = fetchPublishedContent
           emit({ ...publicPatch, status: incoming.version === state.version ? 'dirty' : 'conflict', error: incoming.version === state.version ? '' : 'Draftul a fost modificat într-o altă fereastră. Varianta ta este păstrată.' });
         } else {
           history = [];
-          emit({ ...incoming, ...publicPatch, status: 'saved', dirty: false, errors: [], error: '' });
+          emit({ ...incoming, ...publicPatch, status: 'saved', dirty: false, errors: [], error: '',canUndo:false });
         }
       } catch (error) {
         if (ticket !== operation) return;
@@ -63,14 +63,14 @@ export function createDraftStore(request, getPublication = fetchPublishedContent
       if (!state.draft || ['loading', 'publishing', 'restoring', 'expired'].includes(state.status)) return;
       history = [...history.slice(-19), state.draft];
       generation += 1;
-      emit({ draft: setContentPath(state.draft, path, value), dirty: true, errors: [], error: '',
+      emit({ draft: setContentPath(state.draft, path, value), dirty: true, errors: [], error: '',canUndo:true,
         status: state.status === 'conflict' ? 'conflict' : busy ? state.status : 'dirty' });
     },
     undo() {
       if (!history.length || busy) return;
       const previous = history.pop();
       generation += 1;
-      emit({ draft: previous, dirty: true, errors: [], error: '', status: state.status === 'conflict' ? 'conflict' : 'dirty' });
+      emit({ draft: previous, dirty: true, errors: [], error: '',canUndo:history.length>0, status: state.status === 'conflict' ? 'conflict' : 'dirty' });
     },
     setPendingUploads(count) { emit({ pendingUploads: Math.max(0, typeof count === 'function' ? count(state.pendingUploads) : count) }); },
     async save() {
@@ -109,7 +109,7 @@ export function createDraftStore(request, getPublication = fetchPublishedContent
       try {
         const result = await request(`/api/admin/content/revisions/${encodeURIComponent(id)}/restore`, { method: 'POST', body: JSON.stringify({ version: state.version }) });
         history = [];
-        emit({ ...accept(result), status: 'saved', dirty: false, errors: [] });
+        emit({ ...accept(result), status: 'saved', dirty: false, errors: [],canUndo:false });
         return true;
       } catch (error) { failure(error); return false; }
       finally { busy = false; }

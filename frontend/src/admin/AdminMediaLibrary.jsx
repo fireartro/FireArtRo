@@ -23,6 +23,12 @@ export default function AdminMediaLibrary() {
   const [hasMore, setHasMore] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
   const [pageError, setPageError] = useState('');
+  const [query,setQuery]=useState('');
+  const [fileType,setFileType]=useState('');
+  const [fileState,setFileState]=useState('');
+  const visible=items.filter(item=>(!fileType || item.content_type?.startsWith(`${fileType}/`)) &&
+    (!fileState || (fileState === 'used' ? item.usage_count>0 : fileState === 'unused' ? !item.usage_count : item.state === fileState)) &&
+    `${item.filename} ${item.alt_text}`.toLocaleLowerCase('ro-RO').includes(query.trim().toLocaleLowerCase('ro-RO')));
   const load = useCallback(async () => {
     if (loadingPage.current) return;
     loadingPage.current = true; setStatus('loading'); setError(''); setPageError('');
@@ -80,7 +86,12 @@ export default function AdminMediaLibrary() {
     </form>
     {error && <div role="alert" className="cms-notice is-error">{error}<button className="admin-button" onClick={load}>Reîncarcă</button></div>}
     {status === 'loading' && <p role="status">Se încarcă biblioteca…</p>}
-    <div className="cms-media-grid">{items.map(item => <MediaCard key={item.id} item={item} request={request} attached={draft.mediaItems.some(media => media.id === item.id)} onAttach={() => attach(item)} onDeleted={() => { nextOffset.current = Math.max(0, nextOffset.current - 1); setItems(current => current.filter(value => value.id !== item.id)); }} onUpdated={next => setItems(current => current.map(value => value.id === next.id ? next : value))} />)}</div>
+    <div className="cms-library-filters"><label>Caută fișiere<input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Nume sau descriere"/></label>
+      <label>Tip<select aria-label="Tipul fișierului" value={fileType} onChange={event=>setFileType(event.target.value)}><option value="">Toate fișierele</option><option value="image">Imagini</option><option value="video">Videoclipuri</option></select></label>
+      <label>Stare<select aria-label="Starea fișierului" value={fileState} onChange={event=>setFileState(event.target.value)}><option value="">Toate stările</option><option value="used">Folosite pe site</option><option value="unused">Neasociate</option><option value="pending">Așteaptă confirmarea</option><option value="deleting">Ștergere în curs</option></select></label>
+      <span role="status">{visible.length} din {items.length} fișiere încărcate</span></div>
+    <div className="cms-media-grid">{visible.map(item => <MediaCard key={item.id} item={item} request={request} attached={draft.mediaItems.some(media => media.id === item.id)} onAttach={() => attach(item)} onDeleted={() => { nextOffset.current = Math.max(0, nextOffset.current - 1); setItems(current => current.filter(value => value.id !== item.id)); }} onUpdated={next => setItems(current => current.map(value => value.id === next.id ? next : value))} />)}</div>
+    {!visible.length && status === 'ready' && <p className="cms-empty-state">Niciun fișier pentru aceste filtre.{hasMore ? ' Poți încărca următoarea pagină de fișiere.' : ''}</p>}
     {pageError && <p role="alert" className="cms-notice is-error">{pageError}</p>}
     {hasMore && <button type="button" className="admin-button" disabled={pageLoading || status !== 'ready'} onClick={loadMore}>{pageLoading ? 'Se încarcă…' : 'Încarcă mai multe'}</button>}
   </section>;

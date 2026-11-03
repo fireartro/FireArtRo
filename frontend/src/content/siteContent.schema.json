@@ -396,6 +396,47 @@
       "title": "HeroContent",
       "type": "object"
     },
+    "HomeCategoryVisual": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "enum": [
+            "Artificii de zi",
+            "Artificii de noapte",
+            "Show drone",
+            "Drone + artificii",
+            "Efecte speciale",
+            "Corporate / Festival"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "mediaId": {
+          "maxLength": 80,
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+          "title": "Mediaid",
+          "type": "string"
+        },
+        "imageFrame": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResponsiveImageFrame"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "category",
+        "mediaId"
+      ],
+      "title": "HomeCategoryVisual",
+      "type": "object"
+    },
     "HomePageContent": {
       "additionalProperties": false,
       "properties": {
@@ -424,6 +465,22 @@
           "maxItems": 12,
           "title": "Promoslides",
           "type": "array"
+        },
+        "packageVisuals": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/HomeCategoryVisual"
+              },
+              "maxItems": 6,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Packagevisuals"
         }
       },
       "required": [
@@ -435,6 +492,57 @@
         "brief"
       ],
       "title": "HomePageContent",
+      "type": "object"
+    },
+    "ImageFrame": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Y",
+          "type": "number"
+        },
+        "zoom": {
+          "default": 1,
+          "maximum": 3,
+          "minimum": 1,
+          "title": "Zoom",
+          "type": "number"
+        },
+        "fit": {
+          "default": "cover",
+          "enum": [
+            "cover",
+            "contain"
+          ],
+          "title": "Fit",
+          "type": "string"
+        },
+        "ratio": {
+          "anyOf": [
+            {
+              "maximum": 3,
+              "minimum": 0.4,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ratio"
+        }
+      },
+      "title": "ImageFrame",
       "type": "object"
     },
     "InteriorPageContent": {
@@ -648,9 +756,9 @@
             "Efecte speciale",
             "Corporate / Festival",
             "Festival",
-            "Nunt\u0103",
+            "Nuntă",
             "Corporate",
-            "Promo\u021bii"
+            "Promoții"
           ],
           "title": "Category",
           "type": "string"
@@ -769,6 +877,17 @@
           ],
           "default": null,
           "title": "Aspectratio"
+        },
+        "imageFrame": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResponsiveImageFrame"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -907,6 +1026,30 @@
           "pattern": "^$|^[a-z0-9][a-z0-9-]{0,79}$",
           "title": "Imagemediaid",
           "type": "string"
+        },
+        "imageFrame": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResponsiveImageFrame"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "mediaSelection": {
+          "anyOf": [
+            {
+              "const": "manual",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mediaselection"
         },
         "highlights": {
           "items": {
@@ -1058,6 +1201,30 @@
           "minLength": 1,
           "title": "Ctahref",
           "type": "string"
+        },
+        "imageFrame": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResponsiveImageFrame"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "mediaSelection": {
+          "anyOf": [
+            {
+              "const": "manual",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mediaselection"
         }
       },
       "required": [
@@ -1069,6 +1236,38 @@
         "ctaHref"
       ],
       "title": "PromoSlide",
+      "type": "object"
+    },
+    "ResponsiveImageFrame": {
+      "additionalProperties": false,
+      "properties": {
+        "desktop": {
+          "$ref": "#/$defs/ImageFrame"
+        },
+        "tablet": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageFrame"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageFrame"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "ResponsiveImageFrame",
       "type": "object"
     },
     "ReviewSettings": {

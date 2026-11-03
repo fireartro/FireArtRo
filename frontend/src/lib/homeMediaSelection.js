@@ -24,7 +24,7 @@ export function selectHomeGallery(slides, items) {
     let media = byId.get(slide.mediaId);
     if (slide.type === 'youtube') return [{ ...slide, media }];
     if (!media) return [];
-    if (used.has(pathOf(media.src)) || !isGalleryVisible(media)) {
+    if (slide.mediaSelection !== 'manual' && (used.has(pathOf(media.src)) || !isGalleryVisible(media))) {
       const fallbackId = galleryImageIds[media.category];
       const fallback = byId.get(fallbackId) || originals.get(fallbackId);
       media = fallback && isGalleryVisible(fallback) && !used.has(pathOf(fallback.src)) ? fallback

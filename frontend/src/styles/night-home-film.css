@@ -201,6 +201,7 @@
 .fa-work__card figure {
   position: relative;
   height: clamp(22rem, min(64dvh, 42vw), 48rem);
+  --image-default-height: clamp(22rem, min(64dvh, 42vw), 48rem);
   overflow: hidden;
   border-radius: 0;
   background: #0b1119;
@@ -1020,6 +1021,7 @@
 
   .fa-work__card figure {
     height: min(58svh, 34rem);
+    --image-default-height: min(58svh, 34rem);
     border-radius: 0;
   }
 
@@ -1260,6 +1262,7 @@
 
   .fa-work__card figure {
     height: 54svh;
+    --image-default-height: 54svh;
   }
 
   .fa-team__heading {
@@ -1297,6 +1300,8 @@
 
   .fa-work__card figure {
     width: min(50vw, 28rem, calc((100svh - 10.5rem) * 1.5));
+    --image-default-height:auto;
+    --image-default-ratio:3/2;
     height: auto;
     aspect-ratio: 3 / 2;
     margin-inline: auto;
@@ -1335,6 +1340,8 @@
 
   .fa-work__card figure {
     width: min(68vw, 48rem, calc((100svh - 10rem) * 1.5));
+    --image-default-height:auto;
+    --image-default-ratio:3/2;
     height: auto;
     aspect-ratio: 3 / 2;
     margin-inline: auto;
@@ -1423,7 +1430,7 @@
 @media (min-width: 1600px) {
   .nr-home { --nr-gallery-panel-width: min(78vw, 130rem); }
   .fa-work__card-inner { width: min(92%, clamp(90rem, 68vw, 114rem)); }
-  .fa-work__card figure { height: clamp(26rem, 56dvh, 62rem); }
+  .fa-work__card figure { height: clamp(26rem, 56dvh, 62rem); --image-default-height:clamp(26rem,56dvh,62rem); }
   .fa-about__copy { max-width: min(100%, 75rem); }
 }
 

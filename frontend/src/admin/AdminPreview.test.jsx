@@ -25,7 +25,7 @@ jest.mock('@/pages/FaqPage', () => { mockLoadedPages.push('faq'); return () => n
 jest.mock('@/pages/ContactPage', () => { mockLoadedPages.push('contact'); return () => null; });
 jest.mock('@/pages/BlogPage', () => { mockLoadedPages.push('blog'); return () => null; });
 
-test('loads preview pages only when selected, preserving the latest draft and preview controls', async () => {
+test('uses a separate responsive viewport and transfers the latest draft only to its own same-origin frame', async () => {
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const container = document.createElement('div');
   const root = createRoot(container);
@@ -41,27 +41,35 @@ test('loads preview pages only when selected, preserving the latest draft and pr
     expect(document.querySelector('.cms-preview')).toBeNull();
 
     await render(true);
-    expect(mockLoadedPages).toEqual(['home']);
-    expect(document.querySelector('.cms-preview-frame').textContent).toBe('Draft: Unsaved draft');
-    expect(document.querySelector('.cms-preview-frame').hasAttribute('inert')).toBe(true);
+    expect(mockLoadedPages).toEqual([]);
+    const frame=document.querySelector('iframe[title="Previzualizare site"]');
+    expect(frame).not.toBeNull();
+    expect(frame.getAttribute('src')).toBe('/admin?previzualizare=1&pagina=%2F');
+    expect(frame.style.width).toBe('1440px');
+    const send=jest.spyOn(frame.contentWindow,'postMessage').mockImplementation(()=>{});
+    await act(async()=>window.dispatchEvent(new MessageEvent('message',{origin:window.location.origin,source:window,data:{type:'fireart:preview-ready'}})));
+    expect(send).not.toHaveBeenCalled();
+    await act(async()=>window.dispatchEvent(new MessageEvent('message',{origin:window.location.origin,source:frame.contentWindow,data:{type:'fireart:preview-ready'}})));
+    expect(send).toHaveBeenLastCalledWith({type:'fireart:preview-content',content:mockDraft},window.location.origin);
+    expect(document.querySelector('.cms-preview-frame iframe').tabIndex).toBe(0);
 
     mockDraft = { siteDetails: { name: 'Latest draft edit' } };
     await render(true);
-    expect(document.querySelector('.cms-preview-frame').textContent).toBe('Draft: Latest draft edit');
+    expect(send).toHaveBeenLastCalledWith({type:'fireart:preview-content',content:mockDraft},window.location.origin);
     await click('Galerie');
-    expect(mockLoadedPages).toEqual(['home', 'gallery']);
-    expect(document.querySelector('.cms-preview-frame').textContent).toBe('Gallery: Latest draft edit');
+    expect(document.querySelector('iframe').getAttribute('src')).toBe('/admin?previzualizare=1&pagina=%2Fgalerie');
     await click('Telefon');
     expect(document.querySelector('.cms-preview-frame').classList.contains('is-phone')).toBe(true);
+    expect(document.querySelector('iframe').style.width).toBe('390px');
     await click('Închide');
     expect(onClose).toHaveBeenCalledTimes(1);
 
     await render(false);
     expect(document.querySelector('.cms-preview')).toBeNull();
     await render(true);
-    expect(document.querySelector('.cms-preview-frame').textContent).toBe('Gallery: Latest draft edit');
+    expect(document.querySelector('iframe').getAttribute('src')).toContain('pagina=%2Fgalerie');
     expect(document.querySelector('.cms-preview-frame').classList.contains('is-phone')).toBe(true);
-    expect(mockLoadedPages).toEqual(['home', 'gallery']);
+    expect(mockLoadedPages).toEqual([]);
   } finally {
     await act(async () => root.unmount());
     delete global.IS_REACT_ACT_ENVIRONMENT;
@@ -126,13 +134,13 @@ describe('modal lifecycle', () => {
     expect(dialog().contains(document.activeElement)).toBe(true);
     expect(dialog().getAttribute('aria-modal')).toBe('true');
     expect(document.getElementById(dialog().getAttribute('aria-labelledby')).textContent).toBe('Previzualizare draft');
-    expect(document.querySelector('.cms-preview-frame').hasAttribute('inert')).toBe(true);
+    expect(document.querySelector('.cms-preview-frame iframe').tabIndex).toBe(0);
   });
 
   test('wraps Tab and Shift+Tab between the first and last usable controls', async () => {
     await render();
     const first = button('Acasă');
-    const last = button('Închide');
+    const last = dialog().querySelector('iframe');
     last.focus();
 
     expect(press('Tab').defaultPrevented).toBe(true);
@@ -151,7 +159,7 @@ describe('modal lifecycle', () => {
     expect(document.activeElement).toBe(document.body);
 
     expect(press('Tab', document.body, shift).defaultPrevented).toBe(true);
-    expect(document.activeElement).toBe(button(shift ? 'Închide' : 'Acasă'));
+    expect(document.activeElement).toBe(shift ? dialog().querySelector('iframe') : button('Acasă'));
   });
 
   test('recovers programmatically escaped focus to the last focused modal control', async () => {
@@ -167,13 +175,14 @@ describe('modal lifecycle', () => {
     await render();
     const previewButton = document.createElement('button');
     previewButton.textContent = 'Read-only preview action';
+    previewButton.setAttribute('inert','');
     document.querySelector('.cms-preview-frame').append(previewButton);
     button('Galerie').focus();
     previewButton.focus();
     expect(document.activeElement).toBe(button('Galerie'));
 
     button('Acasă').disabled = true;
-    button('Închide').focus();
+    dialog().querySelector('iframe').focus();
     press('Tab');
     expect(document.activeElement).toBe(button('Galerie'));
   });
@@ -181,6 +190,7 @@ describe('modal lifecycle', () => {
   test('uses the dialog as a focus fallback when no usable controls remain', async () => {
     await render();
     dialog().querySelectorAll('button').forEach(control => { control.disabled = true; });
+    dialog().querySelector('iframe').tabIndex=-1;
     opener.focus();
 
     expect(document.activeElement).toBe(dialog());

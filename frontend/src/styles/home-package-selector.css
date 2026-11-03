@@ -55,6 +55,7 @@
   isolation: isolate;
   min-width: 0;
   min-height: 22rem;
+  --image-default-minimum:22rem;
   overflow: hidden;
   padding: 1.625rem;
   border: 1px solid #8dd3ff26;
@@ -190,6 +191,7 @@
 
   .fa-packages__category {
     min-height: 21rem;
+    --image-default-minimum:21rem;
     padding: 1.25rem;
   }
 
@@ -218,6 +220,7 @@
 
   .fa-packages__category {
     min-height: 20rem;
+    --image-default-minimum:20rem;
   }
 
   .fa-packages__caption > p {
@@ -232,6 +235,7 @@
 
   .fa-packages__category {
     min-height: 18rem;
+    --image-default-minimum:18rem;
   }
 }
 

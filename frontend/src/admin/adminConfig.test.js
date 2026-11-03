@@ -68,6 +68,7 @@ describe("Admin managed-content configuration", () => {
     expect(module.template.id).toBeTruthy();
     expect(next.id).toMatch(new RegExp(`^${module.template.id}-`));
     module.fields.forEach((field) => {
+      if(field.type === 'imageFrame') return; // Optional placement metadata is absent from legacy defaults.
       expect(Object.prototype.hasOwnProperty.call(module.template, field.key)).toBe(true);
     });
   });
@@ -82,9 +83,10 @@ describe("Admin managed-content configuration", () => {
         expect(new Set(value.map((item) => item.id)).size).toBe(value.length);
         return;
       }
-      const optionalFields = definition.fields.filter(field => field.key === 'shareCapital');
+      const optionalKeys = ['shareCapital','imageFrame','packageVisuals'];
+      const optionalFields = definition.fields.filter(field => optionalKeys.includes(field.key));
       const definedFields = definition.fields.filter(field => !optionalFields.includes(field));
-      expect(definedFields.map((field) => field.key).sort()).toEqual(Object.keys(value).filter(key => key !== 'shareCapital').sort());
+      expect(definedFields.map((field) => field.key).sort()).toEqual(Object.keys(value).filter(key => !optionalKeys.includes(key)).sort());
       definition.fields.forEach((field) => {
         if (["object", "collection"].includes(field.type)) inspect(field, value[field.key]);
         if (field.key.endsWith("MediaId") || field.key === "mediaId") expect(field.type).toBe("mediaId");

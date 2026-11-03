@@ -4,6 +4,7 @@ import "@/App.css";
 // stable when pages and Admin previews load in different orders.
 import "@/styles/night-reviews.css";
 import "@/styles/night-blog.css";
+import "@/styles/image-frame.css";
 import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
 import CookieConsent from "@/components/site/CookieConsent";
 import AnalyticsLoader from "@/components/site/AnalyticsLoader";
@@ -28,6 +29,7 @@ const FaqPage = lazy(loadFaq);
 const ContactPage = lazy(loadContact);
 const LegalPage = lazy(loadLegal);
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
+const AdminPreviewCanvas = lazy(() => import('@/admin/AdminPreviewCanvas'));
 const BlogPage = lazy(loadBlog);
 const BlogArticlePage = lazy(loadArticle);
 const ServicePage = lazy(loadService);
@@ -169,6 +171,9 @@ function App() {
     };
   }, []);
 
+  if(typeof window !== 'undefined' && window.location.pathname === '/admin' && new URLSearchParams(window.location.search).get('previzualizare') === '1') {
+    return <Suspense fallback={<div className="route-loading" role="status">Se încarcă previzualizarea…</div>}><AdminPreviewCanvas/></Suspense>;
+  }
   return (
     <div className="App">
       <BrowserRouter>

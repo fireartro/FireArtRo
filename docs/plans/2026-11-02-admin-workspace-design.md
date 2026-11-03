@@ -61,7 +61,7 @@ Interfață de lucru, cu text lizibil, spații de 4/8 px, separatoare discrete, 
 - [x] Inspecția structurii actuale și a modului în care sunt alese imaginile.
 - [x] Propunere concretă cu alternative și criterii de acceptare.
 - [x] Confirmarea direcției și a limitelor intervenției.
-- [ ] Plan de implementare, schemă compatibilă și teste de persistență.
-- [ ] Editor de încadrare, selector media și aplicarea setărilor pe site.
-- [ ] Compactarea adminului și verificarea completă a fluxurilor.
+- [x] Plan de implementare, schemă compatibilă și teste de persistență.
+- [x] Editor de încadrare, selector media și aplicarea setărilor pe site.
+- [x] Compactarea adminului și verificarea completă a fluxurilor.
 - [ ] Build, review vizual, commit și publicare verificate.

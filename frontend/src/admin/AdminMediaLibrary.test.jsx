@@ -23,6 +23,23 @@ let container;
 let root;
 const button = name => [...container.querySelectorAll('button')].find(item => item.textContent === name);
 
+test('library search and file-type filters preserve source records without extra requests',async()=>{
+  const request=jest.fn(async()=>[
+    {...pending,id:'photo',filename:'drone.webp',content_type:'image/webp'},
+    {...pending,id:'film',filename:'drone.mp4',content_type:'video/mp4'},
+  ]);
+  useAdminSession.mockReturnValue({request,csrfToken:'synthetic'});
+  useAdminDraft.mockReturnValue({draft:{mediaItems:[]},update:jest.fn(),setPendingUploads:jest.fn()});
+  container=document.createElement('div');document.body.append(container);root=createRoot(container);
+  await act(async()=>root.render(<AdminMediaLibrary/>));
+  const filter=container.querySelector('select[aria-label="Tipul fișierului"]');
+  expect(filter).not.toBeNull();
+  await act(async()=>{filter.value='video';filter.dispatchEvent(new Event('change',{bubbles:true}));});
+  expect(container.querySelectorAll('.cms-media-card')).toHaveLength(1);
+  expect(container.textContent).toContain('drone.mp4');
+  expect(request).toHaveBeenCalledTimes(1);
+});
+
 afterEach(async () => {
   if (root) await act(async () => root.unmount());
   root = null;
