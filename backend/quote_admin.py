@@ -228,10 +228,12 @@ def _notification_policy(delivery, now):
     if delivery.state == "sent":
         return False, False
     now = _utc(now)
-    first = getattr(delivery, "first_attempt_at", None) or getattr(delivery, "updated_at", None)
+    attempt = getattr(delivery, "first_attempt_at", None)
+    first = attempt or getattr(delivery, "updated_at", None)
+    unattempted = attempt is None and getattr(delivery, "error_code", None) == "not_configured"
     recovery_required = bool(
         first and now - _utc(first) >= NOTIFICATION_RETRY_WINDOW
-        and getattr(delivery, "error_code", None) != "not_configured"
+        and not unattempted
     )
     if recovery_required:
         return False, True
@@ -268,6 +270,7 @@ class QuoteDelivery(EmailDelivery):
     lease_token: str | None = None
     lease_expires_at: datetime | None = None
     first_attempt_at: datetime | None = None
+    first_attempt_started_by_lease: bool = False
     template_version: Literal["legacy", "branded"] = "legacy"
 
     @field_validator("lease_expires_at", "first_attempt_at")
@@ -310,17 +313,19 @@ class MongoQuoteDeliveryRepository(MongoEmailDeliveryRepository):
         query = {"id": delivery_id, "kind": kind, "state": delivery.state,
                  "updated_at": document["updated_at"], "lease_token": document.get("lease_token")}
         first_attempt = delivery.first_attempt_at
+        first_on_lease = first_attempt is None and (unstarted or delivery.error_code == "not_configured")
         template_version = delivery.template_version
         if first_attempt is None:
-            first_attempt = now if unstarted or delivery.error_code == "not_configured" else delivery.updated_at
-            if kind == "quote_notification" and (unstarted or delivery.error_code == "not_configured"):
+            first_attempt = now if first_on_lease else delivery.updated_at
+            if kind == "quote_notification" and first_on_lease:
                 # Resend rejects a different payload for an already used idempotency key.
                 template_version = "branded"
         claimed = await self.collection.find_one_and_update(
             query,
             {"$set": {"state": "pending", "error_code": None,
                       "lease_token": str(uuid.uuid4()), "lease_expires_at": now + NOTIFICATION_LEASE,
-                      "first_attempt_at": first_attempt, "template_version": template_version, "updated_at": now}},
+                      "first_attempt_at": first_attempt, "first_attempt_started_by_lease": first_on_lease,
+                      "template_version": template_version, "updated_at": now}},
             return_document=ReturnDocument.AFTER, projection=QUOTE_DELIVERY_FIELDS, maxTimeMS=2000,
         )
         return QuoteDelivery.model_validate(claimed) if claimed else None
@@ -332,11 +337,15 @@ class MongoQuoteDeliveryRepository(MongoEmailDeliveryRepository):
         changes = {"state": "failed" if error_code else "sent", "error_code": error_code,
                    "resend_email_id": resend_email_id, "sent_at": None if error_code else now,
                    "updated_at": now}
+        query = {"id": delivery_id, "kind": kind, "state": "pending", "lease_token": lease_token}
         if error_code == "not_configured":
-            changes["first_attempt_at"] = None  # transport made no provider request
+            owner = await self.collection.find_one(query, {"first_attempt_started_by_lease": 1}, max_time_ms=2000)
+            if owner is not None and owner.get("first_attempt_started_by_lease"):
+                # This lease made no provider request, and no earlier lease may have sent it.
+                changes["first_attempt_at"] = None
         document = await self.collection.find_one_and_update(
-            {"id": delivery_id, "kind": kind, "state": "pending", "lease_token": lease_token},
-            {"$set": changes, "$unset": {"lease_token": "", "lease_expires_at": ""}},
+            query,
+            {"$set": changes, "$unset": {"lease_token": "", "lease_expires_at": "", "first_attempt_started_by_lease": ""}},
             return_document=ReturnDocument.AFTER, projection=QUOTE_DELIVERY_FIELDS, maxTimeMS=2000,
         )
         return QuoteDelivery.model_validate(document) if document else None

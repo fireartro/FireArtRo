@@ -23,6 +23,7 @@ from test_quote_admin import quote
 from test_quote_recovery import DeliveryCollection
 
 from quote_admin import MongoQuoteDeliveryRepository
+from resend_email import ResendError
 
 REPLY = {"reply_id": "11111111-1111-4111-8111-111111111111", "text": "Oferta de test <script>"}
 
@@ -97,6 +98,8 @@ async def test_quote_reply_reserves_provider_call_and_cannot_repeat_after_uncert
             if provider_calls == 1:
                 accepted.set()
                 await asyncio.Future()  # response lost after the provider accepted it
+            if provider_calls == 2:
+                raise ResendError("not_configured")  # configuration removed during recovery
             return "duplicate-provider-id"
 
     service = InboundReplyService(Provider(), replies, deliveries, object())
@@ -111,10 +114,13 @@ async def test_quote_reply_reserves_provider_call_and_cannot_repeat_after_uncert
         first.cancel()
         with pytest.raises(asyncio.CancelledError):
             await first
+    now += timedelta(minutes=3)
+    with pytest.raises(InboundReplyError, match="not_configured"):
+        await service.reply(target, **REPLY)
     now += timedelta(days=2)
     with pytest.raises(InboundReplyError):
         await service.reply(target, **REPLY)
-    assert provider_calls == 1
+    assert provider_calls == 2
 
 
 @pytest.mark.asyncio
