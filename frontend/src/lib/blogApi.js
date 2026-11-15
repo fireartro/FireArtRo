@@ -84,11 +84,15 @@ export function deleteAdminPost(request, id, version) {
 }
 
 export async function uploadAdminCover(request, preparedImage) {
-  const blob = await fetch(preparedImage.dataUrl).then((response) => response.blob());
+  const encoded = /^data:(image\/(webp|png));base64,([A-Za-z0-9+/=]+)$/.exec(preparedImage.dataUrl || "");
+  if (!encoded) throw new Error("Imaginea optimizată nu a putut fi citită.");
+  const [, mime, extension, base64] = encoded;
+  // Decode the canvas output directly; Admin's CSP disallows fetch(data:).
+  const blob = new Blob([Uint8Array.from(atob(base64), (character) => character.charCodeAt(0))], { type: mime });
   const form = new FormData();
   const baseName = String(preparedImage.originalName || "coperta")
     .replace(/\.[^.]+$/, "");
-  form.append("file", blob, `${baseName}.webp`);
+  form.append("file", blob, baseName + "." + extension);
   return request("/api/admin/blog/media", {
     method: "POST",
     body: form,
