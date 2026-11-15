@@ -141,18 +141,19 @@ test("article update encodes the id and deletion handles an empty 204 through th
   }));
 });
 
-test("cover uploads send WebP multipart data with CSRF and let the browser set its boundary", async () => {
+test("cover uploads work when CSP rejects data URL fetches and send only the multipart API request", async () => {
   const blob = new Blob(["RIFF1234WEBP"], { type: "image/webp" });
-  global.fetch = jest.fn()
-    .mockResolvedValueOnce({ blob: async () => blob })
-    .mockResolvedValueOnce(jsonResponse({ id: "507f1f77bcf86cd799439011" }, 201));
+  global.fetch = jest.fn(async (url) => {
+    if (url.startsWith("data:")) throw new TypeError("Blocked by connect-src");
+    return jsonResponse({ id: "507f1f77bcf86cd799439011" }, 201);
+  });
 
   await expect(uploadAdminCover(sessionRequest, {
     originalName: "Copertă.jpg",
     dataUrl: "data:image/webp;base64,UklGRjEyMzRXRUJQ",
   })).resolves.toEqual({ id: "507f1f77bcf86cd799439011" });
-  expect(global.fetch).toHaveBeenNthCalledWith(1, "data:image/webp;base64,UklGRjEyMzRXRUJQ");
-  const [url, options] = global.fetch.mock.calls[1];
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  const [url, options] = global.fetch.mock.calls[0];
   expect(url).toBe("/api/admin/blog/media");
   expect(Object.keys(options.headers || {})).not.toContain("X-Admin-Key");
   expect(options).toEqual(expect.objectContaining({

@@ -211,16 +211,14 @@ test("cover upload uses the session and changes only the editor until the articl
   jest.spyOn(imageUtils, "prepareAdminImage").mockResolvedValue({
     dataUrl: "data:image/webp;base64,UklGRjEyMzRXRUJQ", originalName: "coperta.jpg",
   });
-  global.fetch
-    .mockResolvedValueOnce({ blob: async () => new Blob(["RIFF1234WEBP"], { type: "image/webp" }) })
-    .mockResolvedValueOnce(response({ id: "507f1f77bcf86cd799439011" }, 201));
+  global.fetch.mockResolvedValueOnce(response({ id: "507f1f77bcf86cd799439011" }, 201));
   const upload = container.querySelector('input[type="file"]');
   Object.defineProperty(upload, "files", { value: [new File(["image"], "coperta.jpg", { type: "image/jpeg" })] });
   await act(async () => upload.dispatchEvent(new Event("change", { bubbles: true })));
-  expect(global.fetch.mock.calls[3]).toEqual(["/api/admin/blog/media", expect.objectContaining({
+  expect(global.fetch.mock.calls[2]).toEqual(["/api/admin/blog/media", expect.objectContaining({
     method: "POST", credentials: "same-origin", headers: { "X-CSRF-Token": "csrf-blog-session" }, body: expect.any(FormData),
   })]);
-  expect(global.fetch).toHaveBeenCalledTimes(4);
+  expect(global.fetch).toHaveBeenCalledTimes(3);
   expect(container.querySelector(".admin-blog-cover img").getAttribute("src")).toBe("/api/blog/media/507f1f77bcf86cd799439011");
   expect(field("Text alternativ").required).toBe(true);
 });

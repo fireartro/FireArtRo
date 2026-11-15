@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Plus, Save, Trash2 } from "lucide-react";
 import { useAdminSession } from "@/admin/AdminSessionContext";
+import { useSectionExitGuard } from "./useSectionExitGuard";
 import { prepareAdminImage } from "@/admin/imageUtils";
 import {
   blogMediaUrl,
@@ -41,7 +42,7 @@ const errorMessage = (error) => {
   return error?.message || "Operațiunea nu a putut fi finalizată.";
 };
 
-export default function AdminBlogPanel() {
+export default function AdminBlogPanel({ onExitState }) {
   const { request, status } = useAdminSession();
   const [loadState, setLoadState] = useState("loading");
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -52,6 +53,13 @@ export default function AdminBlogPanel() {
   const [tone, setTone] = useState("neutral");
   const [busy, setBusy] = useState(false);
   const generation = useRef(0);
+  const lastSaved = posts.find((article) => article.id === selectedId) || EMPTY_ARTICLE;
+  const dirty = Boolean(draft && Object.keys(EMPTY_ARTICLE).some((key) => draft[key] !== lastSaved[key]));
+  useSectionExitGuard(onExitState, { busy, dirty });
+
+  const allowDraftReplacement = () => !busy && (
+    !dirty || window.confirm("Articolul are modificări nesalvate. Schimbi articolul fără să le salvezi?")
+  );
 
   const setNotice = (nextMessage, nextTone = "neutral") => {
     setMessage(nextMessage);
@@ -90,12 +98,14 @@ export default function AdminBlogPanel() {
   }, [request, status, loadAttempt]);
 
   const newArticle = () => {
+    if (!allowDraftReplacement()) return;
     setSelectedId("");
     setDraft({ ...EMPTY_ARTICLE });
     setNotice("");
   };
 
   const selectArticle = (article) => {
+    if (article.id === selectedId || !allowDraftReplacement()) return;
     setSelectedId(article.id);
     setDraft({ ...article });
     setNotice("");

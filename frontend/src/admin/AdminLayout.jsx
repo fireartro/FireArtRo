@@ -17,9 +17,11 @@ import AdminMediaLibrary from './AdminMediaLibrary';
 import AdminIntegrations from './AdminIntegrations';
 import AdminMigrationPanel from './AdminMigrationPanel';
 import AdminFeedback from './AdminFeedback';
+import { AdminHistoryGuard } from './AdminHistoryRouter';
 import { CMS_DEFAULTS } from '@/data/cmsDefaults';
 
 const special = new Set(['dashboard', 'revisions', 'blog', 'quotes', 'inbox', 'media', 'integrations']);
+const knownSections = new Set([...special, ...MODULE_ORDER]);
 const groups = [
   ['Pagini', ['homePage', 'galleryPage', 'packagesPage', 'faqPage', 'contactPage', 'blogPage']],
   ['Conținut', ['media', 'mediaItems', 'packages', 'faqs', 'partners', 'blog', 'testimonials']],
@@ -46,8 +48,31 @@ export default function AdminLayout() {
   const [menu, setMenu] = useState(false);
   const [publish, setPublish] = useState(false);
   const [preview, setPreview] = useState(false);
-  const section = params.get('sectiune') || 'dashboard';
-  const choose = key => { const next = new URLSearchParams(params); next.set('sectiune', key); setParams(next); setMenu(false); };
+  const [exitState, setExitState] = useState('ready');
+  const [exitNotice, setExitNotice] = useState(false);
+  const requestedSection = params.get('sectiune');
+  const section = knownSections.has(requestedSection) ? requestedSection : 'dashboard';
+  const linkedMessage = params.get('mesaj');
+  const operationBusy = exitState === 'busy' || draft.pendingUploads > 0;
+  const allowExit = () => {
+    if (operationBusy) { setExitNotice(true); return false; }
+    return exitState !== 'dirty' || window.confirm('Ai modificări nesalvate în această secțiune. Pleci fără să le salvezi?');
+  };
+  const choose = key => {
+    if (!knownSections.has(key)) return;
+    if (key === section) { setMenu(false); return; }
+    if (!allowExit()) return;
+    setParams({ sectiune: key });
+    setMenu(false);
+  };
+  const signOut = () => { if (allowExit()) logout(); };
+  useEffect(() => {
+    if (!operationBusy) setExitNotice(false);
+    if (!operationBusy && exitState !== 'dirty') return undefined;
+    const warn = event => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [operationBusy, exitState]);
   useEffect(() => {
     const wide = window.matchMedia('(min-width: 1051px)');
     const closeOnDesktop = () => { if (wide.matches) setMenu(false); };
@@ -59,16 +84,17 @@ export default function AdminLayout() {
   if (!draft.draft) return <main className="admin-shell admin-auth-status"><p role={draft.error ? 'alert' : 'status'}>{draft.error || 'Se încarcă editorul…'}</p>{draft.error && <button className="admin-button" onClick={draft.retry}>Încearcă din nou</button>}</main>;
   return <main className="admin-shell cms-shell">
     <header className="admin-appbar"><div className="admin-appbar-brand"><Dialog.Root open={menu} onOpenChange={setMenu}><Dialog.Trigger className="admin-mobile-menu" aria-label="Deschide secțiunile"><Menu /></Dialog.Trigger>
-      <Dialog.Portal><Dialog.Overlay className="cms-dialog-overlay" /><Dialog.Content className="admin-mobile-navigation admin-shell" aria-describedby={undefined}><Dialog.Title>Secțiuni administrare</Dialog.Title><Navigation section={section} choose={choose}/><div className="cms-drawer-actions"><button type="button" className="admin-button" onClick={logout}><LogOut aria-hidden="true"/>Ieși din cont</button><Dialog.Close className="admin-button" aria-label="Închide secțiunile">Închide</Dialog.Close></div></Dialog.Content></Dialog.Portal>
-    </Dialog.Root><Link to="/">FIREARTRO</Link><span>Administrare</span></div>
+      <Dialog.Portal><Dialog.Overlay className="cms-dialog-overlay" /><Dialog.Content className="admin-mobile-navigation admin-shell" aria-describedby={undefined}><Dialog.Title>Secțiuni administrare</Dialog.Title><Navigation section={section} choose={choose}/>{exitNotice && <p role="status">Așteaptă finalizarea operației înainte de a părăsi secțiunea.</p>}<div className="cms-drawer-actions"><button type="button" className="admin-button" onClick={signOut}><LogOut aria-hidden="true"/>Ieși din cont</button><Dialog.Close className="admin-button" aria-label="Închide secțiunile">Închide</Dialog.Close></div></Dialog.Content></Dialog.Portal>
+    </Dialog.Root><Link to="/" onClick={event => { if (!allowExit()) event.preventDefault(); }}>FIREARTRO</Link><span>Administrare</span></div>
       <div className="admin-appbar-context">{labels[section] || ADMIN_MODULES[section]?.label || 'Panou principal'}</div>
       <div className="admin-appbar-actions"><span className={`cms-save-state is-${draft.status}`} aria-live="polite">{STATUS[draft.status] || draft.status}</span><button className="admin-button cms-appbar-undo" aria-label="Anulează modificarea" disabled={!draft.canUndo} onClick={draft.undo}><Undo2 aria-hidden="true"/></button><button className="admin-button cms-appbar-preview" aria-label="Previzualizează" onClick={event => { event.currentTarget.focus(); setPreview(true); }}><Eye aria-hidden="true"/><span>Previzualizează</span></button><button className="admin-button is-primary" aria-label="Publică modificările" disabled={draft.status !== 'saved' || !draft.changedModules.length} onClick={() => setPublish(true)}><Send aria-hidden="true"/><span>Publică modificările</span></button>
-      <span className="admin-session-user">{admin?.username}</span><button className="admin-session-logout" aria-label="Ieși din cont" onClick={logout}><LogOut aria-hidden="true"/><span>Ieși</span></button></div></header>
+      <span className="admin-session-user">{admin?.username}</span><button className="admin-session-logout" aria-label="Ieși din cont" onClick={signOut}><LogOut aria-hidden="true"/><span>Ieși</span></button></div></header>
     <div className="admin-workspace"><aside className="admin-sidebar"><Navigation section={section} choose={choose}/></aside>
-      <div className="cms-main"><AdminFeedback onNavigate={choose}/>{section === 'dashboard' ? <AdminDashboard onNavigate={choose} />
-        : section === 'revisions' ? <AdminRevisions /> : section === 'blog' ? <AdminBlogPanel /> : section === 'quotes' ? <AdminQuotes /> : section === 'inbox' ? <AdminInbox /> : section === 'media' ? <AdminMediaLibrary />
+      <div className="cms-main">{exitNotice && !menu && <p className="cms-notice" role="status">Așteaptă finalizarea operației înainte de a părăsi secțiunea.</p>}<AdminFeedback onNavigate={choose}/>{section === 'dashboard' ? <AdminDashboard onNavigate={choose} />
+        : section === 'revisions' ? <AdminRevisions /> : section === 'blog' ? <AdminBlogPanel onExitState={setExitState} /> : section === 'quotes' ? <AdminQuotes onExitState={setExitState} /> : section === 'inbox' ? <AdminInbox key={linkedMessage || 'inbox'} initialMessageId={linkedMessage} onExitState={setExitState} /> : section === 'media' ? <AdminMediaLibrary />
         : section === 'integrations' ? <><AdminIntegrations/><AdminMigrationPanel/></>
         : ADMIN_MODULES[section] ? <AdminContentEditor key={section} moduleKey={section} /> : <AdminDashboard onNavigate={choose} />}</div></div>
     <AdminPublishDialog open={publish} onOpenChange={setPublish} /><AdminPreview open={preview} onClose={() => setPreview(false)} />
+    <AdminHistoryGuard busy={operationBusy} dirty={exitState === 'dirty'} onBusy={setExitNotice} />
   </main>;
 }

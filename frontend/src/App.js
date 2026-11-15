@@ -29,6 +29,7 @@ const FaqPage = lazy(loadFaq);
 const ContactPage = lazy(loadContact);
 const LegalPage = lazy(loadLegal);
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
+const AdminHistoryRouter = lazy(() => import("@/admin/AdminHistoryRouter"));
 const AdminPreviewCanvas = lazy(() => import('@/admin/AdminPreviewCanvas'));
 const BlogPage = lazy(loadBlog);
 const BlogArticlePage = lazy(loadArticle);
@@ -150,6 +151,7 @@ export function focusRouteContent() {
 
 function App() {
   const [initialRenderData] = useState(readPublicRenderData);
+  const [adminEntry] = useState(() => typeof window !== "undefined" && window.location.pathname === "/admin");
   useEffect(() => {
     let stableWidth = window.innerWidth;
 
@@ -174,9 +176,7 @@ function App() {
   if(typeof window !== 'undefined' && window.location.pathname === '/admin' && new URLSearchParams(window.location.search).get('previzualizare') === '1') {
     return <Suspense fallback={<div className="route-loading" role="status">Se încarcă previzualizarea…</div>}><AdminPreviewCanvas/></Suspense>;
   }
-  return (
-    <div className="App">
-      <BrowserRouter>
+  const routes = (
       <InitialPublicRenderDataProvider value={initialRenderData}>
         <ManagedContentProvider>
         <RouteShutter>
@@ -192,9 +192,12 @@ function App() {
         </RouteShutter>
         </ManagedContentProvider>
       </InitialPublicRenderDataProvider>
-      </BrowserRouter>
-    </div>
   );
+  return <div className="App">
+    {adminEntry
+      ? <Suspense fallback={<div className="route-loading" role="status" aria-label="Se încarcă pagina" />}><AdminHistoryRouter>{routes}</AdminHistoryRouter></Suspense>
+      : <BrowserRouter>{routes}</BrowserRouter>}
+  </div>;
 }
 
 export default App;

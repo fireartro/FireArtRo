@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Mail, Paperclip, RefreshCw, Send } from "lucide-react";
 import { useAdminSession } from "./AdminSessionContext";
+import { useSectionExitGuard } from "./useSectionExitGuard";
 import {
   createReplyId,
   getInboxMessage,
@@ -29,6 +30,22 @@ function formatSize(value) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function QuoteFacts({ quote }) {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(quote.event_date)
+    ? quote.event_date.split("-").reverse().join(".") : quote.event_date;
+  const fields = [
+    ["Eveniment", [quote.event_type, date].filter(Boolean).join(" · ")],
+    ["Localitate", quote.locality],
+    ["Locație", quote.event_location],
+    ["Telefon", quote.phone],
+    ["Servicii", quote.services?.join(", ")],
+    ["Pachet", quote.package_title],
+  ].filter(([, value]) => value);
+  return <dl className="admin-inbox-quote">
+    {fields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+  </dl>;
+}
+
 function InboxDetail({ message, busy, reloadRequired, replyText, replyError, replyStatus, onReplyText, onReply, onRetryReply, onRetryRelay, onReload }) {
   return <article className="admin-inbox-detail" aria-label={`Mesaj de la ${message.from}`}>
     <header className="admin-inbox-detail__header">
@@ -37,13 +54,14 @@ function InboxDetail({ message, busy, reloadRequired, replyText, replyError, rep
         <h2>{message.subject || "Fără subiect"}</h2>
         <p><strong>{message.from}</strong> · {formatDate(message.received_at)}</p>
       </div>
-      <span className={`admin-inbox-state is-${message.relay_state}`}>
+      {message.relay_state && <span className={`admin-inbox-state is-${message.relay_state}`}>
         {RELAY_LABELS[message.relay_state] || message.relay_state}
-      </span>
+      </span>}
     </header>
 
+    {message.quote && <QuoteFacts quote={message.quote} />}
     <section className="admin-inbox-message" aria-label="Conținut mesaj">
-      <p>{message.text || "Mesajul nu conține text simplu."}</p>
+      <p>{message.text || (message.quote ? "Clientul nu a adăugat un mesaj." : "Mesajul nu conține text simplu.")}</p>
     </section>
 
     {message.attachments?.length > 0 ? <section className="admin-inbox-attachments" aria-label="Atașamente">
@@ -93,12 +111,15 @@ function InboxDetail({ message, busy, reloadRequired, replyText, replyError, rep
   </article>;
 }
 
-export default function AdminInbox() {
+export default function AdminInbox({ initialMessageId = null, onExitState }) {
   const { request, status: sessionStatus } = useAdminSession();
   const [input, setInput] = useState({ q: "", category: "" });
   const [filters, setFilters] = useState({ q: "", category: "", page: 1 });
   const [listState, setListState] = useState({ data: EMPTY_LIST, loading: true, error: "" });
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState(() =>
+    typeof initialMessageId === "string" && /^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$/.test(initialMessageId)
+      ? initialMessageId : null
+  );
   const [detailState, setDetailState] = useState({ data: null, loading: false, error: "" });
   const [revision, setRevision] = useState(0);
   const [replyText, setReplyText] = useState("");
@@ -107,9 +128,10 @@ export default function AdminInbox() {
   const [replyReloadRequired, setReplyReloadRequired] = useState(false);
   const operationRef = useRef(0);
   const blocked = replyState.busy || replyReloadRequired || Boolean(replyText.trim());
+  useSectionExitGuard(onExitState, { busy: replyState.busy, dirty: Boolean(replyText.trim()) });
 
   useEffect(() => {
-    if (sessionStatus === "authenticated") return;
+    if (sessionStatus === "authenticated" || sessionStatus === "checking") return;
     operationRef.current += 1;
     setListState({ data: EMPTY_LIST, loading: false, error: "" });
     setSelectedId(null);
@@ -155,13 +177,15 @@ export default function AdminInbox() {
   }, [replyReloadRequired]);
 
   const selectMessage = useCallback((id) => {
-    if (blocked) return;
+    if (blocked || id === selectedId) return;
+    operationRef.current += 1;
+    setDetailState({ data: null, loading: true, error: "" });
     setSelectedId(id);
     setReplyText("");
     setReplyId(createReplyId());
     setReplyState({ busy: false, error: "", status: "" });
     setReplyReloadRequired(false);
-  }, [blocked]);
+  }, [blocked, selectedId]);
 
   const submitFilters = useCallback((event) => {
     event.preventDefault();
@@ -186,7 +210,8 @@ export default function AdminInbox() {
     setReplyState({ busy: true, error: "", status: "" });
     try {
       const updated = await replyToInboxMessage(request, detailState.data.id, text, replyId);
-      if (operation !== operationRef.current || updated?.id !== detailState.data.id) return;
+      if (operation !== operationRef.current) return;
+      if (updated?.id !== detailState.data.id) throw new Error("Invalid reply acknowledgement");
       setDetailState({ data: updated, loading: false, error: "" });
       setReplyText("");
       setReplyId(createReplyId());
@@ -217,7 +242,8 @@ export default function AdminInbox() {
         reply.text,
         reply.id,
       );
-      if (operation !== operationRef.current || updated?.id !== detailState.data.id) return;
+      if (operation !== operationRef.current) return;
+      if (updated?.id !== detailState.data.id) throw new Error("Invalid reply acknowledgement");
       setDetailState({ data: updated, loading: false, error: "" });
       setReplyState({ busy: false, error: "", status: "Răspuns retrimis." });
     } catch (error) {
@@ -232,7 +258,8 @@ export default function AdminInbox() {
     setReplyState({ busy: true, error: "", status: "" });
     try {
       const updated = await retryInboxRelay(request, detailState.data.id);
-      if (operation !== operationRef.current || updated?.id !== detailState.data.id) return;
+      if (operation !== operationRef.current) return;
+      if (updated?.id !== detailState.data.id) throw new Error("Invalid relay acknowledgement");
       setDetailState({ data: updated, loading: false, error: "" });
       setReplyState({ busy: false, error: "", status: "Notificare retrimisă." });
     } catch (error) {
@@ -263,14 +290,14 @@ export default function AdminInbox() {
   return <section className="cms-panel admin-inbox" aria-label="Mesaje primite">
     <header className="admin-inbox-heading">
       <div><p className="admin-inbox-kicker"><Mail aria-hidden="true" /> Corespondență</p><h1>Mesaje</h1></div>
-      <p>Primește mesajele trimise către contact@fireart.ro și răspunde din același fir.</p>
+      <p>Vezi cererile din formular și emailurile către contact@fireart.ro. Răspunde clienților direct de aici.</p>
     </header>
 
     <form className="admin-inbox-filters" aria-label="Filtrează mesajele" onSubmit={submitFilters}>
       <div className="admin-field"><label htmlFor="inbox-search">Caută după expeditor sau subiect</label>
         <input id="inbox-search" name="inbox-search" type="search" maxLength={200} value={input.q}
           disabled={blocked} onChange={(event) => setInput((current) => ({ ...current, q: event.target.value }))} /></div>
-      <div className="admin-field"><label htmlFor="inbox-category">Destinație</label>
+      <div className="admin-field"><label htmlFor="inbox-category">Tip mesaj</label>
         <select id="inbox-category" name="inbox-category" value={input.category} disabled={blocked}
           onChange={(event) => setInput((current) => ({ ...current, category: event.target.value }))}>
           <option value="">Toate mesajele</option>
@@ -291,7 +318,7 @@ export default function AdminInbox() {
             disabled={blocked && selectedId !== item.id} onClick={() => selectMessage(item.id)}>
             <span><strong>{item.from}</strong><time>{formatDate(item.received_at)}</time></span>
             <b>{item.subject || "Fără subiect"}</b>
-            <small>{INBOX_CATEGORIES[item.category] || "Mesaj"} · {RELAY_LABELS[item.relay_state] || item.relay_state}</small>
+            <small>{INBOX_CATEGORIES[item.category] || "Mesaj"}{item.relay_state ? ` · ${RELAY_LABELS[item.relay_state] || item.relay_state}` : ""}</small>
           </button>
         </li>)}</ul>
         <nav aria-label="Paginarea mesajelor">

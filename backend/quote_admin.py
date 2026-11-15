@@ -24,6 +24,7 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from auth import require_admin_session
 from email_inbox import DeliveryState, DeliveryErrorCode, EmailDelivery, MongoEmailDeliveryRepository
+from quote_email import display_event_date, quote_inbox_url, render_quote_email
 from resend_email import ResendError
 
 QuoteStatus = Literal["new", "contacted", "qualified", "closed", "spam"]
@@ -54,6 +55,11 @@ class QuoteSummary(BaseModel):
     package_title: str = ""
     status: QuoteStatus = "new"
     created_at: datetime
+
+    @field_validator("created_at")
+    @classmethod
+    def utc_created_at(cls, value):
+        return _utc(value)
 
 
 class QuoteNotification(BaseModel):
@@ -222,10 +228,12 @@ def _notification_policy(delivery, now):
     if delivery.state == "sent":
         return False, False
     now = _utc(now)
-    first = getattr(delivery, "first_attempt_at", None) or getattr(delivery, "updated_at", None)
+    attempt = getattr(delivery, "first_attempt_at", None)
+    first = attempt or getattr(delivery, "updated_at", None)
+    unattempted = attempt is None and getattr(delivery, "error_code", None) == "not_configured"
     recovery_required = bool(
         first and now - _utc(first) >= NOTIFICATION_RETRY_WINDOW
-        and getattr(delivery, "error_code", None) != "not_configured"
+        and not unattempted
     )
     if recovery_required:
         return False, True
@@ -262,6 +270,8 @@ class QuoteDelivery(EmailDelivery):
     lease_token: str | None = None
     lease_expires_at: datetime | None = None
     first_attempt_at: datetime | None = None
+    first_attempt_started_by_lease: bool = False
+    template_version: Literal["legacy", "branded"] = "legacy"
 
     @field_validator("lease_expires_at", "first_attempt_at")
     @classmethod
@@ -273,7 +283,7 @@ QUOTE_DELIVERY_FIELDS = {"_id": 0, **dict.fromkeys(QuoteDelivery.model_fields, 1
 
 
 class MongoQuoteDeliveryRepository(MongoEmailDeliveryRepository):
-    """Quote-only leases; inherited inbound/reply methods remain compatible."""
+    """Leases for quote notifications and replies; inbound email keeps its existing path."""
 
     async def get_current_quote_notification(self, quote_id):
         document = await self.collection.find_one(
@@ -282,9 +292,9 @@ class MongoQuoteDeliveryRepository(MongoEmailDeliveryRepository):
         )
         return QuoteDelivery.model_validate(document) if document else None
 
-    async def claim_notification(self, delivery_id, *, allow_unstarted=False):
+    async def claim_notification(self, delivery_id, *, allow_unstarted=False, kind="quote_notification"):
         document = await self.collection.find_one(
-            {"id": delivery_id, "kind": "quote_notification"},
+            {"id": delivery_id, "kind": kind},
             QUOTE_DELIVERY_FIELDS, max_time_ms=2000,
         )
         if document is None:
@@ -292,35 +302,50 @@ class MongoQuoteDeliveryRepository(MongoEmailDeliveryRepository):
         delivery = QuoteDelivery.model_validate(document)
         now = _utc(self.clock())
         retryable, recovery_required = _notification_policy(delivery, now)
-        unstarted = allow_unstarted and delivery.state == "pending" and delivery.lease_token is None
+        unstarted = (
+            allow_unstarted and delivery.state == "pending"
+            and delivery.lease_token is None and delivery.first_attempt_at is None
+        )
         if recovery_required or (not retryable and not unstarted):
             return None
         # CAS the fields which determined eligibility; competing claims and
         # completions change them and cannot both win.
-        query = {"id": delivery_id, "kind": "quote_notification", "state": delivery.state,
+        query = {"id": delivery_id, "kind": kind, "state": delivery.state,
                  "updated_at": document["updated_at"], "lease_token": document.get("lease_token")}
         first_attempt = delivery.first_attempt_at
+        first_on_lease = first_attempt is None and (unstarted or delivery.error_code == "not_configured")
+        template_version = delivery.template_version
         if first_attempt is None:
-            first_attempt = now if unstarted or delivery.error_code == "not_configured" else delivery.updated_at
+            first_attempt = now if first_on_lease else delivery.updated_at
+            if kind == "quote_notification" and first_on_lease:
+                # Resend rejects a different payload for an already used idempotency key.
+                template_version = "branded"
         claimed = await self.collection.find_one_and_update(
             query,
             {"$set": {"state": "pending", "error_code": None,
                       "lease_token": str(uuid.uuid4()), "lease_expires_at": now + NOTIFICATION_LEASE,
-                      "first_attempt_at": first_attempt, "updated_at": now}},
+                      "first_attempt_at": first_attempt, "first_attempt_started_by_lease": first_on_lease,
+                      "template_version": template_version, "updated_at": now}},
             return_document=ReturnDocument.AFTER, projection=QUOTE_DELIVERY_FIELDS, maxTimeMS=2000,
         )
         return QuoteDelivery.model_validate(claimed) if claimed else None
 
-    async def complete_notification(self, delivery_id, lease_token, *, resend_email_id=None, error_code=None):
+    async def complete_notification(
+        self, delivery_id, lease_token, *, resend_email_id=None, error_code=None, kind="quote_notification",
+    ):
         now = _utc(self.clock())
         changes = {"state": "failed" if error_code else "sent", "error_code": error_code,
                    "resend_email_id": resend_email_id, "sent_at": None if error_code else now,
                    "updated_at": now}
+        query = {"id": delivery_id, "kind": kind, "state": "pending", "lease_token": lease_token}
         if error_code == "not_configured":
-            changes["first_attempt_at"] = None  # transport made no provider request
+            owner = await self.collection.find_one(query, {"first_attempt_started_by_lease": 1}, max_time_ms=2000)
+            if owner is not None and owner.get("first_attempt_started_by_lease"):
+                # This lease made no provider request, and no earlier lease may have sent it.
+                changes["first_attempt_at"] = None
         document = await self.collection.find_one_and_update(
-            {"id": delivery_id, "kind": "quote_notification", "state": "pending", "lease_token": lease_token},
-            {"$set": changes, "$unset": {"lease_token": "", "lease_expires_at": ""}},
+            query,
+            {"$set": changes, "$unset": {"lease_token": "", "lease_expires_at": "", "first_attempt_started_by_lease": ""}},
             return_document=ReturnDocument.AFTER, projection=QUOTE_DELIVERY_FIELDS, maxTimeMS=2000,
         )
         return QuoteDelivery.model_validate(document) if document else None
@@ -345,7 +370,7 @@ class QuoteNotificationService:
         )
         return value if isinstance(value, str) else str(value)
 
-    def _message(self, quote):
+    def _message(self, quote, template_version):
         first_name = self._quote_value(quote, "first_name")
         last_name = self._quote_value(quote, "last_name")
         fields = (
@@ -370,6 +395,13 @@ class QuoteNotificationService:
         text = "Solicitare ofertă nouă\n\n" + "\n".join(
             f"{label}: {value}" for label, value in fields
         )
+        subject = f"Solicitare ofertă nouă — {first_name} {last_name}".strip()
+        if template_version == "branded":
+            branded = dict(fields)
+            branded["Data eveniment"] = display_event_date(branded["Data eveniment"])
+            url = quote_inbox_url(self._quote_value(quote, "id"))
+            return subject, text + f"\n\nDeschide în Mesaje: {url}", render_quote_email(branded, url)
+        # Keep the exact legacy payload for deliveries already attempted with it.
         html_body = (
             "<h1>Solicitare ofertă nouă</h1><dl>"
             + "".join(
@@ -378,7 +410,6 @@ class QuoteNotificationService:
             )
             + "</dl>"
         )
-        subject = f"Solicitare ofertă nouă — {first_name} {last_name}".strip()
         return subject, text, html_body
 
     async def _deliver(self, quote, *, retry: bool):
@@ -402,7 +433,7 @@ class QuoteNotificationService:
         if delivery is None:
             raise _error(409, "Notificarea este în curs sau necesită verificare manuală înainte de retrimitere.")
 
-        subject, text, html_body = self._message(quote)
+        subject, text, html_body = self._message(quote, getattr(delivery, "template_version", "legacy"))
         try:
             provider_id = await self.resend_client.send(
                 to=NOTIFICATION_TO,

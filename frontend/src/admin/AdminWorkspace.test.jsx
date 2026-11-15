@@ -22,6 +22,14 @@ const handleRequest = async (url, options = {}) => {
     return {version:mockVersion,base_revision_id:'r1',published_revision_id:'r1',published_at:'2026-09-27T10:00:00Z',content:mockContent,updated_at:'2026-09-27T10:00:00Z',updated_by:'operator'};
   }
   if (url.includes('integrations')) return {};
+  if (url === '/api/admin/inbox/search') return {
+    items:[{id:'sample-message',from:'test@example.com',subject:'Mesaj test',received_at:'2026-11-15T10:00:00Z',category:'contact',relay_state:'sent'}],
+    total:1,page:1,page_size:20
+  };
+  if (url === '/api/admin/inbox/sample-message') return {
+    id:'sample-message',from:'test@example.com',subject:'Mesaj test',received_at:'2026-11-15T10:00:00Z',
+    category:'contact',relay_state:'sent',text:'Conținut de test',replies:[]
+  };
   throw new Error('Unexpected request: '+url);
 };
 const mockRequest = jest.fn(handleRequest);
@@ -32,7 +40,7 @@ let container;
 beforeEach(()=>{jest.useFakeTimers();mockSaveError=null;window.matchMedia=()=>({matches:true,addEventListener:()=>{},removeEventListener:()=>{}});mockRequest.mockImplementation(handleRequest);global.fetch=jest.fn(async()=>({ok:true,status:200,json:async()=>({revision_id:'r1',published_at:'2026-09-27T10:00:00Z',content:CMS_DEFAULTS})}));mockContent=JSON.parse(JSON.stringify(CMS_DEFAULTS));mockVersion=0;container=document.createElement('div');document.body.appendChild(container);root=createRoot(container);});
 afterEach(async()=>{await act(async()=>root.unmount());container.remove();jest.useRealTimers();mockRequest.mockClear();global.fetch=originalFetch;window.matchMedia=originalMatchMedia;});
 function Loaded({children}) {return useAdminDraft().draft ? children : null;}
-const render = async element => act(async()=>root.render(<MemoryRouter><AdminDraftProvider><Loaded>{element}</Loaded></AdminDraftProvider></MemoryRouter>));
+const render = async (element, url='/admin') => act(async()=>root.render(<MemoryRouter initialEntries={[url]}><AdminDraftProvider><Loaded>{element}</Loaded></AdminDraftProvider></MemoryRouter>));
 const click = async text => {const button=[...container.querySelectorAll('button')].find(e=>e.textContent===text);expect(button).toBeDefined();await act(async()=>button.click());};
 const type = async (input,value) => act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));});
 
@@ -53,6 +61,29 @@ test('admin navigation can find an operational section without expanding every g
   await type(search,'mesaje');
   expect(container.querySelector('.admin-sidebar').textContent).toContain('Mesaje');
   expect(container.querySelector('.admin-sidebar').textContent).not.toContain('Pagina Galerie');
+});
+
+test('an unknown admin section falls back to the selected dashboard',async()=>{
+  await render(<AdminLayout/>, '/admin?sectiune=constructor');
+  expect(container.querySelector('.cms-main h1').textContent).toBe('Panou principal');
+  expect(container.querySelector('.admin-sidebar [aria-current="page"]').textContent).toBe('Panou principal');
+});
+
+test('canceling navigation away from an unsent reply keeps it available',async()=>{
+  await render(<AdminLayout/>, '/admin?sectiune=inbox&mesaj=sample-message');
+  const textarea=container.querySelector('textarea[name="inbox-reply"]');
+  await act(async()=>{
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(textarea,'Răspuns netrimis');
+    textarea.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  const confirm=jest.spyOn(window,'confirm').mockReturnValue(false);
+  try {
+    await click('Cereri de ofertă');
+    expect(container.querySelector('textarea[name="inbox-reply"]').value).toBe('Răspuns netrimis');
+    confirm.mockReturnValue(true);
+    await click('Panou principal');
+    expect(container.querySelector('.cms-main h1').textContent).toBe('Panou principal');
+  } finally { confirm.mockRestore(); }
 });
 
 test('homepage puts image editing first and separates it from copy and promoted slides',async()=>{

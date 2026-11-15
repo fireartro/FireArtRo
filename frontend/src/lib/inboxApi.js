@@ -1,7 +1,10 @@
 export const INBOX_CATEGORIES = {
   contact: "Contact",
   other_recipient: "Altă adresă",
+  quote: "Cerere din formular",
 };
+
+export const quoteInboxPath = (quoteId) => `/admin?sectiune=inbox&mesaj=quote-${encodeURIComponent(quoteId)}`;
 
 export function listInboxMessages(request, filters, options = {}) {
   const search = String(filters.q || "").trim().slice(0, 200);

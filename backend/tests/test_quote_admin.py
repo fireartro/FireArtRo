@@ -393,6 +393,16 @@ def test_filter_bounds_are_authoritative(domain, query):
     assert client.get("/api/admin/quotes?" + query).status_code == 422
 
 
+def test_quote_date_from_mongo_is_exposed_as_utc_not_local_time(domain):
+    client, collection, _ = domain
+    collection.documents[0]["created_at"] = datetime(2026, 11, 6, 8, 17, 47)
+    authorize(client)
+    quote_id = collection.documents[0]["id"]
+    response = client.get(f"/api/admin/quotes/{quote_id}")
+    assert response.status_code == 200
+    assert datetime.fromisoformat(response.json()["created_at"]).isoformat() == "2026-11-06T08:17:47+00:00"
+
+
 def test_detail_update_and_stale_version_never_overwrite_newer_note(domain):
     client, collection, _ = domain
     headers = authorize(client)
