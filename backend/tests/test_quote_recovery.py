@@ -225,6 +225,7 @@ async def test_expired_pending_is_reclaimed_once_by_competing_workers():
     await asyncio.gather(service.retry(quote()), other.retry(quote()), return_exceptions=True)
     assert len(sender.calls) == 1
     assert sender.calls[0]["idempotency_key"] == "quote-notification/q1"
+    assert sender.calls[0]["html"].startswith("<h1>Solicitare ofertă nouă</h1><dl>")
     assert collection.documents[0]["state"] == "sent"
 
 
@@ -249,21 +250,33 @@ async def test_unknown_outcome_past_provider_window_requires_reconciliation():
 
 @pytest.mark.asyncio
 async def test_interrupted_attempt_leaves_recoverable_lease():
+    payloads = []
+
     class Interrupted:
-        async def send(self, **kwargs): raise asyncio.CancelledError()
+        async def send(self, **kwargs):
+            payloads.append(kwargs)
+            raise asyncio.CancelledError()
 
     collection, repository, service, _ = leased_domain(sender=Interrupted())
+    request = quote(message="<img src=x onerror=alert(1)>")
     with pytest.raises(asyncio.CancelledError):
-        await service.notify(quote())
+        await service.notify(request)
     assert collection.documents[0]["state"] == "pending"
     assert collection.documents[0]["lease_expires_at"] == NOW + timedelta(minutes=2)
+    first = payloads[0]
+    assert "https://fireart.ro/admin?sectiune=inbox&amp;mesaj=quote-q1" in first["html"]
+    assert "https://fireart.ro/admin?sectiune=inbox&mesaj=quote-q1" in first["text"]
+    assert "12.06.2027" in first["html"]
+    assert "&lt;img src=x onerror=alert(1)&gt;" in first["html"]
+    assert "<img" not in first["html"]
+    assert first["reply_to"] == "ana@example.com"
     repository.clock = lambda: NOW + timedelta(minutes=3)
     from quote_admin import QuoteNotificationService
     class Recovered:
         async def send(self, **kwargs):
-            assert kwargs["idempotency_key"] == "quote-notification/q1"
+            assert kwargs == first
             return "accepted-provider-id"
-    await QuoteNotificationService(Recovered(), repository).retry(quote())
+    await QuoteNotificationService(Recovered(), repository).retry(request)
     assert collection.documents[0]["state"] == "sent"
 
 

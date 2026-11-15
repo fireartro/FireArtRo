@@ -708,6 +708,18 @@
   background: var(--inbox-panel);
 }
 .admin-inbox-guard { margin: -2px 0 14px; color: #f8bd62 !important; font-size: 12px; }
+.admin-inbox-quote {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: 9px 16px;
+  margin: 0 0 14px;
+  padding: 13px 15px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.admin-inbox-quote dt { color: var(--admin-muted); font-size: 12px; }
+.admin-inbox-quote dd { margin: 3px 0 0; }
 .admin-inbox-workspace {
   display: grid;
   min-height: 640px;

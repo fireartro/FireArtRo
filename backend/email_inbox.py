@@ -6,6 +6,7 @@ import html
 import re
 import uuid
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.utils import parseaddr
 from typing import Any, Literal
@@ -17,6 +18,7 @@ from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from auth import require_admin_session
+from quote_email import QUOTE_INBOX_PREFIX, quote_contact_address
 
 from resend_email import (
     MAX_ADDRESS_LENGTH,
@@ -46,7 +48,7 @@ MAX_RELATED_DELIVERIES = 100
 MAX_REPLY_TEXT_LENGTH = 12_000
 INBOX_REPLY_MAX_BYTES = 128 * 1024
 
-DeliveryKind = Literal["quote_notification", "inbound_relay", "admin_reply"]
+DeliveryKind = Literal["quote_notification", "inbound_relay", "admin_reply", "quote_reply"]
 DeliveryState = Literal["pending", "sent", "failed"]
 DeliveryErrorCode = Literal[
     "not_configured",
@@ -55,6 +57,7 @@ DeliveryErrorCode = Literal[
     "delivery_failed",
 ]
 InboundCategory = Literal["contact", "other_recipient"]
+InboxCategory = Literal["contact", "other_recipient", "quote"]
 InboundIngestState = Literal["reserved", "received"]
 
 
@@ -227,9 +230,9 @@ class InboundSummary(StrictModel):
     id: str = Field(min_length=1, max_length=MAX_IDENTIFIER_LENGTH)
     sender: str = Field(alias="from", max_length=MAX_ADDRESS_LENGTH)
     subject: str = Field(default="", max_length=MAX_SUBJECT_LENGTH)
-    category: InboundCategory
+    category: InboxCategory
     received_at: datetime
-    relay_state: DeliveryState
+    relay_state: DeliveryState | None
     latest_reply_at: datetime | None = None
 
     @field_validator("received_at", "latest_reply_at")
@@ -259,7 +262,7 @@ class InboundSearchQuery(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     q: str = Field(default="", max_length=MAX_SEARCH_LENGTH)
-    category: InboundCategory | None = None
+    category: InboxCategory | None = None
     page: int = Field(default=1, ge=1, le=MAX_PAGE)
     page_size: int = Field(default=20, ge=1, le=MAX_PAGE_SIZE)
 
@@ -849,8 +852,15 @@ def _valid_message_reference(value: Any) -> str | None:
     return normalized[:MAX_MESSAGE_ID_LENGTH]
 
 
+@dataclass(frozen=True)
+class QuoteReplyTarget:
+    id: str  # reserved inbox identifier, also used to scope the reply history
+    quote_id: str
+    sender: str
+
+
 class InboundReplyService:
-    """Persist and send a plain-text Admin reply to the verified stored sender."""
+    """Persist and send a plain-text Admin reply to the stored address."""
 
     def __init__(
         self,
@@ -864,9 +874,49 @@ class InboundReplyService:
         self.delivery_repository = delivery_repository
         self.inbound_repository = inbound_repository
 
+    async def _send(self, saved_reply: InboundReply) -> str:
+        return await self.resend_client.send(
+            to=saved_reply.recipient,
+            subject=saved_reply.subject,
+            text=saved_reply.text,
+            html=f"<pre>{html.escape(saved_reply.text)}</pre>",
+            idempotency_key=saved_reply.idempotency_key,
+            in_reply_to=saved_reply.in_reply_to or None,
+            references=saved_reply.references,
+        )
+
+    async def _send_quote_reply(self, message, saved_reply, delivery):
+        # A failed/aborted send may have reached Resend. Atomically permit
+        # retries only while the original provider identity is still valid.
+        repository = self.delivery_repository
+        claim = await repository.claim_notification(
+            delivery.id, kind="quote_reply", allow_unstarted=True,
+        )
+        if claim is None:
+            raise InboundReplyError("delivery_failed")
+        if saved_reply.state == "failed":
+            saved_reply = await self.reply_repository.reset_failed(saved_reply.id)
+        if saved_reply is None or saved_reply.state != "pending":
+            raise InboundReplyError("delivery_failed")
+        try:
+            provider_id = await self._send(saved_reply)
+        except ResendError as error:
+            failed = await repository.complete_notification(
+                claim.id, claim.lease_token, kind="quote_reply", error_code=error.code,
+            )
+            if failed is not None:
+                await self.reply_repository.mark_failed(saved_reply.id, error_code=error.code)
+            raise InboundReplyError(error.code) from None
+        completed = await repository.complete_notification(
+            claim.id, claim.lease_token, kind="quote_reply", resend_email_id=provider_id,
+        )
+        if completed is None:
+            raise InboundReplyError("delivery_failed")
+        return await self._converge_sent_reply(message, saved_reply, provider_id=provider_id)
+
     async def _converge_sent_reply(
         self,
-        message: InboundMessage,
+        message: InboundMessage | QuoteReplyTarget,
         saved_reply: InboundReply,
         *,
         provider_id: str,
@@ -883,13 +933,14 @@ class InboundReplyService:
             current = transitioned or await self.reply_repository.get(current.id)
         if current is None or current.state != "sent":
             raise InboundReplyError("delivery_failed")
-        accounted = await self.inbound_repository.mark_reply_sent(message.id, current.id)
-        if accounted is None:
-            raise InboundReplyError("delivery_failed")
+        if not isinstance(message, QuoteReplyTarget):
+            accounted = await self.inbound_repository.mark_reply_sent(message.id, current.id)
+            if accounted is None:
+                raise InboundReplyError("delivery_failed")
         return current
 
     async def reply(
-        self, message: InboundMessage, *, reply_id: str, text: str
+        self, message: InboundMessage | QuoteReplyTarget, *, reply_id: str, text: str
     ) -> InboundReply:
         if (
             self.resend_client is None
@@ -899,14 +950,15 @@ class InboundReplyService:
         ):
             raise InboundReplyError("not_configured")
 
-        recipient = _normalized_address(message.sender)
+        is_quote = isinstance(message, QuoteReplyTarget)
+        recipient = quote_contact_address(message.sender) if is_quote else _normalized_address(message.sender)
         if not recipient or "@" not in recipient:
             raise InboundReplyError("delivery_failed")
-        subject = _reply_subject(message.subject)
-        in_reply_to = _valid_message_reference(message.message_id) or ""
+        subject = "FireArtRo — Cererea ta de ofertă" if is_quote else _reply_subject(message.subject)
+        in_reply_to = "" if is_quote else (_valid_message_reference(message.message_id) or "")
         references = [
             normalized
-            for item in [*message.references, in_reply_to]
+            for item in ([] if is_quote else [*message.references, in_reply_to])
             if (normalized := _valid_message_reference(item))
         ][-MAX_REFERENCES:]
         key = f"admin-reply/{message.id}/{reply_id}"
@@ -921,10 +973,11 @@ class InboundReplyService:
             references=references,
         )
         delivery = await self.delivery_repository.create_or_get(
-            kind="admin_reply",
+            kind="quote_reply" if is_quote else "admin_reply",
             idempotency_key=key,
             recipient=recipient,
-            related_inbound_message_id=message.id,
+            related_quote_id=message.quote_id if is_quote else None,
+            related_inbound_message_id=None if is_quote else message.id,
         )
 
         if delivery.state == "sent":
@@ -933,6 +986,9 @@ class InboundReplyService:
                 saved_reply,
                 provider_id=delivery.resend_email_id or "",
             )
+
+        if is_quote:
+            return await self._send_quote_reply(message, saved_reply, delivery)
 
         if delivery.state == "failed":
             delivery = await self.delivery_repository.reset_failed(delivery.id)
@@ -949,15 +1005,7 @@ class InboundReplyService:
             raise InboundReplyError("delivery_failed")
 
         try:
-            provider_id = await self.resend_client.send(
-                to=recipient,
-                subject=subject,
-                text=text,
-                html=f"<pre>{html.escape(text)}</pre>",
-                idempotency_key=key,
-                in_reply_to=in_reply_to or None,
-                references=references,
-            )
+            provider_id = await self._send(saved_reply)
         except ResendError as error:
             await self.delivery_repository.mark_failed(
                 delivery.id, error_code=error.code
@@ -1591,6 +1639,8 @@ def create_inbound_admin_router(
     reply_repository,
     relay_service,
     reply_service,
+    *,
+    quote_inbox=None,
 ):
     router = APIRouter(
         prefix="/api/admin/inbox",
@@ -1601,24 +1651,37 @@ def create_inbound_admin_router(
     def response(payload: Any) -> JSONResponse:
         return JSONResponse(payload, headers={"Cache-Control": "no-store"})
 
+    def is_quote(message_id: str) -> bool:
+        return quote_inbox is not None and message_id.startswith(QUOTE_INBOX_PREFIX)
+
     async def detail_payload(message_id: str) -> dict[str, Any]:
-        detail = await inbound_repository.get(message_id)
-        if detail is None:
+        if is_quote(message_id):
+            payload = await quote_inbox.detail(message_id)
+        else:
+            detail = await inbound_repository.get(message_id)
+            payload = detail.model_dump(mode="json", by_alias=True) if detail is not None else None
+        if payload is None:
             raise _inbox_error(404, "Mesajul nu a fost găsit.")
         replies = await reply_repository.list_for_message(message_id)
-        payload = detail.model_dump(mode="json", by_alias=True)
         payload["replies"] = [item.model_dump(mode="json") for item in replies]
         return payload
+
+    async def inbox_page(*, q, category, page, page_size):
+        if quote_inbox is not None and category in (None, "quote"):
+            return await quote_inbox.list(q=q, category=category, page=page, page_size=page_size)
+        if category == "quote":
+            return InboundPage(items=[], total=0, page=page, page_size=page_size)
+        return await inbound_repository.list(q=q, category=category, page=page, page_size=page_size)
 
     @router.get("")
     async def list_messages(
         q: str = Query(default="", max_length=MAX_SEARCH_LENGTH),
-        category: InboundCategory | None = None,
+        category: InboxCategory | None = None,
         page: int = Query(default=1, ge=1, le=MAX_PAGE),
         page_size: int = Query(default=20, ge=1, le=MAX_PAGE_SIZE),
     ):
         try:
-            listing = await inbound_repository.list(
+            listing = await inbox_page(
                 q=q,
                 category=category,
                 page=page,
@@ -1631,7 +1694,7 @@ def create_inbound_admin_router(
     @router.post("/search")
     async def search_messages(command: InboundSearchQuery):
         try:
-            listing = await inbound_repository.list(
+            listing = await inbox_page(
                 q=command.q,
                 category=command.category,
                 page=command.page,
@@ -1656,6 +1719,8 @@ def create_inbound_admin_router(
     async def retry_relay(
         message_id: str = Path(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$"),
     ):
+        if is_quote(message_id):
+            raise _inbox_error(409, "Notificarea cererii se gestionează în Cereri de ofertă.")
         try:
             message = await inbound_repository.get_internal(message_id)
             if message is None:
@@ -1687,7 +1752,10 @@ def create_inbound_admin_router(
                 "Răspunsul trebuie să conțină între 1 și 12000 de caractere.",
             ) from None
         try:
-            message = await inbound_repository.get_internal(message_id)
+            message = (
+                await quote_inbox.reply_target(message_id) if is_quote(message_id)
+                else await inbound_repository.get_internal(message_id)
+            )
             if message is None:
                 raise _inbox_error(404, "Mesajul nu a fost găsit.")
             await reply_service.reply(

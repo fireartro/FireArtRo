@@ -44,7 +44,7 @@ const detail = (id = "inbound-001", changes = {}) => ({
   ...changes,
 });
 
-async function render({ handle } = {}) {
+async function render({ handle, initialMessageId } = {}) {
   global.fetch = jest.fn(async (path, options = {}) => {
     if (path === "/api/admin/auth/session") {
       return response({ admin: { username: "admin" }, csrf_token: "csrf-test", expires_at: "2030-01-01T00:00:00Z" });
@@ -61,7 +61,7 @@ async function render({ handle } = {}) {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
-  await act(async () => root.render(<AdminSessionProvider><AdminInbox /></AdminSessionProvider>));
+  await act(async () => root.render(<AdminSessionProvider><AdminInbox initialMessageId={initialMessageId} /></AdminSessionProvider>));
 }
 
 const button = (text) => [...container.querySelectorAll("button")].find((item) => item.textContent.includes(text) || item.getAttribute("aria-label")?.includes(text));
@@ -97,6 +97,52 @@ test("loads the safe list and renders message content as text", async () => {
   expect(container.textContent).toContain("Primul răspuns");
   expect(container.querySelector("img")).toBeNull();
   expect(container.querySelector(".admin-inbox-workspace")).not.toBeNull();
+});
+
+test("a quote link opens the saved request and replies through the existing inbox composer", async () => {
+  const request = summary("quote-q1", {
+    from: "client@example.com",
+    subject: "Cerere de ofertă — Client Test",
+    category: "quote",
+    relay_state: null,
+  });
+  const record = {
+    ...request,
+    text: "Mesaj din formular",
+    replies: [],
+    quote: { id: "q1", name: "Client Test", phone: "0700000000", event_type: "Nuntă",
+      event_date: "2028-05-01", locality: "Cluj", event_location: "Sală de test",
+      services: ["Drone"], package_title: "" },
+  };
+  await render({ initialMessageId: "quote-q1", handle: (path, options) => {
+    if (path === "/api/admin/inbox/search") return response({ items: [request, summary()], total: 2, page: 1, page_size: 20 });
+    if (path === "/api/admin/inbox/quote-q1") return response(record);
+    if (path === "/api/admin/inbox/quote-q1/reply") {
+      const { text, reply_id } = JSON.parse(options.body);
+      return response({ ...record, replies: [{ id: reply_id, text, state: "sent", created_at: request.received_at }] });
+    }
+    return undefined;
+  } });
+  expect(container.textContent).toContain("Cerere din formular");
+  expect(container.textContent).toContain("Sală de test");
+  expect(container.textContent).toContain("Mesaj din formular");
+  expect(container.textContent).toContain("Răspuns către client@example.com");
+  expect(button("Retrimite notificarea")).toBeFalsy();
+  await change('textarea[name="inbox-reply"]', "Oferta de test");
+  await click("Trimite răspunsul");
+  expect(container.querySelector(".admin-inbox-thread").textContent).toContain("Oferta de test");
+  const [, write] = global.fetch.mock.calls.find(([path]) => path === "/api/admin/inbox/quote-q1/reply");
+  expect(Object.keys(JSON.parse(write.body)).sort()).toEqual(["reply_id", "text"]);
+});
+
+test("a mismatched send acknowledgement leaves the draft available for a safe retry", async () => {
+  await render({ handle: (path) => path.endsWith("/reply") ? response(detail("inbound-002")) : undefined });
+  await click("Deschide mesajul Cerere nuntă");
+  await change('textarea[name="inbox-reply"]', "Păstrează acest răspuns");
+  await click("Trimite răspunsul");
+  expect(container.querySelector('textarea[name="inbox-reply"]').value).toBe("Păstrează acest răspuns");
+  expect(button("Trimite răspunsul").disabled).toBe(false);
+  expect(container.querySelector('[role="alert"]').textContent).toContain("Trimiterea nu a fost confirmată.");
 });
 
 test("search and category filters request only bounded query values", async () => {

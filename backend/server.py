@@ -58,6 +58,7 @@ from quote_admin import (
     QuoteNotificationService,
     create_quote_admin_router,
 )
+from quote_inbox import MongoQuoteInbox
 from email_inbox import (
     InboundIdentityConflict,
     InboundReplyService,
@@ -189,6 +190,10 @@ cms_service = CmsService(cms_repository)
 quote_repository = MongoQuoteRepository(
     db.quotes if db is not None else None,
     delivery_repository=quote_delivery_repository if db is not None else None,
+)
+quote_inbox = MongoQuoteInbox(
+    db.quotes if db is not None else None,
+    db.inbound_messages if db is not None else None,
 )
 quote_rate_limiter = MongoQuoteRateLimiter(
     db.quote_rate_limits if db is not None else None,
@@ -630,6 +635,7 @@ app.include_router(
         inbound_reply_repository,
         inbound_relay_service,
         inbound_reply_service,
+        quote_inbox=quote_inbox,
     )
 )
 app.include_router(create_media_router(media_service))

@@ -6,9 +6,12 @@ Acest runbook configurează `contact@fireart.ro` pentru notificările cererilor,
 
 - Formularul salvează cererea în MongoDB înainte de încercarea de notificare.
 - Resend trimite notificările către `fireartro@gmail.com` de la `FireArtRo <contact@fireart.ro>`.
+- Notificarea unei cereri noi are un format HTML și o alternativă text. Butonul „Deschide în Mesaje” deschide cererea în Admin după autentificare.
+- „Mesaje” listează emailurile și cererile salvate în formular, inclusiv cererile deja existente. Cererile marcate ca spam rămân doar în „Cereri de ofertă”. Nu se copiază sau migrează cererile.
 - Emailurile primite de Resend ajung prin evenimentul semnat `email.received` la `/api/webhooks/resend`.
 - Backendul preia textul complet prin API-ul Resend, îl salvează în MongoDB și îl afișează numai într-o sesiune Admin.
 - Răspunsul din Admin este adresat exclusiv expeditorului salvat. Browserul nu poate furniza sau schimba destinatarul.
+- Pentru o cerere din formular, primul răspuns pleacă de la `contact@fireart.ro` la emailul salvat pe cerere și apare în istoricul ei. Dacă destinatarul răspunde prin email, mesajul intră ca email primit.
 - Se păstrează în aplicație numai metadatele atașamentelor. Fișierele atașate rămân la Resend; URL-urile temporare de descărcare nu sunt salvate și nu sunt expuse în Admin.
 - Cheile și secretele rămân exclusiv în Vercel. Nu există variabile Resend în bundle-ul React.
 
@@ -58,6 +61,8 @@ Dacă `fireart.ro` are deja email activ pentru alte adrese, soluția cu risc red
 
 Cererea rămâne în MongoDB. Deschide cererea în Admin, verifică datele fără a le copia în loguri publice și folosește retry numai dacă starea permite. Cheia de idempotency este stabilă pentru aceeași cerere, deci retry-ul nu trebuie înlocuit cu o trimitere manuală repetată.
 
+O notificare deja încercată păstrează șablonul de la prima încercare. Dacă schimbi identitatea expeditorului sau revii la un deployment anterior care nu conține acel șablon, verifică întâi notificările neconfirmate în Resend.
+
 ### Relay inbound eșuat
 
 Mesajul primit rămâne în `Mesaje` cu starea eșuată. După revenirea Resend, folosește `Retrimite notificarea`. Nu recrea webhookul și nu modifica documentul MongoDB manual.
@@ -65,6 +70,7 @@ Mesajul primit rămâne în `Mesaje` cu starea eșuată. După revenirea Resend,
 ### Răspuns Admin neconfirmat
 
 Textul rămâne în formular după eroare. Folosește retry cu același draft; interfața păstrează același identificator de răspuns până la confirmarea succesului. Reîncarcă mesajul înainte de o nouă încercare dacă apare un conflict.
+Pentru răspunsurile la cereri din formular, după 23 de ore de la o încercare cu rezultat incert verifică mai întâi trimiterea în Resend. Admin refuză repetarea aceluiași răspuns după intervalul în care îl poate relua sigur.
 
 ### Provider indisponibil
 

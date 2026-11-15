@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAdminSession } from "./AdminSessionContext";
+import { useSectionExitGuard } from "./useSectionExitGuard";
 import { getAdminQuote, listAdminQuotes, QUOTE_STATUSES, quoteFilters, retryAdminQuoteNotification, updateAdminQuote } from "../lib/quotesApi";
+import { quoteInboxPath } from "../lib/inboxApi";
 
 const wrap = { minWidth: 0, overflowWrap: "anywhere" };
 const rowStyle = { display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" };
@@ -82,13 +84,7 @@ function QuoteEditor({ quote, request, onSaved, onReload, onBlocked }) {
   const writing = useRef(false);
   const dirty = values.status !== confirmed.status || values.internal_note !== confirmed.internal_note;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { onBlocked(dirty || saving || notifying); return () => onBlocked(false); }, [dirty, saving, notifying, onBlocked]);
-  useEffect(() => {
-    if (!dirty && !saving && !notifying) return undefined;
-    const warn = (event) => { event.preventDefault(); event.returnValue = ""; };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty, saving, notifying]);
+  useSectionExitGuard(onBlocked, { busy: saving || notifying, dirty });
 
   async function save(event) {
     event.preventDefault();
@@ -137,6 +133,10 @@ function QuoteEditor({ quote, request, onSaved, onReload, onBlocked }) {
         <div key={label}><dt>{label}</dt><dd style={{ margin: "0 0 12px", ...wrap }}>{value || "—"}</dd></div>)}
     </dl>
     <p style={{ whiteSpace: "pre-wrap", ...wrap }}>{quote.message || "Fără mesaj suplimentar."}</p>
+    {confirmed.status !== "spam" && (
+      <Link to={quoteInboxPath(quote.id)} className="admin-button" aria-disabled={dirty || saving || notifying}
+        onClick={(event) => { if (dirty || saving || notifying) event.preventDefault(); }}>Răspunde în Mesaje</Link>
+    )}
     <QuoteNotificationStatus id={quote.id} notification={notification} request={request}
       disabled={saving} onChanged={setNotification} onBusy={setNotifying} />
     <fieldset disabled={saving || notifying} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
@@ -185,14 +185,16 @@ function QuoteDetail({ id, request, onSaved, onBlocked }) {
     onBlocked={onBlocked} onReload={() => setAttempt((value) => value + 1)} />;
 }
 
-export default function AdminQuotes() {
+export default function AdminQuotes({ onExitState }) {
   const { request, status: sessionStatus } = useAdminSession();
   const [params, setParams] = useSearchParams();
   const { q, status, page } = quoteFilters(params);
   const [search, setSearch] = useState(q);
   const [filter, setFilter] = useState(status);
   const [selected, setSelected] = useState(null);
-  const [blocked, setBlocked] = useState(false);
+  const [guard, setGuard] = useState("ready");
+  const blocked = guard !== "ready";
+  useSectionExitGuard(onExitState, { busy: guard === "busy", dirty: guard === "dirty" });
   const [revision, setRevision] = useState(0);
   const [list, setList] = useState({ items: [], total: 0, loading: true, error: "" });
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
@@ -255,7 +257,7 @@ export default function AdminQuotes() {
           <button className="admin-button" disabled={blocked || list.loading || page >= pages} onClick={() => changeFilters(page + 1)}>Pagina următoare</button>
         </nav>
       </div>
-      {selected ? <QuoteDetail key={selected} id={selected} request={request} onSaved={refresh} onBlocked={setBlocked} /> : <p>Selectează o cerere pentru detalii.</p>}
+        {selected ? <QuoteDetail key={selected} id={selected} request={request} onSaved={refresh} onBlocked={setGuard} /> : <p>Selectează o cerere pentru detalii.</p>}
     </div>
   </section>;
 }
