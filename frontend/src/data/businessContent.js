@@ -602,18 +602,32 @@ export const CONTACT_EVENT_TYPES = [
   "Altul",
 ];
 
-export const COOKIE_SETTINGS_DEFAULT = {
-  title: "Preferințe de confidențialitate",
+const PREVIOUS_COOKIE_COPY = {
   summary:
     "Folosim stocare strict necesară pentru funcționarea site-ului. Playerele YouTube și analiza audienței rămân oprite până alegi explicit. Miniaturile externe sunt descrise în politica de cookies.",
+  marketingLabel: "Conținut extern și marketing",
+  marketingDescription: "Permite servicii externe opționale; videoclipurile YouTube rămân click-to-load.",
+};
+
+export const COOKIE_SETTINGS_DEFAULT = {
+  title: "Preferințe de confidențialitate",
+  summary: "Analiza audienței și conținutul de la platforme externe sunt opționale.",
   necessaryLabel: "Strict necesare",
   necessaryDescription: "Păstrează preferința de consimțământ și funcțiile esențiale ale site-ului.",
   analyticsLabel: "Analiză",
   analyticsDescription: "Permite analiza statistică a utilizării prin Google Analytics, dacă integrarea este configurată.",
-  marketingLabel: "Conținut extern și marketing",
-  marketingDescription: "Permite servicii externe opționale; videoclipurile YouTube rămân click-to-load.",
+  marketingLabel: "Conținut extern",
+  marketingDescription: "Permite miniaturi și recenzii de la Google. Videoclipurile YouTube se deschid după ce apeși Redă.",
   retentionDays: 180,
 };
+
+export function currentCookieSettings(settings) {
+  const updated = { ...settings };
+  for (const [field, previous] of Object.entries(PREVIOUS_COOKIE_COPY)) {
+    if (updated[field] === previous) updated[field] = COOKIE_SETTINGS_DEFAULT[field];
+  }
+  return updated;
+}
 
 export const MANAGED_CONTENT_DEFAULTS = {
   packageCatalogVersion: PACKAGE_CATALOG_VERSION,

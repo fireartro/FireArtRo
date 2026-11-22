@@ -158,7 +158,7 @@ export const ADMIN_MODULES = {
     text("title", "Titlu"), textarea("summary", "Rezumat"),
     text("necessaryLabel", "Titlu strict necesare"), textarea("necessaryDescription", "Descriere strict necesare"),
     text("analyticsLabel", "Titlu analiză"), textarea("analyticsDescription", "Descriere analiză"),
-    text("marketingLabel", "Titlu marketing"), textarea("marketingDescription", "Descriere marketing"),
+    text("marketingLabel", "Titlu conținut extern"), textarea("marketingDescription", "Descriere conținut extern"),
     number("retentionDays", "Păstrare preferință (zile)", { min: 1, max: 730 }),
   ]), "Textele bannerului de consimțământ"),
   legalPages: moduleDefinition(object("legalPages", "Documente legale", [

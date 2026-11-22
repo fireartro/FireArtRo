@@ -1,4 +1,5 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import { currentCookieSettings } from "@/data/businessContent";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Cookie, Settings2, X } from "lucide-react";
@@ -16,7 +17,7 @@ import {
 export { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_UPDATED_EVENT, OPEN_COOKIE_SETTINGS_EVENT, readCookieConsent } from "@/lib/cookieConsent";
 
 export default function CookieConsent({ autoPrompt = true }) {
-  const settings = useManagedContent("cookieSettings", CMS_DEFAULTS.cookieSettings);
+  const settings = currentCookieSettings(useManagedContent("cookieSettings", CMS_DEFAULTS.cookieSettings));
   const retentionDays = consentRetentionDays(settings.retentionDays);
   const stored = useCookieConsent();
   const [introActive, setIntroActive] = useState(() => Boolean(document.documentElement.dataset.fireartIntro));
@@ -126,7 +127,7 @@ export default function CookieConsent({ autoPrompt = true }) {
           <span><Cookie /></span>
           <div>
             <h2 id="cookie-consent-title">{settings.title}</h2>
-            <p id="cookie-consent-summary">Analiza audienței și conținutul de la platforme externe sunt opționale. Poți schimba sau retrage alegerea din „Setări cookies”, în subsolul paginii.</p>
+            <p id="cookie-consent-summary">{settings.summary} Poți schimba sau retrage alegerea din „Setări cookies”, în subsolul paginii.</p>
           </div>
           {(stored || !autoPrompt) && (
             <button type="button" onClick={closeSettings} aria-label="Închide setările cookies">
@@ -157,8 +158,8 @@ export default function CookieConsent({ autoPrompt = true }) {
             </label>
             <label>
               <span>
-                <strong>Conținut extern</strong>
-                <small>Permite miniaturi și recenzii de la Google. Videoclipurile YouTube se deschid după ce apeși Redă.</small>
+                <strong>{settings.marketingLabel}</strong>
+                <small>{settings.marketingDescription}</small>
               </span>
               <input
                 type="checkbox"
