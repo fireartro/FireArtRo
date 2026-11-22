@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 
 import AnalyticsLoader from "./AnalyticsLoader";
-import { COOKIE_CONSENT_STORAGE_KEY } from "./CookieConsent";
+import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION, saveCookieConsent } from "@/lib/cookieConsent";
 import { ANALYTICS_EVENT, trackQuoteAccepted } from "@/lib/analytics";
 
 
@@ -14,13 +14,14 @@ let root;
 let previousMeasurementId;
 let previousTagId;
 
-function consent(analytics) {
+function consent(analytics, duration = 86_400_000) {
   window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({
+    version: COOKIE_CONSENT_VERSION,
     necessary: true,
     analytics,
     marketing: false,
-    savedAt: "2026-09-07T12:00:00.000Z",
-    expiresAt: "2099-09-07T12:00:00.000Z",
+    savedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + duration).toISOString(),
   }));
 }
 
@@ -119,9 +120,7 @@ test.each(["GT-BOOTSTRAP123", "G-LINKED123"])(
       "G-ABC123XYZ", "G-ABC123XYZ", "G-ABC123XYZ", "G-ABC123XYZ",
     ]);
 
-    await act(async () => window.dispatchEvent(new CustomEvent("fireartro-cookie-consent-updated", {
-      detail: { analytics: false },
-    })));
+    await act(async () => saveCookieConsent({ analytics: false, marketing: false }));
     expect(window["ga-disable-G-ABC123XYZ"]).toBe(true);
     expect(window[`ga-disable-${tagId}`]).toBe(true);
     clickContact("tel:+40787602144");
@@ -173,10 +172,7 @@ test("a valid bootstrap tag cannot replace the required GA4 measurement destinat
 test("loads GA4 only after analytics consent and records SPA page views once", async () => {
   await render();
 
-  await act(async () => window.dispatchEvent(new CustomEvent(
-    "fireartro-cookie-consent-updated",
-    { detail: { necessary: true, analytics: true, marketing: false } },
-  )));
+  await act(async () => saveCookieConsent({ analytics: true, marketing: false }));
 
   const script = document.getElementById("fireartro-ga4-script");
   expect(script).not.toBeNull();
@@ -205,10 +201,7 @@ test("stops future measurement when analytics consent is withdrawn", async () =>
   await render();
   expect(document.getElementById("fireartro-ga4-script")).not.toBeNull();
 
-  await act(async () => window.dispatchEvent(new CustomEvent(
-    "fireartro-cookie-consent-updated",
-    { detail: { necessary: true, analytics: false, marketing: false } },
-  )));
+  await act(async () => saveCookieConsent({ analytics: false, marketing: false }));
   expect(window["ga-disable-G-ABC123XYZ"]).toBe(true);
   const consentUpdates = window.dataLayer.filter((entry) => entry[0] === "consent" && entry[1] === "update");
   expect(consentUpdates.at(-1)[2]).toEqual(expect.objectContaining({ analytics_storage: "denied" }));
@@ -234,19 +227,18 @@ test("withdrawal in another tab stops page views and clears only analytics cooki
 
 test("consent expires during an open page without further interaction", async () => {
   jest.useFakeTimers();
-  window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({
-    savedAt: new Date().toISOString(), analytics: true, expiresAt: new Date(Date.now() + 2000).toISOString(),
-  }));
+  consent(true, 2000);
   await render();
   expect(window['ga-disable-G-ABC123XYZ']).toBe(false);
   await act(async () => jest.advanceTimersByTime(2100));
   expect(window['ga-disable-G-ABC123XYZ']).toBe(true);
 });
 
-test("an expired consent event cannot re-enable measurement", async () => {
+test("a consent event cannot enable measurement without a valid stored choice", async () => {
   await render();
   await act(async () => window.dispatchEvent(new CustomEvent('fireartro-cookie-consent-updated', {
-    detail: { analytics: true, expiresAt: '2000-01-01T00:00:00Z' },
+    detail: { version: COOKIE_CONSENT_VERSION, necessary: true, analytics: true, marketing: false,
+      savedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86_400_000).toISOString() },
   })));
   expect(document.getElementById('fireartro-ga4-script')).toBeNull();
 });
@@ -303,18 +295,17 @@ test("business events require consent and stop immediately after withdrawal or e
   clickContact("tel:+40787602144");
   act(() => trackQuoteAccepted());
   expect(businessEvents()).toHaveLength(0);
-  await act(async () => window.dispatchEvent(new CustomEvent("fireartro-cookie-consent-updated", {
-    detail: { analytics: true, expiresAt: new Date(Date.now() + 1000).toISOString() },
-  })));
+  await act(async () => {
+    consent(true, 1000);
+    window.dispatchEvent(new Event("fireartro-cookie-consent-updated"));
+  });
   clickContact("tel:+40787602144");
   expect(businessEvents()).toHaveLength(1);
   await act(async () => jest.advanceTimersByTime(1100));
   clickContact("tel:+40787602144");
   act(() => trackQuoteAccepted());
   expect(businessEvents()).toHaveLength(1);
-  await act(async () => window.dispatchEvent(new CustomEvent("fireartro-cookie-consent-updated", {
-    detail: { analytics: false },
-  })));
+  await act(async () => saveCookieConsent({ analytics: false, marketing: false }));
   act(() => trackQuoteAccepted());
   expect(businessEvents()).toHaveLength(1);
 });

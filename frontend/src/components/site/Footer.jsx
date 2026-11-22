@@ -1,16 +1,23 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { ArrowUpRight, Mail, Phone } from "lucide-react";
-import { OPEN_COOKIE_SETTINGS_EVENT } from "@/components/site/CookieConsent";
+import { useRef } from "react";
 import { WhatsAppIcon } from "@/components/site/BrandIcons";
 
 import useManagedContent from "@/hooks/useManagedContent";
 import { buildWhatsappLink, LOGO_SRC_SET, LOGO_URL } from "@/lib/constants";
+import { NECESSARY_ONLY, OPEN_COOKIE_SETTINGS_EVENT, saveCookieConsent, useCookieConsent } from "@/lib/cookieConsent";
 import "@/styles/night-footer.css";
+
+const ANPC_HOMEPAGE = "https://www.anpc.ro/";
+const ANPC_COMPLAINTS = "https://eservicii.anpc.ro/";
 
 export const Footer = () => {
   const copy = useManagedContent("footer", CMS_DEFAULTS.footer);
   const siteDetails = useManagedContent("siteDetails", CMS_DEFAULTS.siteDetails);
   const managedContactSettings = useManagedContent("contactSettings", CMS_DEFAULTS.contactSettings);
+  const cookieSettings = useManagedContent("cookieSettings", CMS_DEFAULTS.cookieSettings);
+  const consent = useCookieConsent();
+  const cookieSettingsButton = useRef(null);
   const socialLinks = useManagedContent("socialLinks", CMS_DEFAULTS.socialLinks).filter((item) => item.href);
   const phoneDisplay = managedContactSettings.phoneDisplay || CMS_DEFAULTS.contactSettings.phoneDisplay;
   const phoneHref = managedContactSettings.phoneTel
@@ -23,6 +30,12 @@ export const Footer = () => {
   const shareCapital = siteDetails.shareCapital?.trim();
   const phoneTarget = phoneDisplay && phoneHref ? `tel:${phoneHref}` : "/contact";
   const whatsappTarget = whatsAppHref || "/contact";
+  const hasAnpcHomepage = copy.legalLinks.some((link) => link.href === ANPC_HOMEPAGE);
+
+  const withdrawCookieConsent = () => {
+    cookieSettingsButton.current?.focus();
+    saveCookieConsent(NECESSARY_ONLY, cookieSettings.retentionDays);
+  };
 
   return (
     <footer className="fa-footer" data-testid="night-runway-footer">
@@ -79,7 +92,7 @@ export const Footer = () => {
           </div>
           <div className="fa-footer__badges">
             <a className="fa-footer__sal" href="https://reclamatiisal.anpc.ro/" target="_blank" rel="noopener noreferrer">
-              <img src="/legal/anpc-sal.png" alt="ANPC — Soluționarea Alternativă a Litigiilor" width="201" height="50" loading="lazy" />
+              <img src="/legal/anpc-sal.png" alt="ANPC — Soluționarea Alternativă a Litigiilor" width="250" height="50" loading="lazy" />
             </a>
             <a className="fa-footer__pnrr" href="https://mfe.gov.ro/pnrr/" target="_blank" rel="noopener noreferrer" aria-label="PNRR — află mai multe despre finanțarea prin Planul Național de Redresare și Reziliență">
               <img src="/legal/pnrr-banner.png" alt="PNRR: Fonduri pentru România modernă și reformată — finanțat de Uniunea Europeană" width="1416" height="175" loading="lazy" />
@@ -96,13 +109,23 @@ export const Footer = () => {
                 href={item.href}
                 {...(/^https?:\/\//.test(item.href) ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               >
-                {item.label}
+                {item.href === ANPC_COMPLAINTS && item.label === "ANPC" ? "Reclamații ANPC" : item.label}
                 {/^https?:\/\//.test(item.href) && <ArrowUpRight aria-hidden="true" />}
               </a>
             ))}
-            <button type="button" onClick={() => window.dispatchEvent(new CustomEvent(OPEN_COOKIE_SETTINGS_EVENT))}>
+            {!hasAnpcHomepage && (
+              <a href={ANPC_HOMEPAGE} target="_blank" rel="noopener noreferrer">
+                Site ANPC <ArrowUpRight aria-hidden="true" />
+              </a>
+            )}
+            <button ref={cookieSettingsButton} type="button" onClick={() => window.dispatchEvent(new CustomEvent(OPEN_COOKIE_SETTINGS_EVENT))}>
               Setări cookies
             </button>
+            {(consent?.analytics || consent?.marketing) && (
+              <button type="button" onClick={withdrawCookieConsent}>
+                Retrage acordul pentru cookies
+              </button>
+            )}
           </nav>
         </div>
       </div>

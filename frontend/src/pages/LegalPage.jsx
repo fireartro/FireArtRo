@@ -7,7 +7,7 @@ import usePageMeta from "@/hooks/usePageMeta";
 import useManagedContent from "@/hooks/useManagedContent";
 import { EMAIL } from "@/lib/constants";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
-import { LEGAL_PAGE_PRESENTATION } from "@/data/legalContent";
+import { LEGAL_PAGE_PRESENTATION, updatePriorLegalCopy } from "@/data/legalContent";
 import "@/styles/night-legal.css";
 
 const LEGAL_NAV = [
@@ -23,7 +23,7 @@ export default function LegalPage({ type = "confidentialitate" }) {
   const shareCapital = siteDetails.shareCapital?.trim();
   const routeKey = Object.prototype.hasOwnProperty.call(LEGAL_PAGE_PRESENTATION, type) ? type : "confidentialitate";
   const documentKey = { confidentialitate: "privacy", termeni: "terms", cookies: "cookies" }[routeKey];
-  const data = { ...LEGAL_PAGE_PRESENTATION[routeKey], ...legalPages[documentKey] };
+  const data = { ...LEGAL_PAGE_PRESENTATION[routeKey], ...updatePriorLegalCopy(legalPages[documentKey]) };
 
   usePageMeta({
     title: `${data.title} — FireArtRo`,

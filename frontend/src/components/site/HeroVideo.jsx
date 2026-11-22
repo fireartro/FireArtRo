@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import HeroKineticTitles from "./HeroKineticTitles";
 import { HERO_MEDIA, HERO_POSTER } from "@/data/content";
+import { useCookieConsent } from "@/lib/cookieConsent";
+import { allowedGoogleMedia } from "@/lib/optionalGoogleMedia";
 import {
   canPlayHeroVideo,
   canStartHeroVideo,
@@ -32,19 +34,20 @@ export const HeroVideo = ({ mediaOverride }) => {
   );
   const [mediaVariant, setMediaVariant] = useState(readMediaVariant);
   const media = mediaOverride || HERO_MEDIA.variants[mediaVariant] || HERO_MEDIA.variants.wide;
+  const marketingAllowed = useCookieConsent()?.marketing === true;
   const [delivery, setDelivery] = useState(null);
   const needsCodecChoice = !mediaOverride && Boolean(media.av1Src)
     && typeof navigator !== 'undefined' && typeof navigator.mediaCapabilities?.decodingInfo === 'function';
-  const source = !mediaOverride && delivery?.original === media.src ? delivery.src : media.src;
+  const source = allowedGoogleMedia(!mediaOverride && delivery?.original === media.src ? delivery.src : media.src, marketingAllowed);
   const codecReady = !needsCodecChoice || delivery?.original === media.src;
-  const poster = media.poster || HERO_POSTER;
+  const poster = allowedGoogleMedia(media.poster, marketingAllowed) || HERO_POSTER;
   const objectPosition = HERO_MEDIA.position || "50% 50%";
   const [videoFailed, setVideoFailed] = useState(false);
   const [bundledVideoSupported, setBundledVideoSupported] = useState(true);
   const [autoplayEligible, setAutoplayEligible] = useState(true);
   const [activatedSource, setActivatedSource] = useState("");
   const [readyPoster, setReadyPoster] = useState("");
-  const isVideoMedia = !mediaOverride || mediaOverride.type === "video";
+  const isVideoMedia = Boolean(source) && (!mediaOverride || mediaOverride.type === "video");
   const canMountVideo = isVideoMedia
     && codecReady
     && !videoFailed
@@ -54,9 +57,9 @@ export const HeroVideo = ({ mediaOverride }) => {
     && (!codecReady || Boolean(mediaOverride) || bundledVideoSupported || source === media.av1Src);
   const usePoster = !canMountVideo || activatedSource !== source;
   const fallbackImage = mediaOverride && mediaOverride.type !== "video"
-    ? (mediaOverride.type === "youtube" ? poster : source)
+    ? (mediaOverride.type === "youtube" ? poster : source || poster)
     : poster;
-  const customVideoStill = usePoster && mediaOverride?.type === "video" && !mediaOverride.poster;
+  const customVideoStill = isVideoMedia && usePoster && mediaOverride?.type === "video" && !mediaOverride.poster;
   const videoPoster = mediaOverride?.type === "video" && !mediaOverride.poster ? undefined : poster;
 
   useEffect(() => {

@@ -65,10 +65,11 @@ function RouteScrollManager() {
 
 function GlobalUi() {
   const location = useLocation();
-
-  return location.pathname !== "/admin" ? <>
+  const path = location.pathname.replace(/\/$/, "");
+  const isLegal = ["/cookies", "/confidentialitate", "/termeni-si-conditii"].includes(path);
+  return !/^\/admin(?:\/|$)/.test(path) ? <>
     <AnalyticsLoader />
-    <CookieConsent />
+    <CookieConsent autoPrompt={!isLegal} />
   </> : null;
 }
 

@@ -94,6 +94,7 @@ export const QuoteForm = () => {
   const [submissionError, setSubmissionError] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [formStarted, setFormStarted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const submissionRef = useRef(null);
@@ -220,6 +221,7 @@ export const QuoteForm = () => {
 
   const submit = async (event) => {
     event.preventDefault();
+    setFormStarted(true);
     if (submittingRef.current) return;
     if (!validate()) return;
 
@@ -266,6 +268,7 @@ export const QuoteForm = () => {
     setAnnouncement("");
     setSubmissionError("");
     setForm(freshForm());
+    setFormStarted(false);
     setTurnstileToken("");
     setTurnstileResetSignal((current) => current + 1);
   };
@@ -360,7 +363,7 @@ export const QuoteForm = () => {
               <NightButton as="button" onClick={restart} variant="secondary">Trimite altă cerere</NightButton>
             </div>
           ) : (
-            <form onSubmit={submit} data-testid="quote-form" aria-busy={loading} noValidate>
+            <form onSubmit={submit} onChangeCapture={formStarted ? undefined : () => setFormStarted(true)} data-testid="quote-form" aria-busy={loading} noValidate>
               <div className="nr-contact-form-heading">
                 <h2>{contactPage.formTitle}</h2>
                 <span>Câmpurile marcate sunt obligatorii.</span>
@@ -463,7 +466,7 @@ export const QuoteForm = () => {
                 <input id="company-website" tabIndex={-1} autoComplete="off" value={form.company_website} onChange={(event) => update("company_website", event.target.value)} />
               </div>
 
-              {turnstileConfigured && (
+              {turnstileConfigured && formStarted && (
                 <div className="nr-contact-turnstile-field">
                   <TurnstileWidget
                     onToken={updateTurnstileToken}

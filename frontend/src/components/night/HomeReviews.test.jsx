@@ -2,6 +2,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { DraftPreviewProvider } from "@/content/ManagedContentProvider";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import { COOKIE_CONSENT_STORAGE_KEY, OPEN_COOKIE_SETTINGS_EVENT, saveCookieConsent } from "@/lib/cookieConsent";
 import HomeReviews from "./HomeReviews";
 
 const review = {
@@ -27,6 +28,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
   global.fetch = originalFetch;
+  window.localStorage.removeItem(COOKIE_CONSENT_STORAGE_KEY);
   delete global.IS_REACT_ACT_ENVIRONMENT;
 });
 const render = async (settings = {}) => act(async () => root.render(
@@ -35,7 +37,20 @@ const render = async (settings = {}) => act(async () => root.render(
   } }}><HomeReviews /></DraftPreviewProvider>,
 ));
 
-test("credits Google Maps and provides author, avatar and individual review links", async () => {
+test("links to Google Maps and cookie settings without displaying review cards or loading avatars before consent", async () => {
+  const onSettings = jest.fn();
+  window.addEventListener(OPEN_COOKIE_SETTINGS_EVENT, onSettings, { once: true });
+  await render();
+  expect(container.querySelector("[data-review-card]")).toBeNull();
+  expect(container.querySelector("a[href='https://maps.google.com/?cid=123']")).not.toBeNull();
+  expect(container.querySelector(`img[src='${review.author_photo_url}']`)).toBeNull();
+  expect(container.textContent).toContain("FireArtRo nu verifică independent dacă autorii au cumpărat sau folosit serviciile");
+  await act(async () => container.querySelector("button").click());
+  expect(onSettings).toHaveBeenCalledTimes(1);
+});
+
+test("preserves Google Maps author attribution and source links only while external content is authorized", async () => {
+  saveCookieConsent({ analytics: false, marketing: true });
   await render();
   const card = container.querySelector("[data-review-card]");
   expect(card.querySelector(`a[href='${review.url}']`)).not.toBeNull();
@@ -45,6 +60,9 @@ test("credits Google Maps and provides author, avatar and individual review link
   expect(container.textContent).toMatch(/relevanță/);
   expect(container.textContent).not.toMatch(/verificate/);
   expect(container.querySelectorAll("[aria-hidden='true'] a:not([tabindex='-1'])")).toHaveLength(0);
+  await act(async () => saveCookieConsent({ analytics: false, marketing: false }));
+  expect(container.querySelector("[data-review-card]")).toBeNull();
+  expect(container.querySelector(`img[src='${review.author_photo_url}']`)).toBeNull();
 });
 
 test("provider failure hides the section without inventing reviews", async () => {

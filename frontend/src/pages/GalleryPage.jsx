@@ -11,6 +11,8 @@ import ScrollProgress from "@/components/site/ScrollProgress";
 import usePageMeta from "@/hooks/usePageMeta";
 import useManagedContent from "@/hooks/useManagedContent";
 import { buildCategoryRanges, getCategoryLabel, isGalleryVisible } from "@/lib/categoryNavigation";
+import { useCookieConsent } from "@/lib/cookieConsent";
+import { allowedGoogleMedia, LOCAL_MEDIA_FALLBACK } from "@/lib/optionalGoogleMedia";
 
 import "@/styles/night-gallery.css";
 import "@/styles/category-navigation.css";
@@ -54,6 +56,7 @@ const gallerySchema = (items, siteUrl) => ({
 
 export default function GalleryPage() {
   const copy = useManagedContent("galleryPage", CMS_DEFAULTS.galleryPage);
+  const marketingAllowed = useCookieConsent()?.marketing === true;
   const location = useLocation();
   const navigate = useNavigate();
   const media = useManagedContent("mediaItems", CMS_DEFAULTS.mediaItems);
@@ -324,7 +327,7 @@ export default function GalleryPage() {
                 <div className="nr-gallery-lightbox__layout">
                   <div className="nr-gallery-lightbox__media">
                     <img
-                      src={expandedItem.src}
+                      src={allowedGoogleMedia(expandedItem.src, marketingAllowed, LOCAL_MEDIA_FALLBACK)}
                       alt={expandedItem.alt}
                       loading="eager"
                       decoding="async"

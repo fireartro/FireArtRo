@@ -1,6 +1,7 @@
 import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import CookieConsent, { COOKIE_CONSENT_STORAGE_KEY, OPEN_COOKIE_SETTINGS_EVENT } from "./CookieConsent";
+import { COOKIE_CONSENT_VERSION, readCookieConsent, saveCookieConsent } from "@/lib/cookieConsent";
 
 jest.mock("@/hooks/useManagedContent", () => ({ __esModule: true, default: (_key, fallback) => fallback }));
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -8,7 +9,7 @@ let container, root, opener, prior;
 const dialog = () => document.querySelector('[role="dialog"]');
 const key = (value, shiftKey = false) => act(() => document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: value, shiftKey, bubbles: true, cancelable: true })));
 beforeEach(async () => {
-  localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({ savedAt: new Date().toISOString(), analytics: true, marketing: false }));
+  saveCookieConsent({ analytics: true, marketing: false });
   opener = document.createElement("button");
   document.body.appendChild(opener);
   prior = document.createElement("div"); prior.setAttribute("inert", "existing"); document.body.appendChild(prior);
@@ -115,4 +116,46 @@ test("new background surfaces become inert while the modal is open", async () =>
     key("Escape");
     expect(added.hasAttribute("inert")).toBe(false);
   } finally { added.remove(); }
+});
+
+test("rejecting works even when the browser blocks storage writes", async () => {
+  const write = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new DOMException("Storage is disabled", "SecurityError");
+  });
+  try {
+    const reject = [...dialog().querySelectorAll("button")].find(node => node.textContent === "Doar necesare");
+    await act(async () => reject.click());
+    expect(dialog()).toBeNull();
+    expect(container.hasAttribute("inert")).toBe(false);
+  } finally {
+    write.mockRestore();
+    await act(async () => saveCookieConsent({ analytics: false, marketing: false }));
+  }
+});
+
+test.each([
+  { version: undefined },
+  { analytics: "true" },
+  { expiresAt: undefined },
+  { expiresAt: "invalid" },
+  { savedAt: new Date(Date.now() + 86_400_000).toISOString() },
+])("rejects invalid stored choices %j", async fields => {
+  localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({
+    version: COOKIE_CONSENT_VERSION, necessary: true, analytics: true, marketing: true,
+    savedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86_400_000).toISOString(), ...fields,
+  }));
+  expect(readCookieConsent()).toBeNull();
+});
+
+test("lets the reader open consent settings voluntarily on a policy page", async () => {
+  await act(async () => root.unmount());
+  localStorage.clear();
+  root = createRoot(container);
+  await act(async () => root.render(<CookieConsent autoPrompt={false} />));
+  expect(dialog()).toBeNull();
+  await act(async () => window.dispatchEvent(new Event(OPEN_COOKIE_SETTINGS_EVENT)));
+  expect(dialog()).not.toBeNull();
+  expect([...dialog().querySelectorAll("input:not(:disabled)")].every(input => !input.checked)).toBe(true);
+  key("Escape");
+  expect(dialog()).toBeNull();
 });

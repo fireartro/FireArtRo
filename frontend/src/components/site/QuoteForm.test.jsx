@@ -91,6 +91,13 @@ afterEach(async () => {
   jest.clearAllMocks();
 });
 
+test("starts anti-abuse only after form interaction", () => {
+  expect(container.querySelector('[data-testid="turnstile-double"]')).toBeNull();
+  setValue(container.querySelector("#quote-locality"), "Cluj-Napoca");
+  expect(container.querySelector('[data-testid="turnstile-double"]')).not.toBeNull();
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
 test("requires a current anti-abuse token and sends it only after verification", async () => {
   completeRequiredFields();
 

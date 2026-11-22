@@ -1,4 +1,4 @@
-import { LEGAL_PAGE_PRESENTATION } from "./legalContent";
+import { LEGAL_PAGE_PRESENTATION, updatePriorLegalCopy } from "./legalContent";
 
 
 const pageText = (key) => LEGAL_PAGE_PRESENTATION[key].sections
@@ -38,6 +38,26 @@ test("cookie copy covers consent, temporary contact prefill, and consent-gated G
 test.each(["confidentialitate", "termeni", "cookies"])(
   "%s shows the current technical-copy review date",
   (key) => {
-    expect(LEGAL_PAGE_PRESENTATION[key].updated).toBe("26 septembrie 2026");
+    expect(LEGAL_PAGE_PRESENTATION[key].updated).toBe("22 noiembrie 2026");
   },
 );
+
+test("updates the published baseline while preserving an edited CMS section", () => {
+  const original = {
+    title: "Politica FireArtRo",
+    updatedLabel: "Actualizat la 28 septembrie 2026",
+    sections: [
+      { id: "withdrawal", heading: "Cum îți alegi setările", paragraphs: [
+        "Deschide Setări cookies din subsolul paginii. Poți alege Doar necesare, toate opțiunile sau o selecție. Refuzul nu afectează accesul la informațiile firmei și formularul de ofertă.",
+        "Un paragraf personalizat în Admin.",
+      ] },
+    ],
+  };
+  const updated = updatePriorLegalCopy(original);
+  expect(updated.updatedLabel).toBe("Actualizat la 22 noiembrie 2026");
+  expect(updated.title).toBe(original.title);
+  expect(updated.sections[0].heading).toBe(original.sections[0].heading);
+  expect(updated.sections[0].paragraphs[0]).toMatch(/retrage direct acordul/);
+  expect(updated.sections[0].paragraphs[1]).toBe(original.sections[0].paragraphs[1]);
+  expect(updatePriorLegalCopy(updated)).toBe(updated);
+});

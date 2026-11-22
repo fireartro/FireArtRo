@@ -93,6 +93,16 @@
   line-height: 1.5;
 }
 
+.fa-page-reviews__notice-link {
+  padding: 0;
+  border: 0;
+  color: #b8ddff;
+  background: none;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .fa-page-reviews__lane-head > a {
   position: relative;
   display: inline-flex;

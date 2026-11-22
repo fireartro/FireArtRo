@@ -6,6 +6,7 @@ const payload={providers:[
     id:'test-google',provider:'google',author:'Autor de test Google',rating:4,
     text:'Recenzie de test pentru verificarea afișării. '.repeat(18),
     published_at:'2026-10-01T12:00:00Z',url:'https://www.google.com/maps/reviews/test-google',
+    author_photo_url:'https://lh3.googleusercontent.com/test-avatar',
   }]},
   {id:'facebook',href:'https://www.facebook.com/FireArtRo/reviews',reviews:[{
     id:'test-facebook',provider:'facebook',author:'Autor de test Facebook',rating:null,
@@ -25,16 +26,33 @@ async function openReviews(page,body=payload,status=200){
   await response;
 }
 
+async function permitExternalContent(page){
+  await page.getByRole('button',{name:'permite conținutul extern',exact:true}).click();
+  const dialog=page.getByRole('dialog');
+  await dialog.getByRole('checkbox',{name:/Conținut extern/}).check();
+  await dialog.getByRole('button',{name:'Salvează preferințele',exact:true}).click();
+}
+
 for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
   test(`review sources and long text remain usable: ${name}`,async({page},testInfo)=>{
     await page.setViewportSize({width,height});
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
+    const avatarRequests=[];
+    await page.route('https://lh3.googleusercontent.com/test-avatar',route=>{
+      avatarRequests.push(route.request().url());
+      return route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"/>'});
+    });
     await openReviews(page);
     const section=page.getByTestId('home-reviews');
     await expect(section).toBeVisible();
-    await expect(section.locator('[data-review-card]')).toHaveCount(2);
     const google=section.locator('[data-review-provider="google"]');
     const facebook=section.locator('[data-review-provider="facebook"]');
+    await expect(section.locator('[data-review-card]')).toHaveCount(1);
+    await expect(google.getByRole('link',{name:'Vezi recenziile pe Google Maps',exact:true})).toBeVisible();
+    expect(avatarRequests).toEqual([]);
+    await permitExternalContent(page);
+    await expect(section.locator('[data-review-card]')).toHaveCount(2);
+    await expect.poll(()=>avatarRequests.length).toBeGreaterThan(0);
     await expect(google.getByRole('link',{name:'Vezi recenzia originală pe Google Maps',exact:true})).toHaveAttribute('href',payload.providers[0].reviews[0].url);
     await expect(facebook.getByRole('link',{name:'Vezi recenzia originală pe Facebook',exact:true})).toHaveAttribute('href',payload.providers[1].reviews[0].url);
     await expect(facebook.locator('[data-review-card] .fa-page-reviews__rating')).toHaveCount(0);

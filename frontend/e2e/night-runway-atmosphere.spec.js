@@ -1,11 +1,12 @@
 const { expect, test } = require("@playwright/test");
 
 const necessaryConsent = {
+  version: 2,
   necessary: true,
   analytics: false,
   marketing: false,
-  savedAt: "2026-08-31T00:00:00.000Z",
-  expiresAt: "2099-08-31T00:00:00.000Z",
+  savedAt: new Date().toISOString(),
+  expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
 };
 
 test.beforeEach(async ({ page }) => {
