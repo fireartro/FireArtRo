@@ -5,6 +5,7 @@ test.beforeEach(async ({ page }) => {
     window.localStorage.setItem(
       "fireartro-cookie-consent-v1",
       JSON.stringify({
+        version: 2,
         necessary: true,
         analytics: false,
         marketing: false,

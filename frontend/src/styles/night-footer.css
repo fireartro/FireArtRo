@@ -195,7 +195,7 @@
 
 .fa-footer__badges {
   display: grid;
-  grid-template-columns: minmax(0, 15.625rem) minmax(0, 44.5rem);
+  grid-template-columns: minmax(0, 250px) minmax(0, 44.5rem);
   align-items: center;
   justify-content: space-between;
   gap: 2rem;
@@ -204,6 +204,7 @@
 
 .fa-footer__badges a { display: block; min-width: 0; max-width: 100%; }
 .fa-footer__badges img { display: block; width: 100%; max-width: 100%; height: auto; }
+.fa-footer__sal img { height: 50px; object-fit: contain; object-position: left center; }
 .fa-footer__pnrr span { display: none; }
 
 @media (min-width: 1600px) and (min-height: 850px) {
@@ -255,7 +256,7 @@
   .fa-footer__directory { grid-template-columns: minmax(0, 1.2fr) minmax(6.25rem, 0.8fr); gap: 1.25rem 1rem; }
   .fa-footer__explore { grid-column: 1 / -1; }
   .fa-footer__badges { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
-  .fa-footer__sal { width: min(100%, 15.625rem); }
+  .fa-footer__sal { width: min(100%, 250px); }
   .fa-footer__pnrr span { display: flex; align-items: center; gap: 0.4rem; max-width: 100%; margin-top: 0.55rem; color: #d9e5f8; font-size: 0.88rem; line-height: 1.5; overflow-wrap: anywhere; }
   .fa-footer__pnrr span svg { width: 1rem; height: 1rem; flex: none; }
 }

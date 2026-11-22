@@ -11,6 +11,8 @@ import ResponsiveImage from "@/components/site/ResponsiveImage";
 import { createSettlingTicker } from "@/lib/settlingTicker";
 import { selectHomeGallery } from "@/lib/homeMediaSelection";
 import { frameContainerStyle } from '@/lib/imageFrame';
+import { useCookieConsent } from '@/lib/cookieConsent';
+import { allowedGoogleMedia, LOCAL_MEDIA_FALLBACK } from '@/lib/optionalGoogleMedia';
 
 gsap.registerPlugin(ScrollTrigger);
 const SHORT_DESKTOP_QUERY = "(min-width: 1200px) and (max-height: 640px) and (hover: hover) and (pointer: fine)";
@@ -19,6 +21,7 @@ const GALLERY_IMAGE_SIZES = "auto, (max-width: 899px) 100vw, (min-width: 1600px)
 export default function HomeGallery({geometryOnly=false}) {
   const homePage = useManagedContent("homePage", CMS_DEFAULTS.homePage);
   const mediaItems = useManagedContent("mediaItems", CMS_DEFAULTS.mediaItems);
+  const marketingAllowed = useCookieConsent()?.marketing === true;
   const copy = homePage.gallery;
   const galleryItems = useMemo(() => selectHomeGallery(homePage.promoSlides, mediaItems), [homePage.promoSlides, mediaItems]);
   const sectionRef = useRef(null);
@@ -296,7 +299,9 @@ export default function HomeGallery({geometryOnly=false}) {
                 <div className="fa-work__card-inner" data-gallery-lift>
                   <figure data-image-frame={item.imageFrame ? 'gallery' : undefined} style={frameContainerStyle(item.imageFrame,{height:true})}>
                     {geometryOnly ? <span aria-hidden="true"/> : item.type === "video" ? (
-                      <video src={item.media.src} poster={item.media.poster} controls playsInline preload="metadata" aria-label={item.media.alt} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <video src={allowedGoogleMedia(item.media.src, marketingAllowed)}
+                        poster={allowedGoogleMedia(item.media.poster, marketingAllowed, LOCAL_MEDIA_FALLBACK)}
+                        controls playsInline preload="metadata" aria-label={item.media.alt} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : item.type === "youtube" ? (
                       <a href={item.youtubeUrl || item.media?.youtubeUrl} target="_blank" rel="noopener noreferrer" aria-label={item.ctaLabel}>
                         {item.media && <ResponsiveImage src={item.media.poster || item.media.thumbnail} alt={item.media.alt} loading="lazy" decoding="async" />}

@@ -1,11 +1,74 @@
 import { SITE_DETAILS, BUSINESS_HOURS } from "./businessContent";
 
 const EMAIL = SITE_DETAILS.email;
-const UPDATED = "26 septembrie 2026";
+const UPDATED = "22 noiembrie 2026";
 const IDENTITY = `${SITE_DETAILS.legalName}, CUI ${SITE_DETAILS.taxId}, nr. Registrul Comerțului ${SITE_DETAILS.registrationNumber}, cu sediul social în ${SITE_DETAILS.registeredOffice}`;
+const COOKIE_PREFERENCE_TEXT = "fireartro-cookie-consent-v1 (localStorage, fireart.ro) păstrează categoriile alese, versiunea informării, data alegerii și expirarea. Durata este afișată în panoul Setări cookies. După expirare, preferința nu mai activează funcțiile opționale. Dacă browserul blochează salvarea, opțiunile rămân dezactivate.";
+
+// Replace only the exact retired baseline paragraphs on older CMS revisions.
+// Custom text and other sections remain editable and rendered from the CMS.
+const RETIRED_LEGAL_PARAGRAPHS = new Map([
+  [
+    "Google Analytics 4 și activarea playerelor YouTube sunt opționale și se bazează pe consimțământul exprimat în setările cookies (lit. a). Refuzul nu împiedică solicitarea unei oferte. Nu înscriem automat solicitanții la newsletter sau campanii publicitare.",
+    "Google Analytics 4 și conținutul extern de la Google sau YouTube sunt opționale și se bazează pe consimțământul exprimat în Setări cookies (art. 6 alin. 1 lit. a GDPR). Refuzul nu împiedică solicitarea unei oferte. Nu înscriem automat solicitanții la newsletter sau campanii publicitare.",
+  ],
+  [
+    "API-urile de recenzii sunt apelate de server, fără transmiterea explicită a IP-ului vizitatorului. Fotografiile autorilor și miniaturile YouTube încărcate direct de la Google creează însă conexiuni ale browserului către acel furnizor, inclusiv înainte de pornirea unui player. Aceste conexiuni nu reprezintă activarea Analytics.",
+    "Serverul poate prelua recenzii publice fără a transmite IP-ul vizitatorului în solicitarea către API. Atunci când accepți Conținut extern, browserul poate încărca miniaturi YouTube și fotografii ale autorilor de recenzii direct de la Google. Furnizorul primește datele de conectare, inclusiv IP-ul. Această opțiune este independentă de Google Analytics.",
+  ],
+  [
+    "Înaintea asumării unei obligații de plată comunicăm informațiile și condițiile proiectului. Pentru contractele la distanță, confirmarea și documentele relevante sunt transmise pe suport durabil, de exemplu prin email. Limba uzuală este româna; o altă limbă poate fi convenită.",
+    "Înaintea asumării unei obligații de plată comunicăm informațiile și condițiile proiectului. Pentru contractele la distanță, confirmarea și documentele relevante sunt transmise pe suport durabil, de exemplu prin email. Pentru consumatori, informațiile despre servicii și contractul se furnizează în limba română. La cerere, se poate conveni și o versiune într-o altă limbă.",
+  ],
+  [
+    "fireartro-cookie-consent-v1 (localStorage, domeniul site-ului): categoriile acceptate, data salvării și expirarea. Termenul configurat este de 180 de zile. După expirare, alegerea nu mai autorizează funcțiile opționale. localStorage nu se șterge singur la termen; înregistrarea poate rămâne până la înlocuire sau ștergerea datelor browserului.",
+    COOKIE_PREFERENCE_TEXT,
+  ],
+  [
+    "După acord se pot transmite calea paginii, titlul și semnale tehnice ale browserului. Evenimentele explicite ale aplicației elimină parametrii și fragmentul URL și nu includ câmpurile formularului. Cookie-urile _ga și _ga_ID (unde ID identifică integrarea) pot păstra identificatori de analiză; durata depinde de configurația Google, în mod implicit până la 2 ani, cu posibilitatea reînnoirii la interacțiune. Refuzul sau expirarea acordului site-ului are prioritate pentru activarea măsurării.",
+    "După acord se pot comunica Google calea paginii, titlul și semnale tehnice ale browserului. Evenimentele trimise de aplicație exclud parametrii URL, fragmentul și câmpurile formularului. Cookie-urile de analiză _ga și _ga_ID (unde ID identifică integrarea) au o durată configurată de 180 de zile, fără reînnoire automată la vizitarea unei pagini. Retragerea sau expirarea preferinței oprește măsurarea și elimină aceste cookie-uri de pe domeniul site-ului.",
+  ],
+  [
+    "Playerul YouTube necesită atât categoria Conținut extern și marketing, cât și apăsarea butonului de redare. Folosim youtube-nocookie.com, ceea ce nu înseamnă absența oricărei prelucrări. Refuzul păstrează playerul blocat; retragerea acordului îl închide.",
+    "Playerul YouTube se încarcă de la youtube-nocookie.com după ce accepți Conținut extern și apeși butonul de redare. YouTube poate prelucra date tehnice și poate folosi stocare proprie, conform politicilor sale. Retragerea acordului închide playerul.",
+  ],
+  [
+    "Miniaturile pot fi încărcate de la img.youtube.com, iar fotografiile autorilor recenziilor de la Google, înainte de pornirea playerului și fără activarea Analytics. Aceste imagini creează conexiuni către furnizor și expun informațiile tehnice necesare livrării. Stocarea folosită ulterior de platformele externe este descrisă în politicile lor.",
+    "Miniaturile YouTube și fotografiile autorilor recenziilor Google sunt solicitate de browser după acceptarea categoriei Conținut extern. Aceste imagini implică o conexiune către Google și transmit datele necesare livrării lor, inclusiv adresa IP. Poți deschide linkurile către platforme și fără a permite încărcarea conținutului în fireart.ro.",
+  ],
+  [
+    "Categoria Conținut extern și marketing nu activează în prezent un pixel publicitar. Integrarea oricărui nou instrument trebuie documentată și condiționată de acordul necesar înainte de activare.",
+    "Categoria Conținut extern nu activează un pixel publicitar FireArtRo. Furnizorii externi își descriu propriile prelucrări și perioade de stocare în politicile lor.",
+  ],
+  [
+    "Când este configurat, Cloudflare Turnstile se poate încărca odată cu formularul, independent de opțiunile de analiză și marketing, pentru prevenirea spamului și atacurilor. Nu îl folosim pentru publicitate. Prelucrarea și stocarea furnizorului sunt descrise în documentația sa oficială.",
+    "Când este configurat, Cloudflare Turnstile pornește după ce începi să completezi formularul sau încerci să-l trimiți. Este utilizat pentru prevenirea spamului și verificarea trimiterii, independent de opțiunile de analiză și conținut extern. Furnizorul poate prelucra date tehnice în scopurile descrise în politica Turnstile.",
+  ],
+  [
+    "Deschide Setări cookies din subsolul paginii. Poți alege Doar necesare, toate opțiunile sau o selecție. Refuzul nu afectează accesul la informațiile firmei și formularul de ofertă.",
+    "Din subsolul paginii poți retrage direct acordul sau deschide Setări cookies ca să schimbi fiecare opțiune. Doar necesare dezactivează toate opțiunile. Formularul de ofertă și documentele legale rămân disponibile după refuz.",
+  ],
+  [
+    "Recenziile externe sunt însoțite de sursă și, când sunt disponibile, de autor și link. Selecția nu reprezintă obligatoriu toate recenziile. Nu afirmăm că fiecare autor a cumpărat serviciile dacă acest lucru nu a fost verificat; autenticitatea este supusă și regulilor platformei sursă.",
+    "Afișăm recenzii publicate pe platforme externe și indicăm sursa. FireArtRo nu verifică independent dacă autorii au cumpărat sau au folosit serviciile. Platformele sursă își aplică propriile reguli de moderare. Selecția afișată poate include doar o parte din recenzii.",
+  ],
+]);
+
+export function updatePriorLegalCopy(document) {
+  let changed = false;
+  const sections = document.sections.map(section => ({
+    ...section,
+    paragraphs: section.paragraphs.map(paragraph => {
+      const replacement = RETIRED_LEGAL_PARAGRAPHS.get(paragraph);
+      if (replacement) changed = true;
+      return replacement || paragraph;
+    }),
+  }));
+  return changed ? { ...document, sections, updatedLabel: `Actualizat la ${UPDATED}` } : document;
+}
 
 // Shared source for defaults and the targeted CMS publication. See the legal-review runbook.
-export const LEGAL_PAGE_PRESENTATION = {
+const LEGAL_BASELINE = {
   confidentialitate: {
     path: "/confidentialitate", eyebrow: "Protecția datelor", title: "Politica de confidențialitate",
     description: "Cum sunt folosite datele tale când vizitezi site-ul sau contactezi FireArtRo.",
@@ -61,7 +124,7 @@ export const LEGAL_PAGE_PRESENTATION = {
       { label: "Protecția datelor — MongoDB", href: "https://www.mongodb.com/legal/data-processing-agreement" },
       { label: "Protecția datelor — Resend", href: "https://resend.com/legal/dpa" },
       { label: "Confidențialitate Google", href: "https://policies.google.com/privacy?hl=ro" },
-      { label: "Confidențialitate Cloudflare", href: "https://www.cloudflare.com/privacypolicy/" },
+      { label: "Confidențialitate Cloudflare Turnstile", href: "https://www.cloudflare.com/turnstile-privacy-policy/" },
       { label: "Confidențialitate Meta", href: "https://www.facebook.com/privacy/policy/" },
     ],
   },
@@ -118,7 +181,9 @@ export const LEGAL_PAGE_PRESENTATION = {
     ],
     sources: [
       { label: "Formular reclamație ANPC", href: "https://eservicii.anpc.ro/" },
+      { label: "Site oficial ANPC", href: "https://www.anpc.ro/" },
       { label: "Soluționare alternativă a litigiilor — SAL", href: "https://reclamatiisal.anpc.ro/" },
+      { label: "Termenii Google pentru conținutul Google Maps", href: "https://policies.google.com/terms?hl=ro" },
     ],
   },
   cookies: {
@@ -159,10 +224,21 @@ export const LEGAL_PAGE_PRESENTATION = {
       { label: "Confidențialitate FireArtRo", href: "/confidentialitate" },
       { label: "Cookies Google", href: "https://policies.google.com/technologies/cookies?hl=ro" },
       { label: "Cookies Google Analytics", href: "https://support.google.com/analytics/answer/11397207?hl=ro" },
-      { label: "Confidențialitate Cloudflare", href: "https://www.cloudflare.com/privacypolicy/" },
+      { label: "Confidențialitate Cloudflare Turnstile", href: "https://www.cloudflare.com/turnstile-privacy-policy/" },
+      { label: "Legea nr. 506/2004 — forma actualizată", href: "https://legislatie.just.ro/Public/DetaliiDocument/315560" },
     ],
   },
 };
+
+export const LEGAL_PAGE_PRESENTATION = Object.fromEntries(
+  Object.entries(LEGAL_BASELINE).map(([route, page]) => [route, {
+    ...page,
+    sections: page.sections.map(section => ({
+      ...section,
+      body: section.body.map(paragraph => RETIRED_LEGAL_PARAGRAPHS.get(paragraph) || paragraph),
+    })),
+  }]),
+);
 
 export const LEGAL_PAGES_DEFAULT = Object.fromEntries(
   [["privacy", "confidentialitate"], ["terms", "termeni"], ["cookies", "cookies"]].map(([key, route]) => {

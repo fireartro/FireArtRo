@@ -1,11 +1,12 @@
 const { test, expect } = require("@playwright/test");
 
 const consent = {
+  version: 2,
   necessary: true,
   analytics: false,
   marketing: false,
-  savedAt: "2026-08-01T00:00:00.000Z",
-  expiresAt: "2027-08-01T00:00:00.000Z",
+  savedAt: new Date().toISOString(),
+  expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
 };
 
 test.describe("FireArt visual smoke", () => {

@@ -36,6 +36,7 @@ test.beforeEach(async ({ page }) => {
   }));
   await page.addInitScript(() => {
     window.localStorage.setItem("fireartro-cookie-consent-v1", JSON.stringify({
+      version: 2,
       necessary: true,
       analytics: false,
       marketing: false,

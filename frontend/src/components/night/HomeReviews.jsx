@@ -1,6 +1,8 @@
 import { ArrowUpRight, Star } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getPublicReviews } from "@/lib/reviewsApi";
+import { OPEN_COOKIE_SETTINGS_EVENT, useCookieConsent } from "@/lib/cookieConsent";
+import { allowedGoogleMedia } from "@/lib/optionalGoogleMedia";
 import useManagedContent from "@/hooks/useManagedContent";
 import useNearViewport from "@/hooks/useNearViewport";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
@@ -82,9 +84,15 @@ function ReviewGroup({ reviews, provider, clone = false }) {
 }
 
 
-function ReviewRail({ data }) {
+function ReviewRail({ data, marketingAllowed }) {
   const provider = PROVIDERS[data.id];
   if (!provider || !data.reviews.length || !data.href) return null;
+  const isGoogle = data.id === "google";
+  const reviews = isGoogle
+    ? (marketingAllowed ? data.reviews.filter(review => review.author && review.url) : [])
+    : data.reviews.map(review => ({
+      ...review, author_photo_url: allowedGoogleMedia(review.author_photo_url, marketingAllowed),
+    }));
 
   return (
     <div
@@ -93,7 +101,7 @@ function ReviewRail({ data }) {
       data-direction={provider.direction}
     >
       <div className="fa-page-reviews__lane-head nr-shell">
-        {data.id === "google" ? (
+        {isGoogle ? (
           <img className="fa-page-reviews__google-logo" src="/media/brand/google-maps-white.svg" alt="Google Maps" />
         ) : <span>{provider.label}</span>}
         <a href={data.href} target="_blank" rel="noopener noreferrer">
@@ -101,15 +109,20 @@ function ReviewRail({ data }) {
           <ArrowUpRight aria-hidden="true" />
         </a>
       </div>
-      {data.id === "google" ? <p className="fa-page-reviews__notice nr-shell">
-        Recenzii cu text, în ordinea de relevanță furnizată de Google Maps. Afișăm până la {data.reviews.length} recenzii, fără filtrare după notă.
-      </p> : null}
-      <div className="fa-page-reviews__viewport">
+      {isGoogle && !marketingAllowed && <p className="fa-page-reviews__notice nr-shell">
+        Pentru a afișa aici recenziile și fotografiile autorilor de pe Google Maps, poți <button type="button" className="fa-page-reviews__notice-link"
+          onClick={() => window.dispatchEvent(new Event(OPEN_COOKIE_SETTINGS_EVENT))}>permite conținutul extern</button>.
+      </p>}
+      {isGoogle && reviews.length > 0 && <p className="fa-page-reviews__notice nr-shell">
+        Afișăm {reviews.length} recenzii cu text și link la sursă, în ordinea de relevanță furnizată de Google Maps, fără filtrare după notă.{' '}
+        <a className="fa-page-reviews__notice-link" href="https://support.google.com/contributionpolicy/answer/7422880?hl=ro" target="_blank" rel="noopener noreferrer">Politica Google Maps privind recenziile</a>.
+      </p>}
+      {reviews.length > 0 && <div className="fa-page-reviews__viewport">
         <div className="fa-page-reviews__track">
-          <ReviewGroup reviews={data.reviews} provider={provider} />
-          <ReviewGroup clone reviews={data.reviews} provider={provider} />
+          <ReviewGroup reviews={reviews} provider={provider} />
+          <ReviewGroup clone reviews={reviews} provider={provider} />
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -117,6 +130,7 @@ function ReviewRail({ data }) {
 
 export default function HomeReviews() {
   const settings = useManagedContent("reviewSettings", CMS_DEFAULTS.reviewSettings);
+  const marketingAllowed = useCookieConsent()?.marketing === true;
   const anchor = useRef(null);
   const near = useNearViewport(anchor, "300px");
   const [providers, setProviders] = useState([]);
@@ -137,20 +151,23 @@ export default function HomeReviews() {
   // Keep no cross-page Places content cache; fetch only when this area approaches view.
   if (!visibleProviders.length) return <div ref={anchor} aria-hidden="true" />;
 
-  const heading = settings.heading === "Recenzii verificate" ? "Recenziile clienților" : settings.heading;
+  const heading = settings.heading?.trim().toLowerCase() === "recenzii verificate"
+    ? "Recenzii publicate online" : settings.heading;
 
   return (
     <section
       className="fa-page-reviews"
       data-testid="home-reviews"
       ref={anchor}
-      aria-label="Recenziile clienților"
+      aria-label="Recenzii publicate online"
     >
       <p className="fa-kicker">{heading}</p>
       {settings.description ? <p>{settings.description}</p> : null}
+      <p className="fa-page-reviews__notice nr-shell">Recenziile sunt publicate pe platformele indicate. FireArtRo nu verifică independent dacă autorii au cumpărat sau folosit serviciile.</p>
       {visibleProviders.map((provider) => (
         <ReviewRail
           data={{ ...provider, reviews: provider.reviews.slice(0, settings.maxItems) }}
+          marketingAllowed={marketingAllowed}
           key={provider.id}
         />
       ))}

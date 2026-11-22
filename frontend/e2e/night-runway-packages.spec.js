@@ -7,10 +7,22 @@ const responsiveViewports = [
   { width: 568, height: 320 },
 ];
 
+async function permitExternalContent(page) {
+  await page.getByTestId('package-media').getByRole('button').click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('checkbox', { name: /Conținut extern/ }).check();
+  await dialog.getByRole('button', { name: 'Salvează preferințele', exact: true }).click();
+}
+
 test.describe("Night Runway package stage", () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('https://img.youtube.com/**', route => route.fulfill({
+      status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"/>',
+    }));
+    await page.route('https://www.youtube-nocookie.com/**', route => route.fulfill({ status: 200, contentType: 'text/html', body: '' }));
     await page.addInitScript(() => {
       window.localStorage.setItem("fireartro-cookie-consent-v1", JSON.stringify({
+        version: 2,
         necessary: true,
         analytics: false,
         marketing: false,
@@ -64,24 +76,26 @@ test.describe("Night Runway package stage", () => {
     await expect(rail.locator("img")).toHaveCount(0);
   });
 
-  test("opens the selected package preview in an expanded video dialog", async ({ page }) => {
-    await page.getByTestId("package-media").getByRole("button").click();
-
-    const dialog = page.getByTestId("package-video-dialog");
-    await expect(dialog).toBeVisible();
-    await expect(dialog.locator("iframe")).toHaveAttribute("src", /youtube-nocookie/);
+  test("requires permission and a play action to load the selected YouTube clip", async ({ page }) => {
+    const media = page.getByTestId("package-media");
+    await expect(media.locator("iframe")).toHaveCount(0);
+    await expect(page.locator('.nr-package-cinema img[src*="img.youtube.com"]')).toHaveCount(0);
+    await permitExternalContent(page);
+    await expect(media.locator("iframe")).toHaveCount(0);
+    await media.getByRole("button").click();
+    await expect(media.locator("iframe")).toHaveAttribute("src", /youtube-nocookie/);
   });
 
-  test("keeps the full preview and close control inside rotated viewports", async ({ page }) => {
+  test("keeps the inline video within its figure at different viewport widths", async ({ page }) => {
+    await permitExternalContent(page);
     await page.getByTestId("package-media").getByRole("button").click();
-    const dialog = page.getByTestId("package-video-dialog");
+    const media = page.getByTestId("package-media");
     for (const [width, height] of [[375, 812], [844, 390], [568, 320], [1024, 600], [1512, 982], [5120, 1440]]) {
       await page.setViewportSize({ width, height });
-      await expect.poll(() => dialog.evaluate((node) => {
+      await expect.poll(() => media.evaluate((node) => {
         const rect = node.getBoundingClientRect();
-        const close = node.querySelector(":scope > button").getBoundingClientRect();
-        return rect.top >= 0 && rect.bottom <= innerHeight && rect.left >= 0 && rect.right <= innerWidth
-          && close.top >= 0 && close.bottom <= innerHeight && close.height >= 44;
+        const frame = node.querySelector("iframe").getBoundingClientRect();
+        return frame.left >= rect.left && frame.right <= rect.right + 1 && frame.width > 0 && frame.height > 0;
       }), { message: `preview framing at ${width}x${height}` }).toBe(true);
     }
   });
@@ -125,8 +139,10 @@ test.describe("Night Runway package stage", () => {
     expect(headingBox.height).toBeLessThan(70);
   });
 
-  test("uses the matching YouTube thumbnail before a package video is opened", async ({ page }) => {
+  test("uses matching YouTube thumbnails only after the visitor permits external content", async ({ page }) => {
     const media = page.locator(".nr-package-stage__media img");
+    await expect(media).toHaveAttribute('src', /^\/media\//);
+    await permitExternalContent(page);
     const categories = page.getByRole("tablist", { name: "Categorii de spectacol" }).getByRole("tab");
     await expect(categories).not.toHaveCount(0);
     let inspectedPackages = 0;
@@ -165,10 +181,10 @@ test.describe("Night Runway package stage", () => {
       .getByRole("tab", { name: "Artificii de noapte" })
       .click();
     await expect(page.getByTestId("packages-active-title")).toHaveText("Bronze");
-    await expect(page.locator(".nr-package-stage__media img")).toHaveAttribute(
-      "src",
-      "https://img.youtube.com/vi/j2BGRd88qBc/hqdefault.jpg",
-    );
+    await expect(page.locator(".nr-package-stage__media img[src^='/media/']")).toBeVisible();
+    await expect(page.locator('.nr-package-cinema img[src*="img.youtube.com"]')).toHaveCount(0);
+    await permitExternalContent(page);
+    await expect(page.getByTestId('package-media').getByRole('button', { name: /Vezi videoclipul pachetului Bronze/ })).toBeVisible();
   });
 
   test("compares categories and variants with keyboard-safe controls", async ({ page }) => {

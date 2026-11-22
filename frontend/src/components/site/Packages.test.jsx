@@ -6,8 +6,9 @@ import { Packages } from "./Packages";
 import {
   COOKIE_CONSENT_STORAGE_KEY,
   COOKIE_CONSENT_UPDATED_EVENT,
+  COOKIE_CONSENT_VERSION,
   OPEN_COOKIE_SETTINGS_EVENT,
-} from "./CookieConsent";
+} from "@/lib/cookieConsent";
 import useManagedContent from "@/hooks/useManagedContent";
 
 jest.mock("@/hooks/useManagedContent");
@@ -41,7 +42,7 @@ const renderPackages = async (packages = items, route = "/pachete?categorie=Arti
   ));
 };
 const setConsent = async (marketing, expiresAt = new Date(Date.now() + 86_400_000).toISOString()) => {
-  const consent = { necessary: true, analytics: false, marketing, savedAt: new Date().toISOString(), expiresAt };
+  const consent = { version: COOKIE_CONSENT_VERSION, necessary: true, analytics: false, marketing, savedAt: new Date().toISOString(), expiresAt };
   window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify(consent));
   await act(async () => window.dispatchEvent(new CustomEvent(COOKIE_CONSENT_UPDATED_EVENT, { detail: consent })));
 };
@@ -66,6 +67,7 @@ afterEach(async () => {
 });
 
 test("opens the requested category with every unique clip as a labelled thumbnail button and no outgoing video links", async () => {
+  await setConsent(true);
   await renderPackages();
   expect(container.querySelector('[data-testid="packages-active-title"]').textContent).toBe("Zi unu");
   expect(playlistButtons()).toHaveLength(2);
@@ -130,7 +132,8 @@ test.each([false, true])("keeps embeds unloaded with missing or expired consent 
   await renderPackages();
   await click(playlistButtons()[1]);
   expect(player()).toBeNull();
-  expect(container.querySelector('[data-testid="package-media"] img').getAttribute("src")).toContain("AWrMkTUn9iQ");
+  expect(container.querySelector('[data-testid="package-media"] img').getAttribute("src")).toMatch(/^\/media\//);
+  expect(container.querySelector('img[src*="img.youtube.com"]')).toBeNull();
   const openSettings = jest.fn();
   window.addEventListener(OPEN_COOKIE_SETTINGS_EVENT, openSettings);
   try {
@@ -138,6 +141,7 @@ test.each([false, true])("keeps embeds unloaded with missing or expired consent 
     expect(openSettings).toHaveBeenCalledTimes(1);
     expect(player()).toBeNull();
     await setConsent(true);
+    expect(container.querySelector('[data-testid="package-media"] img').getAttribute("src")).toContain("AWrMkTUn9iQ");
     expect(player()).toBeNull();
     await click(container.querySelector(".nr-package-video-trigger"));
     expect(player().getAttribute("src")).toContain("AWrMkTUn9iQ");
@@ -211,6 +215,7 @@ test.each(["not a URL", "javascript:alert(1)", "https://notyoutube.com/watch?v=O
 });
 
 test("falls back from a broken thumbnail and poster without leaving broken images", async () => {
+  await setConsent(true);
   await renderPackages();
   for (const selector of ['[data-testid="package-media"] img', '[data-testid="package-video-playlist"] button:first-child img']) {
     await act(async () => container.querySelector(selector).dispatchEvent(new Event("error")));
@@ -229,6 +234,9 @@ test("plays local videos inline only on request and handles a failed media file 
   expect(player().getAttribute("src")).toBe("/media/package.mp4");
   expect(player().controls).toBe(true);
   expect(player().autoplay).toBe(false);
+  await setConsent(true);
+  await setConsent(false);
+  expect(player().getAttribute("src")).toBe("/media/package.mp4");
   await act(async () => player().dispatchEvent(new Event("error")));
   expect(player()).toBeNull();
   expect(container.textContent).toMatch(/indisponibil/i);

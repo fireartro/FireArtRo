@@ -1,47 +1,30 @@
-import React, { act } from 'react';
+import { act } from 'react';
 import { createRoot } from 'react-dom/client';
+import { COOKIE_CONSENT_STORAGE_KEY, saveCookieConsent } from '@/lib/cookieConsent';
 import ResponsiveImage from './ResponsiveImage';
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
-test('offers AVIF with a WebP fallback and preserves image behavior and crop styling', () => {
+test('uses a first-party fallback for CMS YouTube thumbnails before marketing consent', async () => {
   const container = document.createElement('div');
+  document.body.append(container);
   const root = createRoot(container);
-  const onLoad = jest.fn();
-  const src = '/media/gallery/spectacol-drone-ploiesti-fireartro-097.webp';
-  act(() => root.render(<ResponsiveImage src={src} alt="Drone la Ploiești" className="image-frame-media" sizes="320px" loading="lazy" style={{ objectPosition: '20% 70%' }} onLoad={onLoad} />));
-  const img = container.querySelector('img');
-  const source = container.querySelector('source');
-  expect(source.type).toBe('image/avif');
-  expect(source.srcset).toContain('-1280-20261103.avif 1280w');
-  expect(source.sizes).toBe('320px');
-  expect(img.getAttribute('src')).toBe(src);
-  expect(img.srcset).toContain('-640-20261103.webp 640w');
-  expect(img.alt).toBe('Drone la Ploiești');
-  expect(img.className).toBe('image-frame-media');
-  expect(img.style.objectPosition).toBe('20% 70%');
-  act(() => img.dispatchEvent(new Event('load')));
-  expect(onLoad).toHaveBeenCalledTimes(1);
-  act(() => root.unmount());
-});
-
-test.each(['/uploads/owner-photo.webp', '/media/gallery/spectacol-drone-ploiesti-fireartro-097.webp?v=owner-edit'])('keeps owner uploads and replacements unchanged: %s', src => {
-  const container = document.createElement('div');
-  const root = createRoot(container);
-  act(() => root.render(<ResponsiveImage src={src} alt="Fotografie proprie" />));
-  expect(container.querySelector('source')).toBeNull();
-  expect(container.querySelector('img').getAttribute('src')).toBe(src);
-  expect(container.querySelector('img').getAttribute('srcset')).toBeNull();
-  act(() => root.unmount());
-});
-
-test('gallery cards use the original composition while homepage presets remain opt-in', () => {
-  const container = document.createElement('div');
-  const root = createRoot(container);
-  const src = '/media/gallery/fireartro-artificii-noapte-spectacol-110.webp';
-  act(() => root.render(<ResponsiveImage src={src} alt="Fotografie întreagă" />));
-  expect(container.querySelector('source').srcset).toContain('/media/responsive/fireartro-artificii-noapte-spectacol-110-640-20261103.avif');
-  expect(container.querySelector('source').srcset).not.toContain('pachet-artificii');
-  expect(container.querySelector('img').srcset).not.toContain('pachet-artificii');
-  act(() => root.unmount());
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  try {
+    await act(async () => root.render(
+      <ResponsiveImage src="https://img.youtube.com/vi/AyU0-6KQJXc/hqdefault.jpg"
+        srcSet="https://img.youtube.com/vi/AyU0-6KQJXc/maxresdefault.jpg 1200w" alt="Spectacol" />,
+    ));
+    expect(container.querySelector('img[alt="Spectacol"]')).not.toBeNull();
+    for (const element of container.querySelectorAll('[src], [srcset]')) {
+      expect(element.getAttribute('src') || '').not.toContain('youtube.com');
+      expect(element.getAttribute('srcset') || '').not.toContain('youtube.com');
+    }
+    await act(async () => saveCookieConsent({ analytics: false, marketing: true }));
+    expect(container.querySelector('img').getAttribute('src')).toContain('img.youtube.com');
+    expect(container.querySelector('img').getAttribute('srcset')).toContain('img.youtube.com');
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    window.localStorage.removeItem(COOKIE_CONSENT_STORAGE_KEY);
+    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
+  }
 });

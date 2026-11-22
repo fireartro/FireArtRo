@@ -1,51 +1,40 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import { currentCookieSettings } from "@/data/businessContent";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Cookie, Settings2, X } from "lucide-react";
 
 import useManagedContent from "@/hooks/useManagedContent";
+import {
+  consentRetentionDays,
+  NECESSARY_ONLY,
+  OPEN_COOKIE_SETTINGS_EVENT,
+  readCookieConsent,
+  saveCookieConsent,
+  useCookieConsent,
+} from "@/lib/cookieConsent";
 
-export const COOKIE_CONSENT_STORAGE_KEY = "fireartro-cookie-consent-v1";
-export const OPEN_COOKIE_SETTINGS_EVENT = "fireartro-open-cookie-settings";
-export const COOKIE_CONSENT_UPDATED_EVENT = "fireartro-cookie-consent-updated";
+export { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_UPDATED_EVENT, OPEN_COOKIE_SETTINGS_EVENT, readCookieConsent } from "@/lib/cookieConsent";
 
-const defaultChoice = {
-  necessary: true,
-  analytics: false,
-  marketing: false,
-};
-
-export const readCookieConsent = () => {
-  try {
-    const value = JSON.parse(window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY) || "null");
-    if (!value?.savedAt) return null;
-    return value;
-  } catch {
-    return null;
-  }
-};
-
-const persistConsent = (choice, retentionDays) => {
-  const payload = {
-    ...choice,
-    necessary: true,
-    savedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + retentionDays * 86_400_000).toISOString(),
-  };
-  window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify(payload));
-  window.dispatchEvent(new CustomEvent(COOKIE_CONSENT_UPDATED_EVENT, { detail: payload }));
-  return payload;
-};
-
-export default function CookieConsent() {
-  const settings = useManagedContent("cookieSettings", CMS_DEFAULTS.cookieSettings);
-  const [visible, setVisible] = useState(false);
+export default function CookieConsent({ autoPrompt = true }) {
+  const settings = currentCookieSettings(useManagedContent("cookieSettings", CMS_DEFAULTS.cookieSettings));
+  const retentionDays = consentRetentionDays(settings.retentionDays);
+  const stored = useCookieConsent();
   const [introActive, setIntroActive] = useState(() => Boolean(document.documentElement.dataset.fireartIntro));
   const [customizing, setCustomizing] = useState(false);
-  const [choice, setChoice] = useState(defaultChoice);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [failure, setFailure] = useState(false);
+  const [choice, setChoice] = useState(NECESSARY_ONLY);
   const firstButtonRef = useRef(null);
   const panelRef = useRef(null);
-  const dialogOpen = visible && !introActive;
+  const dialogOpen = ready && !introActive && (settingsOpen || (autoPrompt && !stored));
+
+  const closeSettings = () => {
+    setSettingsOpen(false);
+    setCustomizing(false);
+    setFailure(false);
+  };
 
   useEffect(() => {
     // Never overlap the startup and cookie modal locks. Restoring an inert
@@ -57,28 +46,17 @@ export default function CookieConsent() {
   }, []);
 
   useEffect(() => {
-    const stored = readCookieConsent();
-    const expired = stored?.expiresAt && new Date(stored.expiresAt).getTime() <= Date.now();
-    if (!stored || expired) {
-      if (expired) window.localStorage.removeItem(COOKIE_CONSENT_STORAGE_KEY);
-      setVisible(true);
-    } else {
-      setChoice({
-        necessary: true,
-        analytics: Boolean(stored.analytics),
-        marketing: Boolean(stored.marketing),
-      });
-    }
-
     const openSettings = () => {
-      const current = readCookieConsent();
-      if (current) setChoice({ necessary: true, analytics: !!current.analytics, marketing: !!current.marketing });
+      setChoice(readCookieConsent() || NECESSARY_ONLY);
       setCustomizing(true);
-      setVisible(true);
+      setSettingsOpen(true);
     };
     window.addEventListener(OPEN_COOKIE_SETTINGS_EVENT, openSettings);
+    setReady(true);
     return () => window.removeEventListener(OPEN_COOKIE_SETTINGS_EVENT, openSettings);
   }, []);
+
+  useEffect(() => setChoice(stored || NECESSARY_ONLY), [stored]);
 
   useEffect(() => {
     if (!dialogOpen) return;
@@ -98,7 +76,7 @@ export default function CookieConsent() {
     observer.observe(document.body, { childList: true });
     firstButtonRef.current?.focus();
     const onKeyDown = (event) => {
-      if (event.key === "Escape" && readCookieConsent()) setVisible(false);
+      if (event.key === "Escape" && (readCookieConsent() || !autoPrompt)) closeSettings();
       if (event.key !== "Tab") return;
       const controls = Array.from(panel.querySelectorAll('a[href], button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])'));
       const first = controls[0];
@@ -121,13 +99,16 @@ export default function CookieConsent() {
       });
       if (opener?.isConnected) opener.focus();
     };
-  }, [dialogOpen]);
+  }, [autoPrompt, dialogOpen]);
 
   const save = (nextChoice) => {
-    persistConsent(nextChoice, settings.retentionDays || 180);
-    setChoice(nextChoice);
-    setVisible(false);
-    setCustomizing(false);
+    const saved = saveCookieConsent(nextChoice, retentionDays);
+    if (!saved && (nextChoice.analytics || nextChoice.marketing)) {
+      setSettingsOpen(true);
+      setFailure(true);
+      return;
+    }
+    closeSettings();
   };
 
   if (!dialogOpen) return null;
@@ -146,10 +127,10 @@ export default function CookieConsent() {
           <span><Cookie /></span>
           <div>
             <h2 id="cookie-consent-title">{settings.title}</h2>
-            <p id="cookie-consent-summary">{settings.summary}</p>
+            <p id="cookie-consent-summary">{settings.summary} Poți schimba sau retrage alegerea din „Setări cookies”, în subsolul paginii.</p>
           </div>
-          {readCookieConsent() && (
-            <button type="button" onClick={() => setVisible(false)} aria-label="Închide setările cookies">
+          {(stored || !autoPrompt) && (
+            <button type="button" onClick={closeSettings} aria-label="Închide setările cookies">
               <X />
             </button>
           )}
@@ -189,15 +170,16 @@ export default function CookieConsent() {
           </div>
         )}
 
+        {failure && <p role="status">Browserul nu a permis salvarea. Opțiunile rămân dezactivate.</p>}
         <div className="cookie-consent-links">
           <a href="/cookies">Citește politica de cookies</a>
-          <span>Preferința este păstrată {settings.retentionDays || 180} zile.</span>
+          <span>Preferința este păstrată {retentionDays} zile.</span>
         </div>
 
         <div className="cookie-consent-actions">
           {customizing ? (
             <>
-              <button ref={firstButtonRef} type="button" className="is-secondary" onClick={() => save(defaultChoice)}>
+              <button ref={firstButtonRef} type="button" className="is-secondary" onClick={() => save(NECESSARY_ONLY)}>
                 Doar necesare
               </button>
               <button type="button" className="is-primary" onClick={() => save(choice)}>
@@ -206,7 +188,7 @@ export default function CookieConsent() {
             </>
           ) : (
             <>
-              <button ref={firstButtonRef} type="button" className="is-secondary" onClick={() => save(defaultChoice)}>
+              <button ref={firstButtonRef} type="button" className="is-primary" onClick={() => save(NECESSARY_ONLY)}>
                 Doar necesare
               </button>
               <button type="button" className="is-secondary" onClick={() => setCustomizing(true)}>
