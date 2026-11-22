@@ -56,6 +56,15 @@
 .cms-shell .cms-collection-choice strong { font-size:13px; font-weight:550; }.cms-shell .cms-collection-choice small { font-size:11px; margin-top:3px; }
 .cms-shell .cms-editor-fields { padding:20px 22px 28px; }
 .cms-shell .cms-editor-object { padding:0; }.cms-shell .cms-editor-object .cms-home-visuals { margin:0; padding:0; border:0; }
+.cms-consent-proof { margin-top:36px; padding-top:22px; border-top:1px solid var(--admin-border); }
+.cms-consent-proof h2 { margin:0; font-size:17px; font-weight:600; }
+.cms-consent-proof-form { display:flex; flex-wrap:wrap; align-items:end; gap:10px; }
+.cms-consent-proof-form .admin-field { flex:0 1 28rem; max-width:100%; }
+.cms-consent-proof-result { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr)); gap:14px 18px; margin:18px 0 0; }
+.cms-consent-proof-result>div { min-width:0; padding:10px 0; border-bottom:1px solid var(--admin-border); }
+.cms-consent-proof-result dt { color:var(--admin-muted); font-size:12px; }
+.cms-consent-proof-result dd { display:grid; gap:4px; margin:4px 0 0; font-size:13px; overflow-wrap:anywhere; }
+.cms-consent-proof-result small { color:var(--admin-muted); }
 .cms-editor-title h2 { margin:0 0 12px; font-size:19px; font-weight:600; }
 .cms-shell .cms-form-grid { gap:14px 18px; }
 .cms-shell .admin-field { gap:6px; }.cms-shell .admin-field label { font-size:12px; font-weight:500; }

@@ -9,6 +9,7 @@ import {
   COOKIE_CONSENT_VERSION,
   OPEN_COOKIE_SETTINGS_EVENT,
 } from "@/lib/cookieConsent";
+import { TEST_CONSENT_RECEIPT } from "@/lib/consentTestFixture";
 import useManagedContent from "@/hooks/useManagedContent";
 
 jest.mock("@/hooks/useManagedContent");
@@ -42,7 +43,10 @@ const renderPackages = async (packages = items, route = "/pachete?categorie=Arti
   ));
 };
 const setConsent = async (marketing, expiresAt = new Date(Date.now() + 86_400_000).toISOString()) => {
-  const consent = { version: COOKIE_CONSENT_VERSION, necessary: true, analytics: false, marketing, savedAt: new Date().toISOString(), expiresAt };
+  const consent = {
+    version: COOKIE_CONSENT_VERSION, necessary: true, analytics: false, marketing,
+    ...TEST_CONSENT_RECEIPT, savedAt: new Date().toISOString(), expiresAt,
+  };
   window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify(consent));
   await act(async () => window.dispatchEvent(new CustomEvent(COOKIE_CONSENT_UPDATED_EVENT, { detail: consent })));
 };

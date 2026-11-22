@@ -5,6 +5,7 @@ from starlette.responses import JSONResponse, Response
 from starlette.datastructures import MutableHeaders
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 from pymongo.errors import DuplicateKeyError, PyMongoError
+from pymongo.write_concern import WriteConcern
 import asyncio
 from contextlib import asynccontextmanager
 import json
@@ -33,6 +34,12 @@ from cms_routes import (
     is_cms_content_write,
 )
 from cms_service import CmsService
+from cookie_consent import (
+    CONSENT_WRITE_MAX_BYTES,
+    CONSENT_WRITE_PATHS,
+    MongoConsentLedger,
+    create_consent_router,
+)
 from content_migrations import (
     CompanyMigrationConflict,
     migrate_owner_company_identity,
@@ -199,6 +206,20 @@ quote_rate_limiter = MongoQuoteRateLimiter(
     db.quote_rate_limits if db is not None else None,
     os.environ.get("ADMIN_SESSION_SECRET", ""),
 )
+consent_ledger = MongoConsentLedger(
+    db.get_collection(
+        "cookie_consent_receipts", write_concern=WriteConcern(w="majority")
+    ) if db is not None else None,
+)
+consent_rate_collection = db.cookie_consent_rate_limits if db is not None else None
+consent_grant_limit = MongoQuoteRateLimiter(
+    consent_rate_collection, os.environ.get("ADMIN_SESSION_SECRET", ""),
+    scope="consent-grant-ip", limit=120,
+)
+consent_withdrawal_limit = MongoQuoteRateLimiter(
+    consent_rate_collection, os.environ.get("ADMIN_SESSION_SECRET", ""),
+    scope="consent-withdrawal-ip", limit=200,
+)
 reviews_budget = MongoReviewBudget(
     db.review_provider_budgets if db is not None else None,
     os.environ.get("ADMIN_SESSION_SECRET", ""),
@@ -225,9 +246,25 @@ async def ensure_indexes():
     await media_repository.create_indexes()
 
 
+async def ensure_consent_indexes():
+    await consent_ledger.create_indexes()
+    await consent_grant_limit.create_indexes()
+
+
+async def initialize_indexes(operation, unavailable_message):
+    try:
+        await asyncio.wait_for(operation(), timeout=5)
+    except (PyMongoError, asyncio.TimeoutError):
+        # Connection errors can contain private hostnames or credentials.
+        logger.error(unavailable_message)
+        return False
+    return True
+
+
 @asynccontextmanager
 async def lifespan(application):
     application.state.indexes_ready = False
+    application.state.consent_indexes_ready = False
     try:
         if db is not None:
             try:
@@ -237,8 +274,12 @@ async def lifespan(application):
                 blog_media_store.bucket = AsyncIOMotorGridFSBucket(
                     client[database_name], bucket_name="blog_media"
                 )
-                await asyncio.wait_for(ensure_indexes(), timeout=5)
-                application.state.indexes_ready = True
+                core_ready, consent_ready = await asyncio.gather(
+                    initialize_indexes(ensure_indexes, "Database index initialization unavailable"),
+                    initialize_indexes(ensure_consent_indexes, "Consent index initialization unavailable"),
+                )
+                application.state.indexes_ready = core_ready
+                application.state.consent_indexes_ready = consent_ready
             except (PyMongoError, asyncio.TimeoutError):
                 # No exception text: it can contain connection strings/hosts.
                 logger.error("Database index initialization unavailable")
@@ -274,6 +315,7 @@ async def lifespan(application):
         yield
     finally:
         application.state.indexes_ready = False
+        application.state.consent_indexes_ready = False
         blog_media_store.bucket = None
         if client is not None:
             client.close()
@@ -283,6 +325,7 @@ async def lifespan(application):
 # Create the main app without a prefix
 app = FastAPI(title="FireArtRo API", lifespan=lifespan)
 app.state.indexes_ready = False
+app.state.consent_indexes_ready = False
 auth_service = AuthService(
     sessions=MongoSessionRepository(db.admin_sessions if db is not None else None),
     attempts=MongoLoginAttemptRepository(
@@ -305,6 +348,10 @@ app.include_router(
     create_auth_router(auth_service), dependencies=[Depends(require_auth_ready)]
 )
 app.include_router(create_cms_router(cms_service))
+app.include_router(create_consent_router(
+    consent_ledger, consent_grant_limit, consent_withdrawal_limit,
+    ready=lambda: app.state.consent_indexes_ready,
+))
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -665,15 +712,14 @@ class RequestSecurityMiddleware:
             await self.app(scope, receive, send)
             return
         path = scope["path"]
-        maximum = (
-            4096
-            if path.startswith("/api/admin/auth/")
-            else (
-                CMS_CONTENT_WRITE_MAX_BYTES
-                if is_cms_content_write(path, scope["method"])
-                else request_size_limit(path, scope["method"])
-            )
-        )
+        if path.rstrip("/") in CONSENT_WRITE_PATHS:
+            maximum = CONSENT_WRITE_MAX_BYTES
+        elif path.startswith("/api/admin/auth/"):
+            maximum = 4096
+        elif is_cms_content_write(path, scope["method"]):
+            maximum = CMS_CONTENT_WRITE_MAX_BYTES
+        else:
+            maximum = request_size_limit(path, scope["method"])
 
         async def secure_send(message):
             if message["type"] == "http.response.start":

@@ -528,14 +528,18 @@ def create_quote_admin_router(repository, notification_service=None):
 
 
 class MongoQuoteRateLimiter:
-    """Five submissions per fixed ten-minute window, shared across processes.
+    """Cap requests per fixed ten-minute window, shared across processes.
 
     Mongo's unique _id makes increments atomic. Expiry selects a fresh bucket
     even when TTL cleanup is delayed. IP addresses are stored only as an HMAC.
     """
 
-    def __init__(self, collection, secret, *, clock=lambda: datetime.now(timezone.utc)):
+    def __init__(
+        self, collection, secret, *, scope="quote-ip", limit=5,
+        clock=lambda: datetime.now(timezone.utc),
+    ):
         self.collection, self.secret, self.clock = collection, secret, clock
+        self.scope, self.limit = scope, limit
 
     async def create_indexes(self):
         if self.collection is None:
@@ -549,7 +553,7 @@ class MongoQuoteRateLimiter:
         window = math.floor(now / 600)
         expires_at = datetime.fromtimestamp((window + 1) * 600, tz=timezone.utc)
         digest = hmac.new(
-            self.secret.encode(), ("quote-ip:" + client_ip).encode(), hashlib.sha256
+            self.secret.encode(), f"{self.scope}:{client_ip}".encode(), hashlib.sha256
         ).hexdigest()
         query = {"_id": f"{digest}:{window}"}
         update = {"$inc": {"count": 1}, "$setOnInsert": {"expires_at": expires_at}}
@@ -570,7 +574,7 @@ class MongoQuoteRateLimiter:
                 )
             if document is None:
                 raise _error(503, UNAVAILABLE)
-            if document["count"] > 5:
+            if document["count"] > self.limit:
                 raise _error(
                     429,
                     "Prea multe solicitări. Încearcă din nou mai târziu.",

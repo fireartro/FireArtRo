@@ -1,6 +1,7 @@
 import {act} from 'react';
 import {createRoot} from 'react-dom/client';
-import { COOKIE_CONSENT_STORAGE_KEY, OPEN_COOKIE_SETTINGS_EVENT, saveCookieConsent } from '@/lib/cookieConsent';
+import { COOKIE_CONSENT_STORAGE_KEY, OPEN_COOKIE_SETTINGS_EVENT } from '@/lib/cookieConsent';
+import { seedConsent } from "@/lib/consentTestFixture";
 import PackageVideoPlayer from './PackageVideoPlayer';
 jest.mock('framer-motion',()=>({useReducedMotion:()=>true}));
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
@@ -33,13 +34,13 @@ test('uses local previews and keeps YouTube unloaded before a marketing choice',
     await act(async () => container.querySelector('.nr-package-video-trigger').click());
     expect(openSettings).toHaveBeenCalledTimes(1);
     expect(container.querySelector('iframe')).toBeNull();
-    await act(async () => saveCookieConsent({ analytics: true, marketing: false }));
+    await act(async () => seedConsent({ analytics: true, marketing: false }));
     expect(container.querySelector('img').getAttribute('src')).toBe('/mine.webp');
-    await act(async () => saveCookieConsent({ analytics: false, marketing: true }));
+    await act(async () => seedConsent({ analytics: false, marketing: true }));
     expect(container.querySelector('iframe')).toBeNull();
     await act(async () => container.querySelector('.nr-package-video-trigger').click());
     expect(container.querySelector('iframe').getAttribute('src')).toContain('https://www.youtube-nocookie.com/embed/j2BGRd88qBc');
-    await act(async () => saveCookieConsent({ analytics: false, marketing: false }));
+    await act(async () => seedConsent({ analytics: false, marketing: false }));
     expect(container.querySelector('iframe')).toBeNull();
     expect(container.querySelector('img').getAttribute('src')).toBe('/mine.webp');
   } finally {

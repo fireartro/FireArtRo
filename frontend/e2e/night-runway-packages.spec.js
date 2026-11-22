@@ -1,4 +1,5 @@
 const { test, expect } = require("@playwright/test");
+const { mockConsentLedger } = require("./consent-fixture.cjs");
 
 const responsiveViewports = [
   { width: 1440, height: 900 },
@@ -16,6 +17,7 @@ async function permitExternalContent(page) {
 
 test.describe("Night Runway package stage", () => {
   test.beforeEach(async ({ page }) => {
+    await mockConsentLedger(page);
     await page.route('https://img.youtube.com/**', route => route.fulfill({
       status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"/>',
     }));

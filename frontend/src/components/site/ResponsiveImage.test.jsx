@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { COOKIE_CONSENT_STORAGE_KEY, saveCookieConsent } from '@/lib/cookieConsent';
+import { COOKIE_CONSENT_STORAGE_KEY } from '@/lib/cookieConsent';
+import { seedConsent } from "@/lib/consentTestFixture";
 import ResponsiveImage from './ResponsiveImage';
 
 test('uses a first-party fallback for CMS YouTube thumbnails before marketing consent', async () => {
@@ -18,7 +19,7 @@ test('uses a first-party fallback for CMS YouTube thumbnails before marketing co
       expect(element.getAttribute('src') || '').not.toContain('youtube.com');
       expect(element.getAttribute('srcset') || '').not.toContain('youtube.com');
     }
-    await act(async () => saveCookieConsent({ analytics: false, marketing: true }));
+    await act(async () => seedConsent({ analytics: false, marketing: true }));
     expect(container.querySelector('img').getAttribute('src')).toContain('img.youtube.com');
     expect(container.querySelector('img').getAttribute('srcset')).toContain('img.youtube.com');
   } finally {

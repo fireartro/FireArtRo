@@ -1,6 +1,7 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { COOKIE_CONSENT_STORAGE_KEY, readCookieConsent, saveCookieConsent } from "@/lib/cookieConsent";
+import { readCookieConsent, retryConsentWithdrawals } from "@/lib/cookieConsent";
+import { seedConsent, TEST_CONSENT_RECEIPT } from "@/lib/consentTestFixture";
 import Footer from "./Footer";
 
 let mockShareCapital = "";
@@ -73,6 +74,8 @@ test.each(["analytics", "marketing"])("footer lets visitors withdraw %s consent 
   global.IS_REACT_ACT_ENVIRONMENT = true;
   const host = document.body.appendChild(document.createElement("div"));
   const root = createRoot(host);
+  const originalFetch = global.fetch;
+  global.fetch = jest.fn().mockResolvedValue({ status: 204 });
   const findWithdrawal = () => Array.from(host.querySelectorAll("button"))
     .find((button) => button.textContent.trim() === "Retrage acordul pentru cookies");
 
@@ -80,19 +83,24 @@ test.each(["analytics", "marketing"])("footer lets visitors withdraw %s consent 
     await act(async () => root.render(<Footer />));
     expect(findWithdrawal()).toBeUndefined();
 
-    await act(async () => saveCookieConsent({ [category]: true }, 180));
+    await act(async () => seedConsent({ [category]: true }));
     const withdrawal = findWithdrawal();
     expect(withdrawal).toBeDefined();
     withdrawal.focus();
     await act(async () => withdrawal.click());
+    await retryConsentWithdrawals();
 
     expect(readCookieConsent()).toMatchObject({ necessary: true, analytics: false, marketing: false });
+    expect(global.fetch).toHaveBeenCalledWith("/api/consent/withdraw", expect.objectContaining({
+      body: JSON.stringify({ id: TEST_CONSENT_RECEIPT.receiptId, withdrawKey: TEST_CONSENT_RECEIPT.withdrawKey }),
+    }));
     expect(findWithdrawal()).toBeUndefined();
     expect(document.activeElement.textContent.trim()).toBe("Setări cookies");
   } finally {
     await act(async () => root.unmount());
     host.remove();
-    localStorage.removeItem(COOKIE_CONSENT_STORAGE_KEY);
+    global.fetch = originalFetch;
+    localStorage.clear();
     delete global.IS_REACT_ACT_ENVIRONMENT;
   }
 });

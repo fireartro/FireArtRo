@@ -1,15 +1,18 @@
 import { act, useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import CookieConsent, { COOKIE_CONSENT_STORAGE_KEY, OPEN_COOKIE_SETTINGS_EVENT } from "./CookieConsent";
-import { COOKIE_CONSENT_VERSION, readCookieConsent, saveCookieConsent } from "@/lib/cookieConsent";
+import { COOKIE_CONSENT_VERSION, readCookieConsent, retryConsentWithdrawals, saveCookieConsent } from "@/lib/cookieConsent";
+import { seedConsent, TEST_CONSENT_RECEIPT } from "@/lib/consentTestFixture";
 
 jest.mock("@/hooks/useManagedContent", () => ({ __esModule: true, default: (_key, fallback) => fallback }));
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let container, root, opener, prior;
+const originalFetch = global.fetch;
 const dialog = () => document.querySelector('[role="dialog"]');
 const key = (value, shiftKey = false) => act(() => document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: value, shiftKey, bubbles: true, cancelable: true })));
 beforeEach(async () => {
-  saveCookieConsent({ analytics: true, marketing: false });
+  global.fetch = jest.fn().mockResolvedValue({ status: 204 });
+  seedConsent({ analytics: true });
   opener = document.createElement("button");
   document.body.appendChild(opener);
   prior = document.createElement("div"); prior.setAttribute("inert", "existing"); document.body.appendChild(prior);
@@ -21,6 +24,8 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   await act(async () => root.unmount());
+  await retryConsentWithdrawals();
+  global.fetch = originalFetch;
   container.remove(); opener.remove(); prior.remove(); localStorage.clear();
   delete document.documentElement.dataset.fireartIntro;
 });
@@ -142,7 +147,7 @@ test.each([
 ])("rejects invalid stored choices %j", async fields => {
   localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({
     version: COOKIE_CONSENT_VERSION, necessary: true, analytics: true, marketing: true,
-    savedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86_400_000).toISOString(), ...fields,
+    ...TEST_CONSENT_RECEIPT, savedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86_400_000).toISOString(), ...fields,
   }));
   expect(readCookieConsent()).toBeNull();
 });
