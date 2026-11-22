@@ -11,10 +11,17 @@
 - [Blog](https://fireart.ro/blog): articole publicate de echipa FireArtRo.
 - [Contact](https://fireart.ro/contact): solicitări de ofertă și date de contact.
 
+## Servicii
+
+- [Artificii pentru nuntă](https://fireart.ro/servicii/artificii-nunta): spectacole de artificii profesionale pentru nunți.
+- [Spectacole cu drone](https://fireart.ro/servicii/spectacole-drone): show-uri cu drone pentru evenimente.
+- [Artificii de zi](https://fireart.ro/servicii/artificii-de-zi): spectacole și efecte vizibile în lumină naturală.
+- [Efecte speciale](https://fireart.ro/servicii/efecte-speciale): efecte scenice pentru momentele importante ale evenimentului.
+
 ## Informații legale
 
 - [Confidențialitate](https://fireart.ro/confidentialitate)
 - [Termeni și condiții](https://fireart.ro/termeni-si-conditii)
 - [Cookies](https://fireart.ro/cookies)
 
-Pagina fiecărui pachet este sursa pentru configurația disponibilă. Detaliile și oferta finală se confirmă direct cu echipa pentru evenimentul respectiv.
+Pagina Pachete descrie opțiunile disponibile. Detaliile și oferta finală se confirmă direct cu echipa pentru evenimentul respectiv.
