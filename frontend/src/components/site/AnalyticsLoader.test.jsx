@@ -106,6 +106,14 @@ test.each(["GT-BOOTSTRAP123", "G-LINKED123"])(
     const configurations = window.dataLayer.filter(entry => entry[0] === "config");
     expect(configurations).toHaveLength(1);
     expect(configurations[0][1]).toBe(tagId);
+    const cookieConfiguration = window.dataLayer.slice(0, window.dataLayer.indexOf(configurations[0]))
+      .filter(entry => entry[0] === "set").map(entry => Array.from(entry));
+    expect(cookieConfiguration).toEqual([
+      ["set", "allow_google_signals", false],
+      ["set", "allow_ad_personalization_signals", false],
+      ["set", "cookie_expires", 180 * 86_400],
+      ["set", "cookie_update", false],
+    ]);
     expect(window["ga-disable-G-ABC123XYZ"]).toBe(false);
     expect(window[`ga-disable-${tagId}`]).toBe(true);
 

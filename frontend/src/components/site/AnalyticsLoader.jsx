@@ -61,23 +61,22 @@ export default function AnalyticsLoader({ production }) {
   const lastPagePath = useRef("");
 
   useEffect(() => subscribeCookieConsent(choice => {
-      const nextAllowed = eligible && choice?.analytics === true;
-      const previouslyAllowed = allowedNow.current;
-      allowedNow.current = nextAllowed;
-      // A routing tag may also identify a different GA stream. Keep that
-      // stream disabled before Google loads; consent controls our destination.
-      if (TAG_ID_PATTERN.test(bootstrapTagId) && bootstrapTagId !== measurementId) {
-        window[`ga-disable-${bootstrapTagId}`] = true;
-      }
-      window[`ga-disable-${measurementId}`] = !nextAllowed;
-      if (previouslyAllowed && !nextAllowed && initialized.current && window.gtag) {
-        window.gtag("consent", "update", consentState(false));
-      }
-      setAllowed(nextAllowed);
-      if (!nextAllowed) {
-        lastPagePath.current = "";
-        clearAnalyticsCookies();
-      }
+    const nextAllowed = eligible && choice?.analytics === true;
+    const previouslyAllowed = allowedNow.current;
+    allowedNow.current = nextAllowed;
+    // A routing tag can identify a different stream. Keep that stream disabled.
+    if (TAG_ID_PATTERN.test(bootstrapTagId) && bootstrapTagId !== measurementId) {
+      window[`ga-disable-${bootstrapTagId}`] = true;
+    }
+    window[`ga-disable-${measurementId}`] = !nextAllowed;
+    if (previouslyAllowed && !nextAllowed && initialized.current && window.gtag) {
+      window.gtag("consent", "update", consentState(false));
+    }
+    setAllowed(nextAllowed);
+    if (!nextAllowed) {
+      lastPagePath.current = "";
+      clearAnalyticsCookies();
+    }
   }), [bootstrapTagId, eligible, measurementId]);
 
   useEffect(() => {
@@ -91,14 +90,15 @@ export default function AnalyticsLoader({ production }) {
     if (!initialized.current) {
       window.gtag("consent", "default", consentState(true));
       window.gtag("js", new Date());
+      // The bootstrap tag and the measurement destination can be different.
+      window.gtag("set", "allow_google_signals", false);
+      window.gtag("set", "allow_ad_personalization_signals", false);
+      window.gtag("set", "cookie_expires", 180 * 86_400);
+      window.gtag("set", "cookie_update", false);
       // Configure the loaded tag. A destination-only ID can otherwise trigger
       // a second, unavailable script; explicit events select the GA4 destination.
       window.gtag("config", bootstrapTagId, {
         send_page_view: false,
-        allow_google_signals: false,
-        allow_ad_personalization_signals: false,
-        cookie_expires: 180 * 86_400,
-        cookie_update: false,
         page_location: `https://${CANONICAL_HOSTNAME}${pagePath}`,
         page_referrer: referrerForAnalytics(document.referrer),
       });
