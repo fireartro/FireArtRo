@@ -3,7 +3,8 @@ import { createRoot } from "react-dom/client";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 
 import AnalyticsLoader from "./AnalyticsLoader";
-import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION, saveCookieConsent } from "@/lib/cookieConsent";
+import { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_VERSION } from "@/lib/cookieConsent";
+import { seedConsent } from "@/lib/consentTestFixture";
 import { ANALYTICS_EVENT, trackQuoteAccepted } from "@/lib/analytics";
 
 
@@ -15,14 +16,7 @@ let previousMeasurementId;
 let previousTagId;
 
 function consent(analytics, duration = 86_400_000) {
-  window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({
-    version: COOKIE_CONSENT_VERSION,
-    necessary: true,
-    analytics,
-    marketing: false,
-    savedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + duration).toISOString(),
-  }));
+  seedConsent({ analytics }, duration);
 }
 
 function Harness({ production = true }) {
@@ -128,7 +122,7 @@ test.each(["GT-BOOTSTRAP123", "G-LINKED123"])(
       "G-ABC123XYZ", "G-ABC123XYZ", "G-ABC123XYZ", "G-ABC123XYZ",
     ]);
 
-    await act(async () => saveCookieConsent({ analytics: false, marketing: false }));
+    await act(async () => consent(false));
     expect(window["ga-disable-G-ABC123XYZ"]).toBe(true);
     expect(window[`ga-disable-${tagId}`]).toBe(true);
     clickContact("tel:+40787602144");
@@ -180,7 +174,7 @@ test("a valid bootstrap tag cannot replace the required GA4 measurement destinat
 test("loads GA4 only after analytics consent and records SPA page views once", async () => {
   await render();
 
-  await act(async () => saveCookieConsent({ analytics: true, marketing: false }));
+  await act(async () => consent(true));
 
   const script = document.getElementById("fireartro-ga4-script");
   expect(script).not.toBeNull();
@@ -209,7 +203,7 @@ test("stops future measurement when analytics consent is withdrawn", async () =>
   await render();
   expect(document.getElementById("fireartro-ga4-script")).not.toBeNull();
 
-  await act(async () => saveCookieConsent({ analytics: false, marketing: false }));
+  await act(async () => consent(false));
   expect(window["ga-disable-G-ABC123XYZ"]).toBe(true);
   const consentUpdates = window.dataLayer.filter((entry) => entry[0] === "consent" && entry[1] === "update");
   expect(consentUpdates.at(-1)[2]).toEqual(expect.objectContaining({ analytics_storage: "denied" }));
@@ -223,7 +217,8 @@ test("withdrawal in another tab stops page views and clears only analytics cooki
   await render();
   document.cookie = '_ga=example; path=/';
   document.cookie = 'unrelated=keep; path=/';
-  consent(false);
+  const stored = JSON.parse(localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY));
+  localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({ ...stored, analytics: false }));
   await act(async () => window.dispatchEvent(new StorageEvent('storage', { key: COOKIE_CONSENT_STORAGE_KEY })));
   expect(window['ga-disable-G-ABC123XYZ']).toBe(true);
   expect(document.cookie).not.toMatch(/(?:^|;\s*)_ga=/);
@@ -313,7 +308,7 @@ test("business events require consent and stop immediately after withdrawal or e
   clickContact("tel:+40787602144");
   act(() => trackQuoteAccepted());
   expect(businessEvents()).toHaveLength(1);
-  await act(async () => saveCookieConsent({ analytics: false, marketing: false }));
+  await act(async () => consent(false));
   act(() => trackQuoteAccepted());
   expect(businessEvents()).toHaveLength(1);
 });

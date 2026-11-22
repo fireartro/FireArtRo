@@ -15,6 +15,7 @@ import AdminQuotes from './AdminQuotes';
 import AdminInbox from './AdminInbox';
 import AdminMediaLibrary from './AdminMediaLibrary';
 import AdminIntegrations from './AdminIntegrations';
+import AdminConsentReceipt from './AdminConsentReceipt';
 import AdminMigrationPanel from './AdminMigrationPanel';
 import AdminFeedback from './AdminFeedback';
 import { AdminHistoryGuard } from './AdminHistoryRouter';
@@ -93,6 +94,7 @@ export default function AdminLayout() {
       <div className="cms-main">{exitNotice && !menu && <p className="cms-notice" role="status">Așteaptă finalizarea operației înainte de a părăsi secțiunea.</p>}<AdminFeedback onNavigate={choose}/>{section === 'dashboard' ? <AdminDashboard onNavigate={choose} />
         : section === 'revisions' ? <AdminRevisions /> : section === 'blog' ? <AdminBlogPanel onExitState={setExitState} /> : section === 'quotes' ? <AdminQuotes onExitState={setExitState} /> : section === 'inbox' ? <AdminInbox key={linkedMessage || 'inbox'} initialMessageId={linkedMessage} onExitState={setExitState} /> : section === 'media' ? <AdminMediaLibrary />
         : section === 'integrations' ? <><AdminIntegrations/><AdminMigrationPanel/></>
+        : section === 'cookieSettings' ? <><AdminContentEditor key={section} moduleKey={section} /><AdminConsentReceipt /></>
         : ADMIN_MODULES[section] ? <AdminContentEditor key={section} moduleKey={section} /> : <AdminDashboard onNavigate={choose} />}</div></div>
     <AdminPublishDialog open={publish} onOpenChange={setPublish} /><AdminPreview open={preview} onClose={() => setPreview(false)} />
     <AdminHistoryGuard busy={operationBusy} dirty={exitState === 'dirty'} onBusy={setExitNotice} />

@@ -44,6 +44,89 @@ const render = async (element, url='/admin') => act(async()=>root.render(<Memory
 const click = async text => {const button=[...container.querySelectorAll('button')].find(e=>e.textContent===text);expect(button).toBeDefined();await act(async()=>button.click());};
 const type = async (input,value) => act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));});
 
+const consentReference = '236398d1-5dde-4b90-9a97-639b8f965f01';
+const consentPath = `/api/admin/consent/${consentReference}`;
+const consentEvidence = {
+  id: consentReference, version: 3, analytics: true, marketing: false, status: 'active',
+  method: 'preferences', contentRevision: 'public-revision-42',
+  savedAt: '2026-11-22T10:30:12.000Z', expiresAt: '2027-05-21T10:30:12.000Z',
+  withdrawnAt: null, deleteAfter: '2028-05-20T10:30:12.000Z',
+};
+
+test('Cookies looks up consent evidence by reference without editing the CMS draft', async () => {
+  mockRequest.mockImplementation((path, options) => path === consentPath
+    ? Promise.resolve(consentEvidence) : handleRequest(path, options));
+  await render(<AdminLayout/>, '/admin?sectiune=cookieSettings');
+  const lookup = container.querySelector('input[name="consent-reference"]');
+  expect(lookup).not.toBeNull();
+  await type(lookup, 'referință greșită');
+  await click('Verifică dovada');
+  expect(container.querySelector('.cms-consent-proof [role="alert"]').textContent).toContain('cod de referință valid');
+  expect(mockRequest.mock.calls.some(([path]) => path.startsWith('/api/admin/consent/'))).toBe(false);
+  await type(lookup, consentReference.toUpperCase());
+  await click('Verifică dovada');
+  const proof = container.querySelector('.cms-consent-proof dl');
+  expect(proof.textContent).toContain(consentReference);
+  expect(proof.textContent).toContain('Acord activ');
+  expect(proof.textContent).toContain('Analiză permisă');
+  expect(proof.textContent).toContain('Conținut extern refuzat');
+  expect(proof.textContent).toContain('12:30:12');
+  expect(proof.textContent).toContain(consentEvidence.savedAt);
+  expect(proof.textContent).toContain(consentEvidence.contentRevision);
+  expect(proof.textContent).toContain('Salvează preferințele');
+  expect(proof.textContent).toContain(consentEvidence.deleteAfter);
+  expect(mockRequest.mock.calls.some(([, options]) => ['POST', 'PUT', 'DELETE'].includes(options?.method))).toBe(false);
+});
+
+test('editing the reference cancels a pending lookup and suppresses its late result', async () => {
+  let finishLookup;
+  mockRequest.mockImplementation((path, options) => path === consentPath
+    ? new Promise(resolve => { finishLookup = resolve; }) : handleRequest(path, options));
+  await render(<AdminLayout/>, '/admin?sectiune=cookieSettings');
+  const lookup = container.querySelector('input[name="consent-reference"]');
+  expect(lookup).not.toBeNull();
+  await type(lookup, consentReference);
+  await click('Verifică dovada');
+  const requestOptions = mockRequest.mock.calls.find(([path]) => path === consentPath)[1];
+  expect(requestOptions.signal.aborted).toBe(false);
+  await type(lookup, '');
+  expect(requestOptions.signal.aborted).toBe(true);
+  await act(async () => finishLookup(consentEvidence));
+  expect(container.querySelector('.cms-consent-proof dl')).toBeNull();
+});
+
+test.each([
+  ['expired', null, 'Acord expirat'],
+  ['withdrawn', '2026-11-22T11:23:32.000Z', 'Acord retras'],
+])('Cookies displays the consent state as recorded by the server', async (status, withdrawnAt, label) => {
+  mockRequest.mockImplementation((path, options) => path === consentPath
+    ? Promise.resolve({ ...consentEvidence, status, withdrawnAt }) : handleRequest(path, options));
+  await render(<AdminLayout/>, '/admin?sectiune=cookieSettings');
+  await type(container.querySelector('input[name="consent-reference"]'), consentReference);
+  await click('Verifică dovada');
+  const proof = container.querySelector('.cms-consent-proof dl');
+  expect(proof.textContent).toContain(label);
+  if (withdrawnAt) expect(proof.textContent).toContain(withdrawnAt);
+});
+
+test('an unknown reference shows a clear message and removes the previous result', async () => {
+  const missing = 'c92e368f-6ade-46bb-842b-0e819df2f120';
+  mockRequest.mockImplementation(async (path, options) => {
+    if (path === consentPath) return consentEvidence;
+    if (path === `/api/admin/consent/${missing}`) throw Object.assign(new Error(), { status: 404 });
+    return handleRequest(path, options);
+  });
+  await render(<AdminLayout/>, '/admin?sectiune=cookieSettings');
+  const lookup = container.querySelector('input[name="consent-reference"]');
+  await type(lookup, consentReference);
+  await click('Verifică dovada');
+  expect(container.querySelector('.cms-consent-proof dl')).not.toBeNull();
+  await type(lookup, missing);
+  expect(container.querySelector('.cms-consent-proof dl')).toBeNull();
+  await click('Verifică dovada');
+  expect(container.querySelector('.cms-consent-proof [role="alert"]').textContent).toContain('Nu există o dovadă');
+});
+
 test('image choice opens a searchable visual picker instead of a text-only ID menu',async()=>{
   await render(<AdminContentEditor moduleKey="packages"/>);
   const trigger=container.querySelector('button[aria-label="Alege Imagine proprie"]');

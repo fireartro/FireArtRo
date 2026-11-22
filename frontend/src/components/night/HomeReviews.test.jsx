@@ -2,7 +2,8 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { DraftPreviewProvider } from "@/content/ManagedContentProvider";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
-import { COOKIE_CONSENT_STORAGE_KEY, OPEN_COOKIE_SETTINGS_EVENT, saveCookieConsent } from "@/lib/cookieConsent";
+import { COOKIE_CONSENT_STORAGE_KEY, OPEN_COOKIE_SETTINGS_EVENT } from "@/lib/cookieConsent";
+import { seedConsent } from "@/lib/consentTestFixture";
 import HomeReviews from "./HomeReviews";
 
 const review = {
@@ -50,7 +51,7 @@ test("links to Google Maps and cookie settings without displaying review cards o
 });
 
 test("preserves Google Maps author attribution and source links only while external content is authorized", async () => {
-  saveCookieConsent({ analytics: false, marketing: true });
+  seedConsent({ analytics: false, marketing: true });
   await render();
   const card = container.querySelector("[data-review-card]");
   expect(card.querySelector(`a[href='${review.url}']`)).not.toBeNull();
@@ -60,7 +61,7 @@ test("preserves Google Maps author attribution and source links only while exter
   expect(container.textContent).toMatch(/relevanță/);
   expect(container.textContent).not.toMatch(/verificate/);
   expect(container.querySelectorAll("[aria-hidden='true'] a:not([tabindex='-1'])")).toHaveLength(0);
-  await act(async () => saveCookieConsent({ analytics: false, marketing: false }));
+  await act(async () => seedConsent({ analytics: false, marketing: false }));
   expect(container.querySelector("[data-review-card]")).toBeNull();
   expect(container.querySelector(`img[src='${review.author_photo_url}']`)).toBeNull();
 });

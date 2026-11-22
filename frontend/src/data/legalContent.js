@@ -3,15 +3,35 @@ import { SITE_DETAILS, BUSINESS_HOURS } from "./businessContent";
 const EMAIL = SITE_DETAILS.email;
 const UPDATED = "22 noiembrie 2026";
 const IDENTITY = `${SITE_DETAILS.legalName}, CUI ${SITE_DETAILS.taxId}, nr. Registrul Comerțului ${SITE_DETAILS.registrationNumber}, cu sediul social în ${SITE_DETAILS.registeredOffice}`;
-const COOKIE_PREFERENCE_TEXT = "fireartro-cookie-consent-v1 (localStorage, fireart.ro) păstrează categoriile alese, versiunea informării, data alegerii și expirarea. Durata este afișată în panoul Setări cookies. După expirare, preferința nu mai activează funcțiile opționale. Dacă browserul blochează salvarea, opțiunile rămân dezactivate.";
+const PRIOR_COOKIE_PREFERENCE = "fireartro-cookie-consent-v1 (localStorage, fireart.ro) păstrează categoriile alese, versiunea informării, data alegerii și expirarea. Durata este afișată în panoul Setări cookies. După expirare, preferința nu mai activează funcțiile opționale. Dacă browserul blochează salvarea, opțiunile rămân dezactivate.";
+const PRIOR_OPTIONAL_PURPOSE = "Google Analytics 4 și conținutul extern de la Google sau YouTube sunt opționale și se bazează pe consimțământul exprimat în Setări cookies (art. 6 alin. 1 lit. a GDPR). Refuzul nu împiedică solicitarea unei oferte. Nu înscriem automat solicitanții la newsletter sau campanii publicitare.";
+const PRIOR_WITHDRAWAL = "Din subsolul paginii poți retrage direct acordul sau deschide Setări cookies ca să schimbi fiecare opțiune. Doar necesare dezactivează toate opțiunile. Formularul de ofertă și documentele legale rămân disponibile după refuz.";
+
+const CONSENT_EVIDENCE = [
+  "Funcțiile opționale pornesc după confirmarea serverului. Pentru fiecare acord, FireArtRo consemnează o referință aleatorie, categoriile alese, metoda de acceptare, versiunea 3 a informării, revizia conținutului afișat când este disponibilă, data și ora acordului stabilite de server în UTC și expirarea. La retragere, serverul consemnează ora de primire a retragerii.",
+  "Folosim această evidență pentru gestionarea și dovedirea consimțământului, în temeiul obligației legale prevăzute de art. 4 alin. (5^6) din Legea nr. 506/2004 și art. 7 alin. (1) GDPR, conform art. 6 alin. (1) lit. c GDPR. Evidența include amprenta criptografică a cheii de retragere. Nu consemnăm aici numele, adresele de email, IP-ul sau detalii despre browser. Găzduirea poate prelucra separat datele tehnice necesare livrării și securității site-ului.",
+  "Evidența este păstrată în MongoDB Atlas, cu acces limitat la personalul autorizat al FireArtRo, și poate fi comunicată autorităților competente când legea o cere. Ștergerea automată este programată la 365 de zile după expirarea acordului sau, dacă retragerea ajunge înainte, după primirea retragerii. Ștergerea efectivă poate avea un decalaj tehnic. Referința nu este folosită pentru urmărire și nu este transmisă serviciilor de analiză sau de conținut extern.",
+];
+
+const COOKIE_PREFERENCE_TEXT = [
+  "fireartro-cookie-consent-v1 (localStorage, fireart.ro) păstrează categoriile alese, versiunea informării, data alegerii și expirarea. Când acorzi permisiunea, browserul păstrează și referința acordului și o cheie aleatorie separată pentru confirmarea retragerii. Durata este afișată în panoul Setări cookies. Opțiunea Doar necesare se păstrează local, iar după expirare funcțiile opționale rămân oprite. Dacă browserul blochează salvarea, opțiunile rămân dezactivate.",
+  ...CONSENT_EVIDENCE,
+  "Poți copia referința din Setări cookies cât timp acordul este activ. Dacă ștergi datele browserului, păstrează referința dacă dorești să ne ceri să verificăm înregistrarea. FireArtRo caută dovada după această referință.",
+];
+
+const WITHDRAWAL_TEXT = [
+  PRIOR_WITHDRAWAL,
+  "Retragerea dezactivează imediat funcțiile opționale afectate în browser. Browserul păstrează temporar în localStorage cererile neconfirmate, referințele și cheile aferente, pentru a reîncerca transmiterea până la 30 de zile când site-ul este deschis și conexiunea permite. Referința retrasă este marcată local până la 30 de zile pentru a împiedica reactivarea dintr-o altă filă. Ora din evidență este cea la care serverul primește retragerea.",
+];
 
 // Replace only the exact retired baseline paragraphs on older CMS revisions.
 // Custom text and other sections remain editable and rendered from the CMS.
 const RETIRED_LEGAL_PARAGRAPHS = new Map([
   [
     "Google Analytics 4 și activarea playerelor YouTube sunt opționale și se bazează pe consimțământul exprimat în setările cookies (lit. a). Refuzul nu împiedică solicitarea unei oferte. Nu înscriem automat solicitanții la newsletter sau campanii publicitare.",
-    "Google Analytics 4 și conținutul extern de la Google sau YouTube sunt opționale și se bazează pe consimțământul exprimat în Setări cookies (art. 6 alin. 1 lit. a GDPR). Refuzul nu împiedică solicitarea unei oferte. Nu înscriem automat solicitanții la newsletter sau campanii publicitare.",
+    [PRIOR_OPTIONAL_PURPOSE, ...CONSENT_EVIDENCE],
   ],
+  [PRIOR_OPTIONAL_PURPOSE, [PRIOR_OPTIONAL_PURPOSE, ...CONSENT_EVIDENCE]],
   [
     "API-urile de recenzii sunt apelate de server, fără transmiterea explicită a IP-ului vizitatorului. Fotografiile autorilor și miniaturile YouTube încărcate direct de la Google creează însă conexiuni ale browserului către acel furnizor, inclusiv înainte de pornirea unui player. Aceste conexiuni nu reprezintă activarea Analytics.",
     "Serverul poate prelua recenzii publice fără a transmite IP-ul vizitatorului în solicitarea către API. Atunci când accepți Conținut extern, browserul poate încărca miniaturi YouTube și fotografii ale autorilor de recenzii direct de la Google. Furnizorul primește datele de conectare, inclusiv IP-ul. Această opțiune este independentă de Google Analytics.",
@@ -24,6 +44,7 @@ const RETIRED_LEGAL_PARAGRAPHS = new Map([
     "fireartro-cookie-consent-v1 (localStorage, domeniul site-ului): categoriile acceptate, data salvării și expirarea. Termenul configurat este de 180 de zile. După expirare, alegerea nu mai autorizează funcțiile opționale. localStorage nu se șterge singur la termen; înregistrarea poate rămâne până la înlocuire sau ștergerea datelor browserului.",
     COOKIE_PREFERENCE_TEXT,
   ],
+  [PRIOR_COOKIE_PREFERENCE, COOKIE_PREFERENCE_TEXT],
   [
     "După acord se pot transmite calea paginii, titlul și semnale tehnice ale browserului. Evenimentele explicite ale aplicației elimină parametrii și fragmentul URL și nu includ câmpurile formularului. Cookie-urile _ga și _ga_ID (unde ID identifică integrarea) pot păstra identificatori de analiză; durata depinde de configurația Google, în mod implicit până la 2 ani, cu posibilitatea reînnoirii la interacțiune. Refuzul sau expirarea acordului site-ului are prioritate pentru activarea măsurării.",
     "După acord se pot comunica Google calea paginii, titlul și semnale tehnice ale browserului. Evenimentele trimise de aplicație exclud parametrii URL, fragmentul și câmpurile formularului. Cookie-urile de analiză _ga și _ga_ID (unde ID identifică integrarea) au o durată configurată de 180 de zile, fără reînnoire automată la vizitarea unei pagini. Retragerea sau expirarea preferinței oprește măsurarea și elimină aceste cookie-uri de pe domeniul site-ului.",
@@ -46,8 +67,9 @@ const RETIRED_LEGAL_PARAGRAPHS = new Map([
   ],
   [
     "Deschide Setări cookies din subsolul paginii. Poți alege Doar necesare, toate opțiunile sau o selecție. Refuzul nu afectează accesul la informațiile firmei și formularul de ofertă.",
-    "Din subsolul paginii poți retrage direct acordul sau deschide Setări cookies ca să schimbi fiecare opțiune. Doar necesare dezactivează toate opțiunile. Formularul de ofertă și documentele legale rămân disponibile după refuz.",
+    WITHDRAWAL_TEXT,
   ],
+  [PRIOR_WITHDRAWAL, WITHDRAWAL_TEXT],
   [
     "Recenziile externe sunt însoțite de sursă și, când sunt disponibile, de autor și link. Selecția nu reprezintă obligatoriu toate recenziile. Nu afirmăm că fiecare autor a cumpărat serviciile dacă acest lucru nu a fost verificat; autenticitatea este supusă și regulilor platformei sursă.",
     "Afișăm recenzii publicate pe platforme externe și indicăm sursa. FireArtRo nu verifică independent dacă autorii au cumpărat sau au folosit serviciile. Platformele sursă își aplică propriile reguli de moderare. Selecția afișată poate include doar o parte din recenzii.",
@@ -58,10 +80,14 @@ export function updatePriorLegalCopy(document) {
   let changed = false;
   const sections = document.sections.map(section => ({
     ...section,
-    paragraphs: section.paragraphs.map(paragraph => {
+    paragraphs: section.paragraphs.flatMap(paragraph => {
       const replacement = RETIRED_LEGAL_PARAGRAPHS.get(paragraph);
-      if (replacement) changed = true;
-      return replacement || paragraph;
+      if (!replacement) return paragraph;
+      // A newer CMS publication can already include these supplemental paragraphs.
+      const replacements = Array.isArray(replacement) ? replacement : [replacement];
+      const resolved = replacements.filter(item => item === paragraph || !section.paragraphs.includes(item));
+      changed ||= resolved.length !== 1 || resolved[0] !== paragraph;
+      return resolved;
     }),
   }));
   return changed ? { ...document, sections, updatedLabel: `Actualizat la ${UPDATED}` } : document;
@@ -226,6 +252,7 @@ const LEGAL_BASELINE = {
       { label: "Cookies Google Analytics", href: "https://support.google.com/analytics/answer/11397207?hl=ro" },
       { label: "Confidențialitate Cloudflare Turnstile", href: "https://www.cloudflare.com/turnstile-privacy-policy/" },
       { label: "Legea nr. 506/2004 — forma actualizată", href: "https://legislatie.just.ro/Public/DetaliiDocument/315560" },
+      { label: "Legea nr. 219/2026 — dovada acordului", href: "https://legislatie.just.ro/Public/DetaliiDocumentAfis/316363" },
     ],
   },
 };
@@ -235,7 +262,7 @@ export const LEGAL_PAGE_PRESENTATION = Object.fromEntries(
     ...page,
     sections: page.sections.map(section => ({
       ...section,
-      body: section.body.map(paragraph => RETIRED_LEGAL_PARAGRAPHS.get(paragraph) || paragraph),
+      body: section.body.flatMap(paragraph => RETIRED_LEGAL_PARAGRAPHS.get(paragraph) || paragraph),
     })),
   }]),
 );

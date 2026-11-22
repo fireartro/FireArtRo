@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Cookie, Settings2, X } from "lucide-react";
 
+import { useManagedContentSnapshot } from "@/content/ManagedContentProvider";
 import useManagedContent from "@/hooks/useManagedContent";
 import {
   consentRetentionDays,
@@ -12,12 +13,14 @@ import {
   readCookieConsent,
   saveCookieConsent,
   useCookieConsent,
+  watchConsentWithdrawals,
 } from "@/lib/cookieConsent";
 
 export { COOKIE_CONSENT_STORAGE_KEY, COOKIE_CONSENT_UPDATED_EVENT, OPEN_COOKIE_SETTINGS_EVENT, readCookieConsent } from "@/lib/cookieConsent";
 
 export default function CookieConsent({ autoPrompt = true }) {
   const settings = currentCookieSettings(useManagedContent("cookieSettings", CMS_DEFAULTS.cookieSettings));
+  const publication = useManagedContentSnapshot();
   const retentionDays = consentRetentionDays(settings.retentionDays);
   const stored = useCookieConsent();
   const [introActive, setIntroActive] = useState(() => Boolean(document.documentElement.dataset.fireartIntro));
@@ -25,16 +28,22 @@ export default function CookieConsent({ autoPrompt = true }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [failure, setFailure] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [copyStatus, setCopyStatus] = useState("");
   const [choice, setChoice] = useState(NECESSARY_ONLY);
   const firstButtonRef = useRef(null);
   const panelRef = useRef(null);
+  const activeSave = useRef(null);
   const dialogOpen = ready && !introActive && (settingsOpen || (autoPrompt && !stored));
 
   const closeSettings = () => {
     setSettingsOpen(false);
     setCustomizing(false);
     setFailure(false);
+    setCopyStatus("");
   };
+
+  useEffect(watchConsentWithdrawals, []);
 
   useEffect(() => {
     // Never overlap the startup and cookie modal locks. Restoring an inert
@@ -56,7 +65,9 @@ export default function CookieConsent({ autoPrompt = true }) {
     return () => window.removeEventListener(OPEN_COOKIE_SETTINGS_EVENT, openSettings);
   }, []);
 
-  useEffect(() => setChoice(stored || NECESSARY_ONLY), [stored]);
+  useEffect(() => {
+    if (!activeSave.current) setChoice(stored || NECESSARY_ONLY);
+  }, [stored]);
 
   useEffect(() => {
     if (!dialogOpen) return;
@@ -76,7 +87,7 @@ export default function CookieConsent({ autoPrompt = true }) {
     observer.observe(document.body, { childList: true });
     firstButtonRef.current?.focus();
     const onKeyDown = (event) => {
-      if (event.key === "Escape" && (readCookieConsent() || !autoPrompt)) closeSettings();
+      if (event.key === "Escape" && !activeSave.current && (readCookieConsent() || !autoPrompt)) closeSettings();
       if (event.key !== "Tab") return;
       const controls = Array.from(panel.querySelectorAll('a[href], button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])'));
       const first = controls[0];
@@ -101,14 +112,36 @@ export default function CookieConsent({ autoPrompt = true }) {
     };
   }, [autoPrompt, dialogOpen]);
 
-  const save = (nextChoice) => {
-    const saved = saveCookieConsent(nextChoice, retentionDays);
-    if (!saved && (nextChoice.analytics || nextChoice.marketing)) {
+  const save = async (nextChoice, method = "preferences") => {
+    const optional = nextChoice.analytics || nextChoice.marketing;
+    if (optional && activeSave.current) return;
+    const operation = {};
+    activeSave.current = optional ? operation : null;
+    setSaving(Boolean(optional));
+    setFailure(false);
+    if (optional) setSettingsOpen(true);
+    const saved = await saveCookieConsent(nextChoice, retentionDays, {
+      method,
+      contentRevision: publication.status === "ready" ? publication.revisionId : null,
+    });
+    if (optional && activeSave.current !== operation) return;
+    activeSave.current = null;
+    setSaving(false);
+    if (!saved && optional) {
       setSettingsOpen(true);
       setFailure(true);
       return;
     }
     closeSettings();
+  };
+
+  const copyReceipt = async () => {
+    try {
+      await navigator.clipboard.writeText(stored.receiptId);
+      setCopyStatus("Codul a fost copiat.");
+    } catch {
+      setCopyStatus("Poți selecta și copia manual codul afișat.");
+    }
   };
 
   if (!dialogOpen) return null;
@@ -130,7 +163,7 @@ export default function CookieConsent({ autoPrompt = true }) {
             <p id="cookie-consent-summary">{settings.summary} Poți schimba sau retrage alegerea din „Setări cookies”, în subsolul paginii.</p>
           </div>
           {(stored || !autoPrompt) && (
-            <button type="button" onClick={closeSettings} aria-label="Închide setările cookies">
+            <button type="button" disabled={saving} onClick={closeSettings} aria-label="Închide setările cookies">
               <X />
             </button>
           )}
@@ -152,6 +185,7 @@ export default function CookieConsent({ autoPrompt = true }) {
               </span>
               <input
                 type="checkbox"
+                disabled={saving}
                 checked={choice.analytics}
                 onChange={(event) => setChoice((current) => ({ ...current, analytics: event.target.checked }))}
               />
@@ -163,6 +197,7 @@ export default function CookieConsent({ autoPrompt = true }) {
               </span>
               <input
                 type="checkbox"
+                disabled={saving}
                 checked={choice.marketing}
                 onChange={(event) => setChoice((current) => ({ ...current, marketing: event.target.checked }))}
               />
@@ -170,7 +205,16 @@ export default function CookieConsent({ autoPrompt = true }) {
           </div>
         )}
 
-        {failure && <p role="status">Browserul nu a permis salvarea. Opțiunile rămân dezactivate.</p>}
+        {customizing && stored?.receiptId && (
+          <div className="cookie-receipt">
+            <p>Codul dovezii acordului</p>
+            <code>{stored.receiptId}</code>
+            <button type="button" onClick={copyReceipt}>Copiază codul</button>
+            <span role="status">{copyStatus}</span>
+          </div>
+        )}
+        {saving && <p className="cookie-receipt" role="status">Se salvează dovada acordului…</p>}
+        {failure && <p className="cookie-receipt" role="status">Acordul nu a putut fi confirmat. Poți reîncerca sau continua cu „Doar necesare”.</p>}
         <div className="cookie-consent-links">
           <a href="/cookies">Citește politica de cookies</a>
           <span>Preferința este păstrată {retentionDays} zile.</span>
@@ -182,7 +226,7 @@ export default function CookieConsent({ autoPrompt = true }) {
               <button ref={firstButtonRef} type="button" className="is-secondary" onClick={() => save(NECESSARY_ONLY)}>
                 Doar necesare
               </button>
-              <button type="button" className="is-primary" onClick={() => save(choice)}>
+              <button type="button" className="is-primary" disabled={saving} onClick={() => save(choice)}>
                 Salvează preferințele
               </button>
             </>
@@ -191,13 +235,14 @@ export default function CookieConsent({ autoPrompt = true }) {
               <button ref={firstButtonRef} type="button" className="is-primary" onClick={() => save(NECESSARY_ONLY)}>
                 Doar necesare
               </button>
-              <button type="button" className="is-secondary" onClick={() => setCustomizing(true)}>
+              <button type="button" className="is-secondary" disabled={saving} onClick={() => setCustomizing(true)}>
                 <Settings2 /> Personalizează
               </button>
               <button
                 type="button"
                 className="is-primary"
-                onClick={() => save({ necessary: true, analytics: true, marketing: true })}
+                disabled={saving}
+                onClick={() => save({ necessary: true, analytics: true, marketing: true }, "accept_all")}
               >
                 Acceptă toate
               </button>

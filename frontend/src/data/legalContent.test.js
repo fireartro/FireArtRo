@@ -58,6 +58,42 @@ test("updates the published baseline while preserving an edited CMS section", ()
   expect(updated.title).toBe(original.title);
   expect(updated.sections[0].heading).toBe(original.sections[0].heading);
   expect(updated.sections[0].paragraphs[0]).toMatch(/retrage direct acordul/);
-  expect(updated.sections[0].paragraphs[1]).toBe(original.sections[0].paragraphs[1]);
+  expect(updated.sections[0].paragraphs.at(-1)).toBe(original.sections[0].paragraphs[1]);
+  expect(updatePriorLegalCopy(updated)).toBe(updated);
+});
+
+test("informs visitors about server consent proof and how withdrawal works", () => {
+  const cookies = pageText("cookies");
+  const privacy = pageText("confidentialitate");
+
+  expect(cookies).toMatch(/confirmarea serverului/);
+  expect(cookies).toMatch(/referință aleatorie/);
+  expect(cookies).toMatch(/versiunea 3/);
+  expect(cookies).toMatch(/ora de primire a retragerii/);
+  expect(cookies).toMatch(/dezactivează imediat/);
+  expect(cookies).toMatch(/MongoDB Atlas/);
+  expect(cookies).toMatch(/365 de zile/);
+  expect(privacy).toMatch(/dovedirea consimțământului/);
+  expect(privacy).toMatch(/365 de zile/);
+});
+
+test("replaces the prior consent storage copy in a published document without overwriting custom paragraphs", () => {
+  const original = {
+    title: "Politica personalizată",
+    updatedLabel: "Versiunea anterioară",
+    sections: [{
+      id: "cookies-section-2",
+      heading: "Cum funcționează stocarea",
+      paragraphs: [
+        "fireartro-cookie-consent-v1 (localStorage, fireart.ro) păstrează categoriile alese, versiunea informării, data alegerii și expirarea. Durata este afișată în panoul Setări cookies. După expirare, preferința nu mai activează funcțiile opționale. Dacă browserul blochează salvarea, opțiunile rămân dezactivate.",
+        "Un paragraf personalizat în Admin.",
+      ],
+    }],
+  };
+  const updated = updatePriorLegalCopy(original);
+  expect(updated.title).toBe(original.title);
+  expect(updated.sections[0].heading).toBe(original.sections[0].heading);
+  expect(updated.sections[0].paragraphs.join(" ")).toMatch(/referință aleatorie/);
+  expect(updated.sections[0].paragraphs.at(-1)).toBe(original.sections[0].paragraphs[1]);
   expect(updatePriorLegalCopy(updated)).toBe(updated);
 });
