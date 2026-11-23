@@ -50,7 +50,7 @@ class ConsentReference(BaseModel):
 
 
 class ConsentGrant(ConsentReference):
-    version: int = Field(strict=True, ge=3, le=3)
+    version: int = Field(strict=True, ge=3, le=4)
     analytics: StrictBool
     marketing: StrictBool
     retentionDays: int = Field(strict=True, ge=1, le=730)

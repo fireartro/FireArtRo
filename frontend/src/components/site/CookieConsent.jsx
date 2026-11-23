@@ -160,7 +160,7 @@ export default function CookieConsent({ autoPrompt = true }) {
           <span><Cookie /></span>
           <div>
             <h2 id="cookie-consent-title">{settings.title}</h2>
-            <p id="cookie-consent-summary">{settings.summary} Poți schimba sau retrage alegerea din „Setări cookies”, în subsolul paginii.</p>
+            <p id="cookie-consent-summary">{settings.summary} Categoria Conținut extern include recenziile Facebook afișate prin Elfsight. Poți schimba sau retrage alegerea din „Setări cookies”, în subsolul paginii.</p>
           </div>
           {(stored || !autoPrompt) && (
             <button type="button" disabled={saving} onClick={closeSettings} aria-label="Închide setările cookies">

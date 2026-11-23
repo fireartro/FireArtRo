@@ -41,7 +41,7 @@ test("no optional access until the server acknowledges the current choice and po
   expect(readCookieConsent()?.analytics).not.toBe(true);
   expect(global.fetch.mock.calls[0][0]).toBe("/api/consent");
   expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toMatchObject({
-    analytics: true, marketing: false, version: 3, retentionDays: 180,
+    analytics: true, marketing: false, version: 4, retentionDays: 180,
     contentRevision: "cms-test", method: "preferences", withdrawKey: expect.any(String),
   });
   confirm();

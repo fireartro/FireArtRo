@@ -32,10 +32,10 @@ afterEach(async () => {
   window.localStorage.removeItem(COOKIE_CONSENT_STORAGE_KEY);
   delete global.IS_REACT_ACT_ENVIRONMENT;
 });
-const render = async (settings = {}) => act(async () => root.render(
+const render = async (settings = {}, showFacebookWidget = false) => act(async () => root.render(
   <DraftPreviewProvider content={{ ...CMS_DEFAULTS, reviewSettings: {
     ...CMS_DEFAULTS.reviewSettings, ...settings,
-  } }}><HomeReviews /></DraftPreviewProvider>,
+  } }}><HomeReviews showFacebookWidget={showFacebookWidget} /></DraftPreviewProvider>,
 ));
 
 test("links to Google Maps and cookie settings without displaying review cards or loading avatars before consent", async () => {
@@ -70,6 +70,22 @@ test("provider failure hides the section without inventing reviews", async () =>
   global.fetch.mockResolvedValue({ ok: false });
   await render();
   expect(container.querySelector("[data-testid='home-reviews']")).toBeNull();
+});
+
+test("loads the live Facebook widget only with current external-content consent", async () => {
+  global.fetch.mockResolvedValue({ ok: true, json: async () => ({ providers: [] }) });
+  const prior = seedConsent({ marketing: true });
+  window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({ ...prior, version: 3 }));
+  await render({}, true);
+  expect(container.querySelector("iframe")).toBeNull();
+  expect(container.querySelector("a[href='https://www.facebook.com/FireArtRo/reviews']")).not.toBeNull();
+
+  await act(async () => seedConsent({ marketing: true }));
+  expect(container.querySelector("iframe[title='Recenzii FireArtRo de pe Facebook']").getAttribute("src"))
+    .toMatch(/^https:\/\/[a-f0-9]{32}\.elf\.site\/?$/);
+
+  await act(async () => seedConsent());
+  expect(container.querySelector("iframe")).toBeNull();
 });
 
 test("disabled settings do not request external review data", async () => {
