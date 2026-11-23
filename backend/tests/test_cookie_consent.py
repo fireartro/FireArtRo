@@ -57,8 +57,9 @@ def grant_reference(grant):
     return {key: grant[key] for key in ("id", "withdrawKey")}
 
 
-def test_receipt_fixes_server_time_and_retries_preserve_it(domain):
-    grant = grant_data()
+@pytest.mark.parametrize("version", [3, 4])
+def test_receipt_fixes_server_time_and_retries_preserve_it(domain, version):
+    grant = grant_data(version=version)
     first = domain.client.post("/api/consent", json=grant, headers=ORIGIN)
     assert first.status_code == 200
     assert first.headers["cache-control"] == "no-store"
@@ -66,6 +67,7 @@ def test_receipt_fixes_server_time_and_retries_preserve_it(domain):
         "id", "version", "analytics", "marketing", "savedAt", "expiresAt", "contentRevision", "method",
     }
     assert first.json()["id"] == grant["id"]
+    assert first.json()["version"] == version
     assert first.json()["contentRevision"] == grant["contentRevision"]
     assert first.json()["method"] == grant["method"]
     assert datetime.fromisoformat(first.json()["savedAt"]) == START

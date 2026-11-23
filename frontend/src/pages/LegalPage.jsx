@@ -23,7 +23,10 @@ export default function LegalPage({ type = "confidentialitate" }) {
   const shareCapital = siteDetails.shareCapital?.trim();
   const routeKey = Object.prototype.hasOwnProperty.call(LEGAL_PAGE_PRESENTATION, type) ? type : "confidentialitate";
   const documentKey = { confidentialitate: "privacy", termeni: "terms", cookies: "cookies" }[routeKey];
-  const data = { ...LEGAL_PAGE_PRESENTATION[routeKey], ...updatePriorLegalCopy(legalPages[documentKey]) };
+  const data = {
+    ...LEGAL_PAGE_PRESENTATION[routeKey],
+    ...updatePriorLegalCopy(legalPages[documentKey], { includeFacebookReviews: documentKey !== "terms" }),
+  };
 
   usePageMeta({
     title: `${data.title} — FireArtRo`,

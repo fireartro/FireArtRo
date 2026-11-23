@@ -6,9 +6,10 @@ const IDENTITY = `${SITE_DETAILS.legalName}, CUI ${SITE_DETAILS.taxId}, nr. Regi
 const PRIOR_COOKIE_PREFERENCE = "fireartro-cookie-consent-v1 (localStorage, fireart.ro) păstrează categoriile alese, versiunea informării, data alegerii și expirarea. Durata este afișată în panoul Setări cookies. După expirare, preferința nu mai activează funcțiile opționale. Dacă browserul blochează salvarea, opțiunile rămân dezactivate.";
 const PRIOR_OPTIONAL_PURPOSE = "Google Analytics 4 și conținutul extern de la Google sau YouTube sunt opționale și se bazează pe consimțământul exprimat în Setări cookies (art. 6 alin. 1 lit. a GDPR). Refuzul nu împiedică solicitarea unei oferte. Nu înscriem automat solicitanții la newsletter sau campanii publicitare.";
 const PRIOR_WITHDRAWAL = "Din subsolul paginii poți retrage direct acordul sau deschide Setări cookies ca să schimbi fiecare opțiune. Doar necesare dezactivează toate opțiunile. Formularul de ofertă și documentele legale rămân disponibile după refuz.";
+const CONSENT_EVIDENCE_V3 = "Funcțiile opționale pornesc după confirmarea serverului. Pentru fiecare acord, FireArtRo consemnează o referință aleatorie, categoriile alese, metoda de acceptare, versiunea 3 a informării, revizia conținutului afișat când este disponibilă, data și ora acordului stabilite de server în UTC și expirarea. La retragere, serverul consemnează ora de primire a retragerii.";
 
 const CONSENT_EVIDENCE = [
-  "Funcțiile opționale pornesc după confirmarea serverului. Pentru fiecare acord, FireArtRo consemnează o referință aleatorie, categoriile alese, metoda de acceptare, versiunea 3 a informării, revizia conținutului afișat când este disponibilă, data și ora acordului stabilite de server în UTC și expirarea. La retragere, serverul consemnează ora de primire a retragerii.",
+  CONSENT_EVIDENCE_V3.replace("versiunea 3 a informării", "versiunea informării"),
   "Folosim această evidență pentru gestionarea și dovedirea consimțământului, în temeiul obligației legale prevăzute de art. 4 alin. (5^6) din Legea nr. 506/2004 și art. 7 alin. (1) GDPR, conform art. 6 alin. (1) lit. c GDPR. Evidența include amprenta criptografică a cheii de retragere. Nu consemnăm aici numele, adresele de email, IP-ul sau detalii despre browser. Găzduirea poate prelucra separat datele tehnice necesare livrării și securității site-ului.",
   "Evidența este păstrată în MongoDB Atlas, cu acces limitat la personalul autorizat al FireArtRo, și poate fi comunicată autorităților competente când legea o cere. Ștergerea automată este programată la 365 de zile după expirarea acordului sau, dacă retragerea ajunge înainte, după primirea retragerii. Ștergerea efectivă poate avea un decalaj tehnic. Referința nu este folosită pentru urmărire și nu este transmisă serviciilor de analiză sau de conținut extern.",
 ];
@@ -27,6 +28,7 @@ const WITHDRAWAL_TEXT = [
 // Replace only the exact retired baseline paragraphs on older CMS revisions.
 // Custom text and other sections remain editable and rendered from the CMS.
 const RETIRED_LEGAL_PARAGRAPHS = new Map([
+  [CONSENT_EVIDENCE_V3, CONSENT_EVIDENCE[0]],
   [
     "Google Analytics 4 și activarea playerelor YouTube sunt opționale și se bazează pe consimțământul exprimat în setările cookies (lit. a). Refuzul nu împiedică solicitarea unei oferte. Nu înscriem automat solicitanții la newsletter sau campanii publicitare.",
     [PRIOR_OPTIONAL_PURPOSE, ...CONSENT_EVIDENCE],
@@ -76,7 +78,7 @@ const RETIRED_LEGAL_PARAGRAPHS = new Map([
   ],
 ]);
 
-export function updatePriorLegalCopy(document) {
+export function updatePriorLegalCopy(document, { includeFacebookReviews = false } = {}) {
   let changed = false;
   const sections = document.sections.map(section => ({
     ...section,
@@ -90,6 +92,24 @@ export function updatePriorLegalCopy(document) {
       return resolved;
     }),
   }));
+  if (includeFacebookReviews) {
+    return {
+      ...document,
+      updatedLabel: "Actualizat la 23 noiembrie 2026",
+      sections: [...sections, {
+        id: "elfsight-facebook-reviews",
+        heading: "Recenzii Facebook prin Elfsight",
+        paragraphs: [
+          "Pe pagina principală, recenziile publice Facebook se încarcă prin Elfsight după ce permiți categoria Conținut extern. Browserul se conectează la Elfsight și transmite datele tehnice necesare afișării, inclusiv adresa IP. Furnizorul poate folosi cookie-ul elfsight_viewed_recently, cu durata de 15 secunde, pentru a limita numărarea repetată a încărcărilor. Platformele externe pot folosi și alte tehnologii descrise în politicile lor.",
+          "Poți opri încărcarea din Setări cookies, în subsolul paginii. Linkul către recenziile originale de pe Facebook rămâne disponibil și fără acest acord.",
+        ],
+      }],
+      sources: [...(document.sources || []), {
+        label: "Confidențialitate Elfsight",
+        href: "https://elfsight.com/privacy-policy/",
+      }],
+    };
+  }
   return changed ? { ...document, sections, updatedLabel: `Actualizat la ${UPDATED}` } : document;
 }
 

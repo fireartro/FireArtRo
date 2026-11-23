@@ -68,7 +68,7 @@ test("informs visitors about server consent proof and how withdrawal works", () 
 
   expect(cookies).toMatch(/confirmarea serverului/);
   expect(cookies).toMatch(/referință aleatorie/);
-  expect(cookies).toMatch(/versiunea 3/);
+  expect(cookies).toMatch(/versiunea informării/);
   expect(cookies).toMatch(/ora de primire a retragerii/);
   expect(cookies).toMatch(/dezactivează imediat/);
   expect(cookies).toMatch(/MongoDB Atlas/);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 export const COOKIE_CONSENT_STORAGE_KEY = "fireartro-cookie-consent-v1";
-export const COOKIE_CONSENT_VERSION = 3;
+export const COOKIE_CONSENT_VERSION = 4;
 export const OPEN_COOKIE_SETTINGS_EVENT = "fireartro-open-cookie-settings";
 export const COOKIE_CONSENT_UPDATED_EVENT = "fireartro-cookie-consent-updated";
 export const NECESSARY_ONLY = Object.freeze({ necessary: true, analytics: false, marketing: false });
@@ -32,7 +32,8 @@ function validateChoice(choice) {
       || typeof choice.analytics !== "boolean" || typeof choice.marketing !== "boolean"
       || typeof choice.savedAt !== "string" || typeof choice.expiresAt !== "string") return null;
   const optional = choice.analytics || choice.marketing;
-  if (choice.version !== COOKIE_CONSENT_VERSION && !(choice.version === 2 && !optional)) return null;
+  const validPriorChoice = (choice.version === 2 && !optional) || (choice.version === 3 && !choice.marketing);
+  if (choice.version !== COOKIE_CONSENT_VERSION && !validPriorChoice) return null;
   if (optional && (!validId(choice.receiptId) || !validId(choice.withdrawKey) || withdrawnLocally(choice.receiptId))) return null;
   const saved = Date.parse(choice.savedAt);
   const expires = Date.parse(choice.expiresAt);
@@ -171,7 +172,7 @@ export async function saveCookieConsent(choice, days, { contentRevision = null, 
     savedAt: new Date(now).toISOString(),
     expiresAt: new Date(now + retentionDays * DAY).toISOString(),
   };
-  queueWithdrawal(current?.receiptId || prior?.pendingId, prior?.withdrawKey);
+  queueWithdrawal(prior?.receiptId || prior?.pendingId, prior?.withdrawKey);
   if (!analytics && !marketing) {
     const saved = saveLocally(refusal, refusal);
     void retryConsentWithdrawals();
@@ -196,7 +197,8 @@ export async function saveCookieConsent(choice, days, { contentRevision = null, 
       analytics: receipt.analytics, marketing: receipt.marketing,
       contentRevision: receipt.contentRevision, savedAt: receipt.savedAt, expiresAt: receipt.expiresAt,
     };
-    if (receipt.id !== id || receipt.analytics !== analytics || receipt.marketing !== marketing
+    if (receipt.id !== id || receipt.version !== COOKIE_CONSENT_VERSION
+        || receipt.analytics !== analytics || receipt.marketing !== marketing
         || receipt.method !== method || receipt.contentRevision !== contentRevision
         || !validateChoice(next) || readStoredChoice()?.pendingId !== id) return false;
     return saveLocally(next, refusal) && readCookieConsent()?.receiptId === id;

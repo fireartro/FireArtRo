@@ -8,6 +8,8 @@ import useNearViewport from "@/hooks/useNearViewport";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import "@/styles/night-reviews.css";
 
+const FACEBOOK_REVIEWS_URL = "https://www.facebook.com/FireArtRo/reviews";
+const FACEBOOK_WIDGET_URL = "https://5cd3630c2af747e78e24cbbda99bf22a.elf.site";
 
 const PROVIDERS = {
   facebook: {
@@ -128,7 +130,41 @@ function ReviewRail({ data, marketingAllowed }) {
 }
 
 
-export default function HomeReviews() {
+function FacebookReviewWidget({ marketingAllowed, near }) {
+  return (
+    <div className="fa-page-reviews__lane" data-review-provider="facebook">
+      <div className="fa-page-reviews__lane-head nr-shell">
+        <span>Facebook</span>
+        <a href={FACEBOOK_REVIEWS_URL} target="_blank" rel="noopener noreferrer">
+          {PROVIDERS.facebook.linkLabel}
+          <ArrowUpRight aria-hidden="true" />
+        </a>
+      </div>
+      {marketingAllowed ? near && (
+        <div className="nr-shell">
+          <iframe
+            className="fa-page-reviews__widget"
+            title="Recenzii FireArtRo de pe Facebook"
+            src={FACEBOOK_WIDGET_URL}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+          />
+        </div>
+      ) : (
+        <p className="fa-page-reviews__notice nr-shell">
+          Pentru a afișa aici recenziile Facebook prin Elfsight, poți{" "}
+          <button type="button" className="fa-page-reviews__notice-link"
+            onClick={() => window.dispatchEvent(new Event(OPEN_COOKIE_SETTINGS_EVENT))}>
+            permite conținutul extern
+          </button>.
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default function HomeReviews({ showFacebookWidget = false }) {
   const settings = useManagedContent("reviewSettings", CMS_DEFAULTS.reviewSettings);
   const marketingAllowed = useCookieConsent()?.marketing === true;
   const anchor = useRef(null);
@@ -147,9 +183,11 @@ export default function HomeReviews() {
   const visibleProviders = providers.filter(provider =>
     (provider.id === "google" && settings.googleEnabled)
     || (provider.id === "facebook" && settings.facebookEnabled));
+  const hasFacebookWidget = showFacebookWidget && settings.facebookEnabled
+    && !visibleProviders.some(provider => provider.id === "facebook");
   if (!enabled) return null;
   // Keep no cross-page Places content cache; fetch only when this area approaches view.
-  if (!visibleProviders.length) return <div ref={anchor} aria-hidden="true" />;
+  if (!hasFacebookWidget && !visibleProviders.length) return <div ref={anchor} aria-hidden="true" />;
 
   const heading = settings.heading?.trim().toLowerCase() === "recenzii verificate"
     ? "Recenzii publicate online" : settings.heading;
@@ -158,12 +196,14 @@ export default function HomeReviews() {
     <section
       className="fa-page-reviews"
       data-testid="home-reviews"
+      id="recenzii"
       ref={anchor}
       aria-label="Recenzii publicate online"
     >
       <p className="fa-kicker">{heading}</p>
       {settings.description ? <p>{settings.description}</p> : null}
       <p className="fa-page-reviews__notice nr-shell">Recenziile sunt publicate pe platformele indicate. FireArtRo nu verifică independent dacă autorii au cumpărat sau folosit serviciile.</p>
+      {hasFacebookWidget && <FacebookReviewWidget marketingAllowed={marketingAllowed} near={near} />}
       {visibleProviders.map((provider) => (
         <ReviewRail
           data={{ ...provider, reviews: provider.reviews.slice(0, settings.maxItems) }}
