@@ -38,6 +38,16 @@ const render = async (settings = {}, showFacebookWidget = false) => act(async ()
   } }}><HomeReviews showFacebookWidget={showFacebookWidget} /></DraftPreviewProvider>,
 ));
 
+const expectFacebookReviewLink = () => {
+  const link = container.querySelector("[data-review-provider='facebook'] .fa-page-reviews__lane-head a");
+  expect(link.textContent).toBe("Adaugă recenzie");
+  expect(link.href).toBe("https://www.facebook.com/FireArtRo/reviews");
+  expect(link.target).toBe("_blank");
+  expect(link.relList.contains("noopener")).toBe(true);
+  expect(link.relList.contains("noreferrer")).toBe(true);
+  expect(link.getAttribute("aria-label")).toMatch(/Facebook.*filă nouă/);
+};
+
 test("links to Google Maps and cookie settings without displaying review cards or loading avatars before consent", async () => {
   const onSettings = jest.fn();
   window.addEventListener(OPEN_COOKIE_SETTINGS_EVENT, onSettings, { once: true });
@@ -78,14 +88,16 @@ test("loads the live Facebook widget only with current external-content consent"
   window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({ ...prior, version: 3 }));
   await render({}, true);
   expect(container.querySelector("iframe")).toBeNull();
-  expect(container.querySelector("a[href='https://www.facebook.com/FireArtRo/reviews']")).not.toBeNull();
+  expectFacebookReviewLink();
 
   await act(async () => seedConsent({ marketing: true }));
   expect(container.querySelector("iframe[title='Recenzii FireArtRo de pe Facebook']").getAttribute("src"))
     .toMatch(/^https:\/\/[a-f0-9]{32}\.elf\.site\/?$/);
+  expectFacebookReviewLink();
 
   await act(async () => seedConsent());
   expect(container.querySelector("iframe")).toBeNull();
+  expectFacebookReviewLink();
 });
 
 test("disabled settings do not request external review data", async () => {
@@ -96,10 +108,11 @@ test("disabled settings do not request external review data", async () => {
 
 test("Facebook source links identify Facebook rather than Google Maps", async () => {
   global.fetch.mockResolvedValue({ ok: true, json: async () => ({ providers: [{
-    id: "facebook", href: "https://www.facebook.com/FireArtRo/reviews",
+    id: "facebook", href: "https://www.facebook.com/FireArtRo",
     reviews: [{ ...review, provider: "facebook", url: "https://www.facebook.com/review/123", author_url: "", author_photo_url: "" }],
   }] }) });
   await render();
+  expectFacebookReviewLink();
   const source = container.querySelector("[data-review-card] .fa-page-reviews__source");
   expect(source.getAttribute("aria-label")).toBe("Vezi recenzia originală pe Facebook");
   expect(container.textContent).not.toContain("Google Maps");

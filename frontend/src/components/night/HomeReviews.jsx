@@ -6,16 +6,15 @@ import { allowedGoogleMedia } from "@/lib/optionalGoogleMedia";
 import useManagedContent from "@/hooks/useManagedContent";
 import useNearViewport from "@/hooks/useNearViewport";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import FacebookReviewFrame from "./FacebookReviewFrame";
 import "@/styles/night-reviews.css";
 
 const FACEBOOK_REVIEWS_URL = "https://www.facebook.com/FireArtRo/reviews";
-const FACEBOOK_WIDGET_URL = "https://5cd3630c2af747e78e24cbbda99bf22a.elf.site";
 
 const PROVIDERS = {
   facebook: {
     label: "Facebook",
     direction: "right-to-left",
-    linkLabel: "Vezi recenziile pe Facebook",
   },
   google: {
     label: "Google Maps",
@@ -86,6 +85,17 @@ function ReviewGroup({ reviews, provider, clone = false }) {
 }
 
 
+function FacebookReviewLink() {
+  return (
+    <a className="fa-page-reviews__add-review" href={FACEBOOK_REVIEWS_URL} target="_blank"
+      rel="noopener noreferrer" aria-label="Adaugă recenzie pe Facebook (se deschide într-o filă nouă)">
+      Adaugă recenzie
+      <ArrowUpRight aria-hidden="true" />
+    </a>
+  );
+}
+
+
 function ReviewRail({ data, marketingAllowed }) {
   const provider = PROVIDERS[data.id];
   if (!provider || !data.reviews.length || !data.href) return null;
@@ -106,10 +116,12 @@ function ReviewRail({ data, marketingAllowed }) {
         {isGoogle ? (
           <img className="fa-page-reviews__google-logo" src="/media/brand/google-maps-white.svg" alt="Google Maps" />
         ) : <span>{provider.label}</span>}
-        <a href={data.href} target="_blank" rel="noopener noreferrer">
-          {provider.linkLabel}
-          <ArrowUpRight aria-hidden="true" />
-        </a>
+        {isGoogle ? (
+          <a href={data.href} target="_blank" rel="noopener noreferrer">
+            {provider.linkLabel}
+            <ArrowUpRight aria-hidden="true" />
+          </a>
+        ) : <FacebookReviewLink />}
       </div>
       {isGoogle && !marketingAllowed && <p className="fa-page-reviews__notice nr-shell">
         Pentru a afișa aici recenziile și fotografiile autorilor de pe Google Maps, poți <button type="button" className="fa-page-reviews__notice-link"
@@ -135,22 +147,10 @@ function FacebookReviewWidget({ marketingAllowed, near }) {
     <div className="fa-page-reviews__lane" data-review-provider="facebook">
       <div className="fa-page-reviews__lane-head nr-shell">
         <span>Facebook</span>
-        <a href={FACEBOOK_REVIEWS_URL} target="_blank" rel="noopener noreferrer">
-          {PROVIDERS.facebook.linkLabel}
-          <ArrowUpRight aria-hidden="true" />
-        </a>
+        <FacebookReviewLink />
       </div>
       {marketingAllowed ? near && (
-        <div className="nr-shell">
-          <iframe
-            className="fa-page-reviews__widget"
-            title="Recenzii FireArtRo de pe Facebook"
-            src={FACEBOOK_WIDGET_URL}
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-          />
-        </div>
+        <FacebookReviewFrame />
       ) : (
         <p className="fa-page-reviews__notice nr-shell">
           Pentru a afișa aici recenziile Facebook prin Elfsight, poți{" "}

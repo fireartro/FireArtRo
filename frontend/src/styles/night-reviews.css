@@ -150,6 +150,25 @@
   transform: scaleX(1);
 }
 
+.fa-page-reviews__lane-head > .fa-page-reviews__add-review {
+  justify-content: center;
+  padding-inline: 1rem;
+  border: 1px solid var(--fa-review-accent);
+  border-radius: 0.3rem;
+  color: #edf4ff;
+  background: rgba(120, 165, 255, 0.12);
+  text-decoration: none;
+}
+
+.fa-page-reviews__add-review:hover,
+.fa-page-reviews__add-review:focus-visible {
+  background: rgba(120, 165, 255, 0.24);
+}
+
+.fa-page-reviews__lane-head > .fa-page-reviews__add-review::after {
+  content: none;
+}
+
 .fa-page-reviews__lane-head svg {
   width: 0.9rem;
   height: 0.9rem;
