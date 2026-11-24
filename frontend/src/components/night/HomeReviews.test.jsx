@@ -32,10 +32,10 @@ afterEach(async () => {
   window.localStorage.removeItem(COOKIE_CONSENT_STORAGE_KEY);
   delete global.IS_REACT_ACT_ENVIRONMENT;
 });
-const render = async (settings = {}, showFacebookWidget = false) => act(async () => root.render(
+const render = async (settings = {}) => act(async () => root.render(
   <DraftPreviewProvider content={{ ...CMS_DEFAULTS, reviewSettings: {
     ...CMS_DEFAULTS.reviewSettings, ...settings,
-  } }}><HomeReviews showFacebookWidget={showFacebookWidget} /></DraftPreviewProvider>,
+  } }}><HomeReviews /></DraftPreviewProvider>,
 ));
 
 const expectFacebookReviewLink = () => {
@@ -55,8 +55,9 @@ test("links to Google Maps and cookie settings without displaying review cards o
   expect(container.querySelector("[data-review-card]")).toBeNull();
   expect(container.querySelector("a[href='https://maps.google.com/?cid=123']")).not.toBeNull();
   expect(container.querySelector(`img[src='${review.author_photo_url}']`)).toBeNull();
-  expect(container.textContent).toContain("FireArtRo nu verifică independent dacă autorii au cumpărat sau folosit serviciile");
-  await act(async () => container.querySelector("button").click());
+  expect(container.textContent).not.toContain("FireArtRo nu verifică independent");
+  expect(container.querySelector("a[href='/termeni-si-conditii#terms-section-8']").textContent).toBe("Sursă și verificare");
+  await act(async () => container.querySelector("[data-review-provider='google'] button").click());
   expect(onSettings).toHaveBeenCalledTimes(1);
 });
 
@@ -76,9 +77,9 @@ test("preserves Google Maps author attribution and source links only while exter
   expect(container.querySelector(`img[src='${review.author_photo_url}']`)).toBeNull();
 });
 
-test("provider failure hides the section without inventing reviews", async () => {
+test("provider failure hides the section when the Facebook fallback is disabled", async () => {
   global.fetch.mockResolvedValue({ ok: false });
-  await render();
+  await render({ facebookEnabled: false });
   expect(container.querySelector("[data-testid='home-reviews']")).toBeNull();
 });
 
@@ -86,7 +87,7 @@ test("loads the live Facebook widget only with current external-content consent"
   global.fetch.mockResolvedValue({ ok: true, json: async () => ({ providers: [] }) });
   const prior = seedConsent({ marketing: true });
   window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({ ...prior, version: 3 }));
-  await render({}, true);
+  await render();
   expect(container.querySelector("iframe")).toBeNull();
   expectFacebookReviewLink();
 

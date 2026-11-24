@@ -5,6 +5,16 @@ const content = {
   ...contentSeed,
   reviewSettings: {...contentSeed.reviewSettings,description:''},
   cookieSettings: {...contentSeed.cookieSettings,marketingLabel:'Conținut extern'},
+  legalPages: {
+    ...contentSeed.legalPages,
+    terms: {
+      ...contentSeed.legalPages.terms,
+      sections: [...contentSeed.legalPages.terms.sections, {
+        id:'terms-section-8',heading:'Materiale și recenzii',
+        paragraphs:['FireArtRo nu verifică independent dacă autorii au cumpărat sau au folosit serviciile.'],
+      }],
+    },
+  },
 };
 
 // Isolated browser fixtures. These are never stored in CMS or sent to providers.
@@ -110,10 +120,22 @@ test('a provider without reviews does not hide the available provider',async({pa
   await expect(section.locator('[data-review-provider="google"]')).toHaveCount(0);
 });
 
-test('unavailable providers leave no empty review section or error on the page',async({page})=>{
+test('Facebook fallback at the end of Contact respects consent and links to the legal notice',async({page})=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  const widgetUrl = 'https://5cd3630c2af747e78e24cbbda99bf22a.elf.site';
+  await page.route(`${widgetUrl}/**`,route=>route.fulfill({contentType:'text/html',body:'<p>Widget Facebook de test</p>'}));
   await openReviews(page,{providers:[]},503);
-  await expect(page.getByTestId('home-reviews')).toHaveCount(0);
+  const reviews=page.getByTestId('home-reviews');
+  await expect(reviews.locator('iframe')).toHaveCount(0);
+  await expect(reviews.getByRole('link',{name:/Adaugă recenzie pe Facebook/})).toBeVisible();
+  await expect(reviews).not.toContainText('nu verifică independent');
+  await permitExternalContent(page);
+  await expect(reviews.locator('iframe')).toHaveAttribute('src',widgetUrl);
+  await reviews.getByRole('link',{name:'Sursă și verificare',exact:true}).click();
+  await expect(page).toHaveURL(/\/termeni-si-conditii#terms-section-8$/);
+  const policy=page.locator('#terms-section-8');
+  await expect(policy.getByRole('heading',{name:'Materiale și recenzii'})).toBeInViewport();
+  await expect(policy).toContainText('nu verifică independent');
   await expect(page.getByTestId('night-runway-footer')).toBeVisible();
   expect(errors).toEqual([]);
 });

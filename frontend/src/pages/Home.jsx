@@ -59,7 +59,7 @@ export default function Home() {
       <Navbar />
       <Hero />
       <HomeRunway />
-      <PageEnd showBlog showFacebookWidget />
+      <PageEnd showBlog />
       <SocialDock />
     </main>
   );
