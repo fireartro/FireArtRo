@@ -1,5 +1,10 @@
 const {test,expect}=require('@playwright/test');
 const { mockConsentLedger } = require('./consent-fixture.cjs');
+const contentSeed = require('../src/content/__fixtures__/siteContent.json');
+const content = {
+  ...contentSeed,
+  cookieSettings: {...contentSeed.cookieSettings,marketingLabel:'Conținut extern'},
+};
 
 // Isolated browser fixtures. These are never stored in CMS or sent to providers.
 const payload={providers:[
@@ -18,6 +23,9 @@ const payload={providers:[
 
 async function openReviews(page,body=payload,status=200){
   await mockConsentLedger(page);
+  const revision = {revision_id:'reviews-qa',published_at:'2026-10-01T12:00:00Z'};
+  await page.route('**/api/content',route=>route.fulfill({json:{...revision,content}}));
+  await page.route('**/api/content/revision',route=>route.fulfill({json:revision}));
   await page.route('**/api/reviews',route=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)}));
   const response=page.waitForResponse(r=>r.url().endsWith('/api/reviews'));
   await page.goto('/contact',{waitUntil:'domcontentloaded'});
