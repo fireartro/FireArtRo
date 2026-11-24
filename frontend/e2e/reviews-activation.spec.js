@@ -1,6 +1,7 @@
 const {test,expect}=require('@playwright/test');
 const { mockConsentLedger } = require('./consent-fixture.cjs');
 const contentSeed = require('../src/content/__fixtures__/siteContent.json');
+const widgetUrl = 'https://5cd3630c2af747e78e24cbbda99bf22a.elf.site';
 const content = {
   ...contentSeed,
   reviewSettings: {...contentSeed.reviewSettings,description:''},
@@ -122,8 +123,16 @@ test('a provider without reviews does not hide the available provider',async({pa
 
 test('Facebook fallback at the end of Contact respects consent and links to the legal notice',async({page})=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
-  const widgetUrl = 'https://5cd3630c2af747e78e24cbbda99bf22a.elf.site';
-  await page.route(`${widgetUrl}/**`,route=>route.fulfill({contentType:'text/html',body:'<p>Widget Facebook de test</p>'}));
+  await page.route(`${widgetUrl}/**`,route=>route.fulfill({
+    contentType:'text/html',
+    body:`<p>Widget Facebook de test</p><script>
+      window.addEventListener('message', event => {
+        if (event.source === window.parent && event.data?.type === 'fireart:check-review-ready') {
+          window.parent.postMessage({type:'fireart:review-ready'}, event.origin);
+        }
+      });
+    </script>`,
+  }));
   await openReviews(page,{providers:[]},503);
   const reviews=page.getByTestId('home-reviews');
   await expect(reviews.locator('iframe')).toHaveCount(0);
@@ -131,6 +140,7 @@ test('Facebook fallback at the end of Contact respects consent and links to the 
   await expect(reviews).not.toContainText('nu verifică independent');
   await permitExternalContent(page);
   await expect(reviews.locator('iframe')).toHaveAttribute('src',widgetUrl);
+  await expect(reviews.locator('[data-widget-state="ready"] iframe')).toBeVisible();
   await reviews.getByRole('link',{name:'Sursă și verificare',exact:true}).click();
   await expect(page).toHaveURL(/\/termeni-si-conditii#terms-section-8$/);
   const policy=page.locator('#terms-section-8');
@@ -138,4 +148,18 @@ test('Facebook fallback at the end of Contact respects consent and links to the 
   await expect(policy).toContainText('nu verifică independent');
   await expect(page.getByTestId('night-runway-footer')).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('a blocked Facebook embed leaves a readable link instead of a browser error panel',async({page})=>{
+  await page.route(`${widgetUrl}/**`,route=>route.fulfill({
+    contentType:'text/html', headers:{'x-frame-options':'DENY'}, body:'Blocked test frame',
+  }));
+  await openReviews(page,{providers:[]},503);
+  await permitExternalContent(page);
+  const reviews=page.getByTestId('home-reviews');
+  await expect(reviews.locator('iframe')).toBeHidden();
+  await expect(reviews.getByRole('link',{name:'Vezi recenziile pe Facebook',exact:true}))
+    .toHaveAttribute('href','https://www.facebook.com/FireArtRo/reviews');
+  await expect(reviews.getByRole('status')).toHaveText('Recenziile Facebook nu sunt disponibile aici momentan.',{timeout:15000});
+  await expect(reviews.locator('iframe')).toHaveCount(0);
 });

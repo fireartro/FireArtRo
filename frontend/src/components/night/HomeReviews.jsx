@@ -186,7 +186,7 @@ function FacebookReviewWidget({ marketingAllowed, near }) {
         <ReviewPlatformLink />
       </div>
       {marketingAllowed ? near && (
-        <FacebookReviewFrame />
+        <FacebookReviewFrame reviewsHref={FACEBOOK_REVIEWS_URL} />
       ) : (
         <p className="fa-page-reviews__notice nr-shell">
           Pentru a afișa aici recenziile Facebook prin Elfsight, poți{" "}
