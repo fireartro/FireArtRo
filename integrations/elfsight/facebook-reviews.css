@@ -1,26 +1,67 @@
 /* Elfsight Settings > Custom CSS. The site blurs the page behind the iframe. */
 .es-backdrop-container {
-  background: rgba(6, 12, 23, 0.32) !important;
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  background: rgba(3, 10, 21, 0.13) !important;
+}
+
+.es-review-container .es-review-background-container {
+  background:
+    radial-gradient(ellipse at 2% 0%, rgba(198, 227, 255, 0.18), transparent 58%),
+    radial-gradient(ellipse at 100% 110%, rgba(61, 143, 226, 0.13), transparent 55%),
+    linear-gradient(155deg, rgba(28, 51, 79, 0.40), rgba(7, 18, 32, 0.30) 62%, rgba(17, 37, 61, 0.34)) !important;
+  border-color: rgba(184, 219, 255, 0.27) !important;
+  box-shadow: inset 0 1px 0 rgba(238, 248, 255, 0.24), inset 0 -1px 0 rgba(100, 169, 236, 0.16),
+    0 9px 24px rgba(0, 7, 18, 0.18);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+}
+
+.es-review-container .es-review-card-tail path {
+  fill: rgba(34, 61, 94, 0.52) !important;
 }
 
 .es-reviews-popup-content-container {
   box-sizing: border-box;
   color: #f4f7fb;
-  background: linear-gradient(145deg, rgba(44, 59, 82, 0.78), rgba(13, 22, 38, 0.82)) !important;
-  border: 1px solid rgba(207, 227, 255, 0.28);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 24px 80px rgba(0, 0, 0, 0.3);
-  -webkit-backdrop-filter: blur(20px) saturate(125%);
-  backdrop-filter: blur(20px) saturate(125%);
+  background:
+    radial-gradient(ellipse at 10% -12%, rgba(207, 234, 255, 0.26), transparent 55%),
+    radial-gradient(ellipse at 102% 100%, rgba(68, 153, 244, 0.21), transparent 56%),
+    linear-gradient(150deg, rgba(26, 51, 81, 0.46), rgba(7, 17, 31, 0.40) 56%, rgba(16, 44, 75, 0.43)) !important;
+  border: 1px solid rgba(203, 229, 255, 0.42);
+  box-shadow: inset 0 1px 0 rgba(240, 249, 255, 0.37), inset 0 -1px 0 rgba(116, 188, 255, 0.21),
+    0 24px 80px rgba(0, 6, 17, 0.35);
+  -webkit-backdrop-filter: blur(9px) saturate(140%);
+  backdrop-filter: blur(9px) saturate(140%);
 }
 
 .es-reviews-popup-content-container .es-review-background-container {
   background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.es-review-container .es-text-shortener-control-open {
+  color: #a6d6ff !important;
 }
 
 @media (prefers-reduced-transparency: reduce) {
+  .es-backdrop-container {
+    background: rgba(3, 10, 21, 0.62) !important;
+  }
+
+  .es-review-container .es-review-background-container,
   .es-reviews-popup-content-container {
     background: #172334 !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .es-review-container .es-review-card-tail path {
+    fill: #172334 !important;
+  }
+
+  .es-reviews-popup-content-container .es-review-background-container {
+    background: transparent !important;
   }
 }

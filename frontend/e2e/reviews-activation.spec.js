@@ -1,5 +1,11 @@
 const {test,expect}=require('@playwright/test');
 const { mockConsentLedger } = require('./consent-fixture.cjs');
+const contentSeed = require('../src/content/__fixtures__/siteContent.json');
+const content = {
+  ...contentSeed,
+  reviewSettings: {...contentSeed.reviewSettings,description:''},
+  cookieSettings: {...contentSeed.cookieSettings,marketingLabel:'Conținut extern'},
+};
 
 // Isolated browser fixtures. These are never stored in CMS or sent to providers.
 const payload={providers:[
@@ -18,6 +24,9 @@ const payload={providers:[
 
 async function openReviews(page,body=payload,status=200){
   await mockConsentLedger(page);
+  const revision = {revision_id:'reviews-qa',published_at:'2026-10-01T12:00:00Z'};
+  await page.route('**/api/content',route=>route.fulfill({json:{...revision,content}}));
+  await page.route('**/api/content/revision',route=>route.fulfill({json:revision}));
   await page.route('**/api/reviews',route=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)}));
   const response=page.waitForResponse(r=>r.url().endsWith('/api/reviews'));
   await page.goto('/contact',{waitUntil:'domcontentloaded'});
@@ -50,7 +59,8 @@ for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
     const google=section.locator('[data-review-provider="google"]');
     const facebook=section.locator('[data-review-provider="facebook"]');
     await expect(section.locator('[data-review-card]')).toHaveCount(1);
-    await expect(google.getByRole('link',{name:'Vezi recenziile pe Google Maps',exact:true})).toBeVisible();
+    await expect(google.getByRole('link',{name:/Vezi pe Google Maps/})).toBeVisible();
+    await expect(facebook.getByRole('link',{name:/Adaugă recenzie pe Facebook/})).toHaveCSS('border-radius','999px');
     expect(avatarRequests).toEqual([]);
     await permitExternalContent(page);
     await expect(section.locator('[data-review-card]')).toHaveCount(2);
@@ -58,15 +68,38 @@ for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
     await expect(google.getByRole('link',{name:'Vezi recenzia originală pe Google Maps',exact:true})).toHaveAttribute('href',payload.providers[0].reviews[0].url);
     await expect(facebook.getByRole('link',{name:'Vezi recenzia originală pe Facebook',exact:true})).toHaveAttribute('href',payload.providers[1].reviews[0].url);
     await expect(facebook.locator('[data-review-card] .fa-page-reviews__rating')).toHaveCount(0);
-    const card=google.locator('[data-review-card]');
-    await expect(card).toContainText(payload.providers[0].reviews[0].text.trim());
-    const textBounds=await card.locator('p').evaluate(n=>({scroll:n.scrollHeight,height:n.clientHeight,clamp:getComputedStyle(n).webkitLineClamp}));
-    expect(textBounds.scroll).toBeLessThanOrEqual(textBounds.height+1);
-    expect(textBounds.clamp).toBe('none');
+    const expandGoogle=google.getByRole('button',{name:'Citește mai mult',exact:true});
+    await section.screenshot({path:testInfo.outputPath(`${name}-test-reviews.png`)});
+    await expandGoogle.click();
+    const googleDialog=page.getByRole('dialog',{name:'Recenzie de pe Google Maps',exact:true});
+    await expect(googleDialog).toContainText(payload.providers[0].reviews[0].text.trim());
+    await expect(googleDialog.getByRole('button',{name:'Închide recenzia',exact:true})).toHaveCSS('border-radius','50%');
+    const source=googleDialog.getByRole('link',{name:'Vezi recenzia originală pe Google Maps',exact:true});
+    await source.scrollIntoViewIfNeeded();
+    await expect(source).toBeInViewport();
+    await expect(googleDialog.getByRole('button',{name:'Închide recenzia',exact:true})).toBeInViewport();
+    const quote=googleDialog.locator('.fa-page-reviews__quote');
+    await expect(quote).toHaveCSS('display','block');
+    expect(await quote.evaluate(element=>{
+      const range=document.createRange();
+      range.selectNodeContents(element);
+      const lastLine=Array.from(range.getClientRects()).at(-1);
+      const card=element.closest('blockquote').getBoundingClientRect();
+      return lastLine && lastLine.top >= card.top-1 && lastLine.bottom <= card.bottom+1;
+    })).toBe(true);
+    await page.screenshot({path:testInfo.outputPath(`${name}-google-review-dialog.png`)});
+    await page.keyboard.press('Escape');
+    await expect(googleDialog).toHaveCount(0);
+    await expect(expandGoogle).toBeFocused();
+    const expandFacebook=facebook.getByRole('button',{name:'Citește mai mult',exact:true});
+    await expandFacebook.click();
+    const facebookDialog=page.getByRole('dialog',{name:'Recenzie de pe Facebook',exact:true});
+    await expect(facebookDialog).toContainText(payload.providers[1].reviews[0].text);
+    await facebookDialog.getByRole('button',{name:'Închide recenzia',exact:true}).click();
+    await expect(expandFacebook).toBeFocused();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+1);
     expect(await section.locator('[aria-hidden="true"] a:not([tabindex="-1"])').count()).toBe(0);
     expect(errors).toEqual([]);
-    await section.screenshot({path:testInfo.outputPath(`${name}-test-reviews.png`)});
   });
 }
 
