@@ -1,5 +1,8 @@
 import { SITE_DETAILS, BUSINESS_HOURS } from "./businessContent";
 
+export const REVIEW_POLICY_SECTION_ID = "terms-section-8";
+export const REVIEW_POLICY_HREF = `/termeni-si-conditii#${REVIEW_POLICY_SECTION_ID}`;
+
 const EMAIL = SITE_DETAILS.email;
 const UPDATED = "22 noiembrie 2026";
 const IDENTITY = `${SITE_DETAILS.legalName}, CUI ${SITE_DETAILS.taxId}, nr. Registrul Comerțului ${SITE_DETAILS.registrationNumber}, cu sediul social în ${SITE_DETAILS.registeredOffice}`;
@@ -95,12 +98,12 @@ export function updatePriorLegalCopy(document, { includeFacebookReviews = false 
   if (includeFacebookReviews) {
     return {
       ...document,
-      updatedLabel: "Actualizat la 23 noiembrie 2026",
+      updatedLabel: "Actualizat la 24 noiembrie 2026",
       sections: [...sections, {
         id: "elfsight-facebook-reviews",
         heading: "Recenzii Facebook prin Elfsight",
         paragraphs: [
-          "Pe pagina principală, recenziile publice Facebook se încarcă prin Elfsight după ce permiți categoria Conținut extern. Browserul se conectează la Elfsight și transmite datele tehnice necesare afișării, inclusiv adresa IP. Furnizorul poate folosi cookie-ul elfsight_viewed_recently, cu durata de 15 secunde, pentru a limita numărarea repetată a încărcărilor. Platformele externe pot folosi și alte tehnologii descrise în politicile lor.",
+          "În secțiunea Recenzii a paginilor publice, recenziile Facebook se pot încărca prin Elfsight după ce permiți categoria Conținut extern. Browserul se conectează la Elfsight și transmite datele tehnice necesare afișării, inclusiv adresa IP. Furnizorul poate folosi cookie-ul elfsight_viewed_recently, cu durata de 15 secunde, pentru a limita numărarea repetată a încărcărilor. Platformele externe pot folosi și alte tehnologii descrise în politicile lor.",
           "Poți opri încărcarea din Setări cookies, în subsolul paginii. Linkul către recenziile originale de pe Facebook rămâne disponibil și fără acest acord.",
         ],
       }],

@@ -6,6 +6,7 @@ import { allowedGoogleMedia } from "@/lib/optionalGoogleMedia";
 import useManagedContent from "@/hooks/useManagedContent";
 import useNearViewport from "@/hooks/useNearViewport";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import { REVIEW_POLICY_HREF } from "@/data/legalContent";
 import FacebookReviewFrame from "./FacebookReviewFrame";
 import "@/styles/night-reviews.css";
 
@@ -185,7 +186,7 @@ function FacebookReviewWidget({ marketingAllowed, near }) {
         <ReviewPlatformLink />
       </div>
       {marketingAllowed ? near && (
-        <FacebookReviewFrame />
+        <FacebookReviewFrame reviewsHref={FACEBOOK_REVIEWS_URL} />
       ) : (
         <p className="fa-page-reviews__notice nr-shell">
           Pentru a afișa aici recenziile Facebook prin Elfsight, poți{" "}
@@ -199,7 +200,7 @@ function FacebookReviewWidget({ marketingAllowed, near }) {
   );
 }
 
-export default function HomeReviews({ showFacebookWidget = false }) {
+export default function HomeReviews() {
   const settings = useManagedContent("reviewSettings", CMS_DEFAULTS.reviewSettings);
   const marketingAllowed = useCookieConsent()?.marketing === true;
   const anchor = useRef(null);
@@ -218,14 +219,14 @@ export default function HomeReviews({ showFacebookWidget = false }) {
   const visibleProviders = providers.filter(provider =>
     (provider.id === "google" && settings.googleEnabled)
     || (provider.id === "facebook" && settings.facebookEnabled));
-  const hasFacebookWidget = showFacebookWidget && settings.facebookEnabled
+  const hasFacebookWidget = settings.facebookEnabled
     && !visibleProviders.some(provider => provider.id === "facebook");
   if (!enabled) return null;
   // Keep no cross-page Places content cache; fetch only when this area approaches view.
   if (!hasFacebookWidget && !visibleProviders.length) return <div ref={anchor} aria-hidden="true" />;
 
   const heading = settings.heading?.trim().toLowerCase() === "recenzii verificate"
-    ? "Recenzii publicate online" : settings.heading;
+    ? "Recenzii" : settings.heading;
 
   return (
     <section
@@ -233,11 +234,13 @@ export default function HomeReviews({ showFacebookWidget = false }) {
       data-testid="home-reviews"
       id="recenzii"
       ref={anchor}
-      aria-label="Recenzii publicate online"
+      aria-label={heading}
     >
-      <p className="fa-kicker">{heading}</p>
-      {settings.description ? <p>{settings.description}</p> : null}
-      <p className="fa-page-reviews__notice nr-shell">Recenziile sunt publicate pe platformele indicate. FireArtRo nu verifică independent dacă autorii au cumpărat sau folosit serviciile.</p>
+      <div className="fa-page-reviews__intro nr-shell">
+        <p className="fa-kicker">{heading}</p>
+        <a className="fa-page-reviews__notice-link" href={REVIEW_POLICY_HREF}>Sursă și verificare</a>
+        {settings.description ? <p className="fa-page-reviews__notice">{settings.description}</p> : null}
+      </div>
       {hasFacebookWidget && <FacebookReviewWidget marketingAllowed={marketingAllowed} near={near} />}
       {visibleProviders.map((provider) => (
         <ReviewRail

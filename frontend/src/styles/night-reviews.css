@@ -40,11 +40,30 @@
   z-index: 1;
 }
 
-.fa-page-reviews > .fa-kicker {
-  width: min(calc(100% - (2 * var(--nr-gutter))), var(--nr-layout-max));
-  margin: 0 auto;
+.fa-page-reviews__intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: 1rem;
+}
+
+.fa-page-reviews__intro > .fa-kicker {
+  margin: 0;
   color: #8ebeff;
   letter-spacing: 0.11em;
+}
+
+.fa-page-reviews__intro > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  font-size: 0.8rem;
+  text-underline-offset: 0.2em;
+}
+
+.fa-page-reviews__intro > p:not(.fa-kicker) {
+  flex-basis: 100%;
 }
 
 .fa-page-reviews__lane {

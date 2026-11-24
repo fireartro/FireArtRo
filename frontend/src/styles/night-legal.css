@@ -434,3 +434,6 @@ main.legal-page[data-design="night-runway"] :where(.legal-nav a, .legal-source, 
     transition: none;
   }
 }
+#terms-section-8 {
+  scroll-margin-top: var(--nav-scroll-offset, 6rem);
+}

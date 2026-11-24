@@ -7,7 +7,7 @@ import usePageMeta from "@/hooks/usePageMeta";
 import useManagedContent from "@/hooks/useManagedContent";
 import { EMAIL } from "@/lib/constants";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
-import { LEGAL_PAGE_PRESENTATION, updatePriorLegalCopy } from "@/data/legalContent";
+import { LEGAL_PAGE_PRESENTATION, REVIEW_POLICY_SECTION_ID, updatePriorLegalCopy } from "@/data/legalContent";
 import "@/styles/night-legal.css";
 
 const LEGAL_NAV = [
@@ -75,7 +75,9 @@ export default function LegalPage({ type = "confidentialitate" }) {
             </dl>
           </div>
           {data.sections.map((section, index) => (
-            <section key={section.id} aria-labelledby={`legal-section-${index}`}>
+            <section key={section.id}
+              id={documentKey === "terms" && section.id === REVIEW_POLICY_SECTION_ID ? REVIEW_POLICY_SECTION_ID : undefined}
+              aria-labelledby={`legal-section-${index}`}>
               <span>{String(index + 1).padStart(2, "0")}</span>
               <div>
                 <h2 id={`legal-section-${index}`}>{section.heading}</h2>
