@@ -36,7 +36,7 @@ function ReviewCard({ review, provider, onExpand }) {
 
   return (
     <blockquote className={onExpand ? "fa-page-reviews__card" : "fa-page-reviews__card fa-page-reviews__card--full"}
-      {...(onExpand ? { "data-review-card": true } : {})}>
+      {...(onExpand ? { "data-review-card": true } : { tabIndex: 0 })}>
       <div className="fa-page-reviews__card-top">
         <span className={review.provider === "google" || provider.label === "Google Maps" ? "fa-page-reviews__google-text" : undefined} translate="no">{provider.label}</span>
         {showRating ? (

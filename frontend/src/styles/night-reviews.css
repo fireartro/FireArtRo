@@ -422,6 +422,15 @@ html:has(.fa-page-reviews__panel:modal) {
   overscroll-behavior: contain;
 }
 
+.fa-page-reviews__card--full > * {
+  flex-shrink: 0;
+}
+
+.fa-page-reviews__card--full:focus-visible {
+  outline: 1px solid #c9e6ff;
+  outline-offset: -1px;
+}
+
 .fa-page-reviews__card--full .fa-page-reviews__quote {
   display: block;
   overflow: visible;
