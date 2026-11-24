@@ -126,8 +126,9 @@ test('Facebook fallback at the end of Contact respects consent and links to the 
   await page.route(`${widgetUrl}/**`,route=>route.fulfill({
     contentType:'text/html',
     body:`<p>Widget Facebook de test</p><script>
+      let probes = 0;
       window.addEventListener('message', event => {
-        if (event.source === window.parent && event.data?.type === 'fireart:check-review-ready') {
+        if (event.source === window.parent && event.data?.type === 'fireart:check-review-ready' && ++probes > 1) {
           window.parent.postMessage({type:'fireart:review-ready'}, event.origin);
         }
       });

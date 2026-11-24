@@ -4,6 +4,7 @@ import "@/styles/facebook-review-frame.css";
 
 const WIDGET_ORIGIN = "https://5cd3630c2af747e78e24cbbda99bf22a.elf.site";
 const WIDGET_READY_TIMEOUT_MS = 9_000;
+const WIDGET_PROBE_INTERVAL_MS = 1_000;
 
 export default function FacebookReviewFrame({ reviewsHref }) {
   const [status, setStatus] = useState("loading");
@@ -15,6 +16,7 @@ export default function FacebookReviewFrame({ reviewsHref }) {
     const frame = frameRef.current;
     let currentStatus = "loading";
     let timer;
+    let probes;
 
     function restoreInline() {
       if (!dialog.open) return;
@@ -22,12 +24,18 @@ export default function FacebookReviewFrame({ reviewsHref }) {
       dialog.setAttribute("role", "presentation");
     }
 
+    function stopChecks() {
+      window.clearTimeout(timer);
+      window.clearInterval(probes);
+    }
+
     function waitForReviews() {
       if (currentStatus === "unavailable") return;
-      window.clearTimeout(timer);
+      stopChecks();
       currentStatus = "loading";
       setStatus(currentStatus);
       timer = window.setTimeout(() => {
+        stopChecks();
         currentStatus = "unavailable";
         setStatus(currentStatus);
       }, WIDGET_READY_TIMEOUT_MS);
@@ -36,14 +44,19 @@ export default function FacebookReviewFrame({ reviewsHref }) {
     function probeFrame() {
       restoreInline();
       waitForReviews();
-      frame.contentWindow?.postMessage({ type: "fireart:check-review-ready" }, WIDGET_ORIGIN);
+      if (currentStatus !== "loading") return;
+      const requestReady = () => {
+        frame.contentWindow?.postMessage({ type: "fireart:check-review-ready" }, WIDGET_ORIGIN);
+      };
+      requestReady();
+      probes = window.setInterval(requestReady, WIDGET_PROBE_INTERVAL_MS);
     }
 
     function syncWidget(event) {
       if (event.origin !== WIDGET_ORIGIN || event.source !== frame.contentWindow) return;
       const message = event.data;
       if (message?.type === "fireart:review-ready" && currentStatus === "loading") {
-        window.clearTimeout(timer);
+        stopChecks();
         currentStatus = "ready";
         setStatus(currentStatus);
         return;
@@ -72,7 +85,7 @@ export default function FacebookReviewFrame({ reviewsHref }) {
     // An iframe load event can also signal a blocked document. Wait for the widget itself.
     waitForReviews();
     return () => {
-      window.clearTimeout(timer);
+      stopChecks();
       window.removeEventListener("message", syncWidget);
       dialog.removeEventListener("cancel", cancelDialog);
       frame.removeEventListener("load", probeFrame);
