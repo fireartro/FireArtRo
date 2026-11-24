@@ -50,7 +50,7 @@ for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
     const google=section.locator('[data-review-provider="google"]');
     const facebook=section.locator('[data-review-provider="facebook"]');
     await expect(section.locator('[data-review-card]')).toHaveCount(1);
-    await expect(google.getByRole('link',{name:'Vezi recenziile pe Google Maps',exact:true})).toBeVisible();
+    await expect(google.getByRole('link',{name:/Vezi pe Google Maps/})).toBeVisible();
     expect(avatarRequests).toEqual([]);
     await permitExternalContent(page);
     await expect(section.locator('[data-review-card]')).toHaveCount(2);
@@ -58,15 +58,27 @@ for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
     await expect(google.getByRole('link',{name:'Vezi recenzia originală pe Google Maps',exact:true})).toHaveAttribute('href',payload.providers[0].reviews[0].url);
     await expect(facebook.getByRole('link',{name:'Vezi recenzia originală pe Facebook',exact:true})).toHaveAttribute('href',payload.providers[1].reviews[0].url);
     await expect(facebook.locator('[data-review-card] .fa-page-reviews__rating')).toHaveCount(0);
-    const card=google.locator('[data-review-card]');
-    await expect(card).toContainText(payload.providers[0].reviews[0].text.trim());
-    const textBounds=await card.locator('p').evaluate(n=>({scroll:n.scrollHeight,height:n.clientHeight,clamp:getComputedStyle(n).webkitLineClamp}));
-    expect(textBounds.scroll).toBeLessThanOrEqual(textBounds.height+1);
-    expect(textBounds.clamp).toBe('none');
+    const expandGoogle=google.getByRole('button',{name:'Citește mai mult',exact:true});
+    await section.screenshot({path:testInfo.outputPath(`${name}-test-reviews.png`)});
+    await expandGoogle.click();
+    const googleDialog=page.getByRole('dialog',{name:'Recenzie de pe Google Maps',exact:true});
+    await expect(googleDialog).toContainText(payload.providers[0].reviews[0].text.trim());
+    await expect(googleDialog.getByRole('link',{name:'Vezi recenzia originală pe Google Maps',exact:true})).toBeVisible();
+    const quote=googleDialog.locator('.fa-page-reviews__quote');
+    expect(await quote.evaluate(n=>n.scrollHeight-n.clientHeight)).toBeLessThanOrEqual(1);
+    await page.screenshot({path:testInfo.outputPath(`${name}-google-review-dialog.png`)});
+    await page.keyboard.press('Escape');
+    await expect(googleDialog).toHaveCount(0);
+    await expect(expandGoogle).toBeFocused();
+    const expandFacebook=facebook.getByRole('button',{name:'Citește mai mult',exact:true});
+    await expandFacebook.click();
+    const facebookDialog=page.getByRole('dialog',{name:'Recenzie de pe Facebook',exact:true});
+    await expect(facebookDialog).toContainText(payload.providers[1].reviews[0].text);
+    await facebookDialog.getByRole('button',{name:'Închide recenzia',exact:true}).click();
+    await expect(expandFacebook).toBeFocused();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+1);
     expect(await section.locator('[aria-hidden="true"] a:not([tabindex="-1"])').count()).toBe(0);
     expect(errors).toEqual([]);
-    await section.screenshot({path:testInfo.outputPath(`${name}-test-reviews.png`)});
   });
 }
 

@@ -1,5 +1,5 @@
-import { ArrowUpRight, Star } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { ArrowUpRight, Star, X } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 import { getPublicReviews } from "@/lib/reviewsApi";
 import { OPEN_COOKIE_SETTINGS_EVENT, useCookieConsent } from "@/lib/cookieConsent";
 import { allowedGoogleMedia } from "@/lib/optionalGoogleMedia";
@@ -14,12 +14,9 @@ const FACEBOOK_REVIEWS_URL = "https://www.facebook.com/FireArtRo/reviews";
 const PROVIDERS = {
   facebook: {
     label: "Facebook",
-    direction: "right-to-left",
   },
   google: {
     label: "Google Maps",
-    direction: "left-to-right",
-    linkLabel: "Vezi recenziile pe Google Maps",
   },
 };
 
@@ -32,13 +29,14 @@ const reviewDate = (value) => {
 };
 
 
-function ReviewCard({ review, provider, clone = false }) {
+function ReviewCard({ review, provider, onExpand }) {
   const date = review.published_relative || reviewDate(review.published_at);
   const rating = Number(review.rating);
   const showRating = Number.isFinite(rating) && rating > 0 && rating <= 5;
 
   return (
-    <blockquote {...(!clone ? { "data-review-card": true } : {})}>
+    <blockquote className={onExpand ? "fa-page-reviews__card" : "fa-page-reviews__card fa-page-reviews__card--full"}
+      {...(onExpand ? { "data-review-card": true } : {})}>
       <div className="fa-page-reviews__card-top">
         <span className={review.provider === "google" || provider.label === "Google Maps" ? "fa-page-reviews__google-text" : undefined} translate="no">{provider.label}</span>
         {showRating ? (
@@ -48,48 +46,96 @@ function ReviewCard({ review, provider, clone = false }) {
           </span>
         ) : null}
       </div>
-      <p>„{review.text}”</p>
+      <p className="fa-page-reviews__quote">„{review.text}”</p>
       {review.translated ? <small className="fa-page-reviews__translation-note">Text tradus automat de Google Maps.</small> : null}
       <footer>
         <span className="fa-page-reviews__author">
           {review.author_photo_url ? <img src={review.author_photo_url} alt="" width="32" height="32" loading="lazy" referrerPolicy="no-referrer" /> : null}
           <cite>{review.author_url ? (
-            <a href={review.author_url} target="_blank" rel="noopener noreferrer" tabIndex={clone ? -1 : undefined}>
+            <a href={review.author_url} target="_blank" rel="noopener noreferrer">
               {review.author || `Autor ${provider.label}`}
             </a>
           ) : review.author || `Recenzie ${provider.label}`}</cite>
         </span>
         {date ? <time dateTime={review.published_at}>{date}</time> : null}
       </footer>
-      {review.url ? <a className="fa-page-reviews__source" href={review.url} target="_blank" rel="noopener noreferrer" tabIndex={clone ? -1 : undefined} aria-label={`Vezi recenzia originală pe ${provider.label}`}>
-        Vezi recenzia <ArrowUpRight aria-hidden="true" />
-      </a> : null}
+      {(onExpand || review.url) && <div className="fa-page-reviews__actions">
+        {onExpand && <button className="fa-page-reviews__more" type="button" aria-haspopup="dialog"
+          onClick={event => onExpand(review, event.currentTarget)}>
+          Citește mai mult
+        </button>}
+        {review.url && <a className="fa-page-reviews__source" href={review.url} target="_blank" rel="noopener noreferrer"
+          aria-label={`Vezi recenzia originală pe ${provider.label}`}>
+          Vezi la sursă <ArrowUpRight aria-hidden="true" />
+        </a>}
+      </div>}
     </blockquote>
   );
 }
 
 
-function ReviewGroup({ reviews, provider, clone = false }) {
+function ReviewCarousel({ reviews, provider }) {
+  const [selected, setSelected] = useState(null);
+  const dialog = useRef(null);
+  const closeButton = useRef(null);
+  const trigger = useRef(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    if (!selected || !dialog.current || dialog.current.open) return;
+    dialog.current.showModal();
+    closeButton.current?.focus({ preventScroll: true });
+  }, [selected]);
+
+  function openReview(review, button) {
+    trigger.current = button;
+    setSelected(review);
+  }
+
+  function clearSelection() {
+    setSelected(null);
+    trigger.current?.focus({ preventScroll: true });
+  }
+
   return (
-    <div className="fa-page-reviews__group" {...(clone ? { "aria-hidden": "true" } : {})}>
-      {reviews.map((review) => (
-        <ReviewCard
-          clone={clone}
-          key={`${provider.label}-${review.id}`}
-          provider={provider}
-          review={review}
-        />
-      ))}
-    </div>
+    <>
+      <div className="fa-page-reviews__viewport nr-shell">
+        <div className="fa-page-reviews__track">
+          <div className="fa-page-reviews__group">
+            {reviews.map(review => (
+              <ReviewCard key={review.id} provider={provider} review={review} onExpand={openReview} />
+            ))}
+          </div>
+        </div>
+      </div>
+      {selected && <dialog ref={dialog} className="fa-page-reviews__panel" aria-labelledby={titleId}
+        onClose={clearSelection}
+        onClick={event => {
+          if (event.target !== event.currentTarget) return;
+          const { left, right, top, bottom } = event.currentTarget.getBoundingClientRect();
+          if (event.clientX < left || event.clientX > right || event.clientY < top || event.clientY > bottom) {
+            event.currentTarget.close();
+          }
+        }}>
+        <header className="fa-page-reviews__panel-head">
+          <h2 id={titleId}>Recenzie de pe <span translate="no">{provider.label}</span></h2>
+          <button ref={closeButton} type="button" className="fa-page-reviews__panel-close" aria-label="Închide recenzia"
+            onClick={() => dialog.current.close()}><X aria-hidden="true" /></button>
+        </header>
+        <ReviewCard provider={provider} review={selected} />
+      </dialog>}
+    </>
   );
 }
 
 
-function FacebookReviewLink() {
+function ReviewPlatformLink({ googleHref }) {
+  const label = googleHref ? "Vezi pe Google Maps" : "Adaugă recenzie";
   return (
-    <a className="fa-page-reviews__add-review" href={FACEBOOK_REVIEWS_URL} target="_blank"
-      rel="noopener noreferrer" aria-label="Adaugă recenzie pe Facebook (se deschide într-o filă nouă)">
-      Adaugă recenzie
+    <a className="fa-page-reviews__add-review" href={googleHref || FACEBOOK_REVIEWS_URL} target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`${googleHref ? label : "Adaugă recenzie pe Facebook"} (se deschide într-o filă nouă)`}>
+      {label}
       <ArrowUpRight aria-hidden="true" />
     </a>
   );
@@ -110,18 +156,12 @@ function ReviewRail({ data, marketingAllowed }) {
     <div
       className="fa-page-reviews__lane"
       data-review-provider={data.id}
-      data-direction={provider.direction}
     >
       <div className="fa-page-reviews__lane-head nr-shell">
         {isGoogle ? (
           <img className="fa-page-reviews__google-logo" src="/media/brand/google-maps-white.svg" alt="Google Maps" />
         ) : <span>{provider.label}</span>}
-        {isGoogle ? (
-          <a href={data.href} target="_blank" rel="noopener noreferrer">
-            {provider.linkLabel}
-            <ArrowUpRight aria-hidden="true" />
-          </a>
-        ) : <FacebookReviewLink />}
+        <ReviewPlatformLink googleHref={isGoogle ? data.href : undefined} />
       </div>
       {isGoogle && !marketingAllowed && <p className="fa-page-reviews__notice nr-shell">
         Pentru a afișa aici recenziile și fotografiile autorilor de pe Google Maps, poți <button type="button" className="fa-page-reviews__notice-link"
@@ -131,12 +171,7 @@ function ReviewRail({ data, marketingAllowed }) {
         Afișăm {reviews.length} recenzii cu text și link la sursă, în ordinea de relevanță furnizată de Google Maps, fără filtrare după notă.{' '}
         <a className="fa-page-reviews__notice-link" href="https://support.google.com/contributionpolicy/answer/7422880?hl=ro" target="_blank" rel="noopener noreferrer">Politica Google Maps privind recenziile</a>.
       </p>}
-      {reviews.length > 0 && <div className="fa-page-reviews__viewport">
-        <div className="fa-page-reviews__track">
-          <ReviewGroup reviews={reviews} provider={provider} />
-          <ReviewGroup clone reviews={reviews} provider={provider} />
-        </div>
-      </div>}
+      {reviews.length > 0 && <ReviewCarousel reviews={reviews} provider={provider} />}
     </div>
   );
 }
@@ -147,7 +182,7 @@ function FacebookReviewWidget({ marketingAllowed, near }) {
     <div className="fa-page-reviews__lane" data-review-provider="facebook">
       <div className="fa-page-reviews__lane-head nr-shell">
         <span>Facebook</span>
-        <FacebookReviewLink />
+        <ReviewPlatformLink />
       </div>
       {marketingAllowed ? near && (
         <FacebookReviewFrame />
