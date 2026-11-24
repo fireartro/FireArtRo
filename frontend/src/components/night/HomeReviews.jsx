@@ -168,7 +168,7 @@ function ReviewRail({ data, marketingAllowed }) {
           onClick={() => window.dispatchEvent(new Event(OPEN_COOKIE_SETTINGS_EVENT))}>permite conținutul extern</button>.
       </p>}
       {isGoogle && reviews.length > 0 && <p className="fa-page-reviews__notice nr-shell">
-        Afișăm {reviews.length} recenzii cu text și link la sursă, în ordinea de relevanță furnizată de Google Maps, fără filtrare după notă.{' '}
+        Afișăm {reviews.length === 1 ? "o recenzie" : `${reviews.length} recenzii`} cu text și link la sursă, în ordinea de relevanță furnizată de Google Maps, fără filtrare după notă.{' '}
         <a className="fa-page-reviews__notice-link" href="https://support.google.com/contributionpolicy/answer/7422880?hl=ro" target="_blank" rel="noopener noreferrer">Politica Google Maps privind recenziile</a>.
       </p>}
       {reviews.length > 0 && <ReviewCarousel reviews={reviews} provider={provider} />}

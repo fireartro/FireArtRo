@@ -3,6 +3,7 @@ const { mockConsentLedger } = require('./consent-fixture.cjs');
 const contentSeed = require('../src/content/__fixtures__/siteContent.json');
 const content = {
   ...contentSeed,
+  reviewSettings: {...contentSeed.reviewSettings,description:''},
   cookieSettings: {...contentSeed.cookieSettings,marketingLabel:'Conținut extern'},
 };
 
@@ -59,6 +60,7 @@ for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
     const facebook=section.locator('[data-review-provider="facebook"]');
     await expect(section.locator('[data-review-card]')).toHaveCount(1);
     await expect(google.getByRole('link',{name:/Vezi pe Google Maps/})).toBeVisible();
+    await expect(facebook.getByRole('link',{name:/Adaugă recenzie pe Facebook/})).toHaveCSS('border-radius','999px');
     expect(avatarRequests).toEqual([]);
     await permitExternalContent(page);
     await expect(section.locator('[data-review-card]')).toHaveCount(2);
@@ -71,6 +73,7 @@ for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
     await expandGoogle.click();
     const googleDialog=page.getByRole('dialog',{name:'Recenzie de pe Google Maps',exact:true});
     await expect(googleDialog).toContainText(payload.providers[0].reviews[0].text.trim());
+    await expect(googleDialog.getByRole('button',{name:'Închide recenzia',exact:true})).toHaveCSS('border-radius','50%');
     await expect(googleDialog.getByRole('link',{name:'Vezi recenzia originală pe Google Maps',exact:true})).toBeVisible();
     const quote=googleDialog.locator('.fa-page-reviews__quote');
     expect(await quote.evaluate(n=>n.scrollHeight-n.clientHeight)).toBeLessThanOrEqual(1);
