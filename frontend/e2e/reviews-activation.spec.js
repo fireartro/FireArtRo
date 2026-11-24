@@ -74,9 +74,19 @@ for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
     const googleDialog=page.getByRole('dialog',{name:'Recenzie de pe Google Maps',exact:true});
     await expect(googleDialog).toContainText(payload.providers[0].reviews[0].text.trim());
     await expect(googleDialog.getByRole('button',{name:'Închide recenzia',exact:true})).toHaveCSS('border-radius','50%');
-    await expect(googleDialog.getByRole('link',{name:'Vezi recenzia originală pe Google Maps',exact:true})).toBeVisible();
+    const source=googleDialog.getByRole('link',{name:'Vezi recenzia originală pe Google Maps',exact:true});
+    await source.scrollIntoViewIfNeeded();
+    await expect(source).toBeInViewport();
+    await expect(googleDialog.getByRole('button',{name:'Închide recenzia',exact:true})).toBeInViewport();
     const quote=googleDialog.locator('.fa-page-reviews__quote');
-    expect(await quote.evaluate(n=>n.scrollHeight-n.clientHeight)).toBeLessThanOrEqual(1);
+    await expect(quote).toHaveCSS('display','block');
+    expect(await quote.evaluate(element=>{
+      const range=document.createRange();
+      range.selectNodeContents(element);
+      const lastLine=Array.from(range.getClientRects()).at(-1);
+      const card=element.closest('blockquote').getBoundingClientRect();
+      return lastLine && lastLine.top >= card.top-1 && lastLine.bottom <= card.bottom+1;
+    })).toBe(true);
     await page.screenshot({path:testInfo.outputPath(`${name}-google-review-dialog.png`)});
     await page.keyboard.press('Escape');
     await expect(googleDialog).toHaveCount(0);
