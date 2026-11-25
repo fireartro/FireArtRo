@@ -131,7 +131,7 @@ test("shows enabled sources in the authenticated draft preview without loading e
   expect(container.querySelector("iframe")).toBeNull();
 });
 
-test("observes the review section when enabled and starts the widget before it is on screen", async () => {
+test("starts the permitted Facebook widget without waiting for a viewport intersection", async () => {
   const priorObserver = global.IntersectionObserver;
   const observe = jest.fn();
   const intersections = new Map();
@@ -144,11 +144,8 @@ test("observes the review section when enabled and starts the widget before it i
     await render({ enabled: false });
     expect(observe).not.toHaveBeenCalled();
     await render();
-    expect(global.IntersectionObserver).toHaveBeenCalledWith(expect.any(Function), { rootMargin: "0px 0px 1200px" });
+    expect(global.IntersectionObserver).toHaveBeenCalledTimes(1);
     expect(observe).toHaveBeenCalledWith(container.querySelector("#recenzii"));
-    expect(container.querySelector("iframe")).toBeNull();
-
-    await act(async () => intersections.get("0px 0px 1200px")([{ isIntersecting: true }]));
     expect(container.querySelector("iframe")).not.toBeNull();
     expect(global.fetch).not.toHaveBeenCalled();
     await act(async () => intersections.get("300px")([{ isIntersecting: true }]));
