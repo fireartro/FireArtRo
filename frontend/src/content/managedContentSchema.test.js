@@ -55,3 +55,18 @@ test.each([
   mutate(value);
   expect(() => normalizePublishedContent(value)).toThrow('Conținut public invalid');
 });
+
+test('uses the new public headings for legacy copy and preserves edits from Admin', () => {
+  const snapshot = JSON.parse(JSON.stringify(CMS_DEFAULTS));
+  snapshot.reviewSettings.heading = 'Recenzii verificate';
+  Object.assign(snapshot.homePage.partners, {
+    title: 'O rețea care prinde formă.',
+    description: 'Locații, organizatori și echipe tehnice intră în aceeași orbită.',
+  });
+  const result = normalizePublishedContent(snapshot);
+  expect(result.reviewSettings.heading).toBe('Ce spun clienții despre noi');
+  expect(result.homePage.partners).toMatchObject({ title: 'Parteneri și colaboratori', description: '' });
+  snapshot.reviewSettings.heading = 'Experiențe FireArtRo';
+  snapshot.homePage.partners.title = 'Colaboratorii locali';
+  expect(normalizePublishedContent(snapshot)).toEqual(snapshot);
+});

@@ -227,8 +227,7 @@ export default function HomeReviews() {
   // Keep no cross-page Places content cache; fetch only when this area approaches view.
   if (!preview && !hasFacebookWidget && !visibleProviders.length) return <div ref={anchor} aria-hidden="true" />;
 
-  const heading = settings.heading?.trim().toLowerCase() === "recenzii verificate"
-    ? "Recenzii" : settings.heading;
+  const heading = settings.heading;
 
   return (
     <section
