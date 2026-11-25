@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import BlogCard from "@/components/blog/BlogCard";
 import NightButton from "@/components/night/NightButton";
+import ManagedPageMedia from "@/components/site/ManagedPageMedia";
 import Navbar from "@/components/site/Navbar";
 import PageEnd from "@/components/site/PageEnd";
 import ScrollProgress from "@/components/site/ScrollProgress";
@@ -85,6 +86,11 @@ export default function BlogPage() {
             <h1>{copy.title}</h1>
             <p>{copy.description}</p>
           </div>
+          {copy.heroMediaId && (
+            <div className="nr-shell fa-blog-hero__media">
+              <ManagedPageMedia mediaId={copy.heroMediaId} />
+            </div>
+          )}
         </header>
 
         <section className="fa-blog-archive nr-section" aria-live="polite">

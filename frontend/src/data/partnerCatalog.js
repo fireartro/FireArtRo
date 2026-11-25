@@ -74,6 +74,24 @@ export const PARTNER_CATALOG = [
 ].map(partner => ({ ...partner, href: destinations[partner.id] }));
 const normalize = name => name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 const catalogueByName = new Map(PARTNER_CATALOG.flatMap(partner => [partner.name, ...(partner.aliases || [])].map(name => [normalize(name), partner])));
+const catalogueById = new Map(PARTNER_CATALOG.map(partner => [partner.id, partner]));
+
+export const CURRENT_PARTNER_TITLE = "Împreună, dincolo de spectacol.";
+export const CURRENT_PARTNER_DESCRIPTION = "Parteneri & colaboratori";
+const LEGACY_PARTNER_TITLE = "O rețea care prinde formă.";
+const LEGACY_PARTNER_DESCRIPTION = "Locații, organizatori și echipe tehnice intră în aceeași orbită.";
+
+export function createManagedPartners() {
+  return PARTNER_CATALOG.map(({ id, name, logo, href }) => ({
+    id,
+    name,
+    logoPlaceholder: "",
+    logoMediaId: "",
+    replaceable: false,
+    catalogueLogoId: logo ? id : "",
+    destinationUrl: href,
+  }));
+}
 
 // Only the untouched, exact old CMS seed is migrated. Real edits always win.
 export function isOriginalPartnerSeed(partners) {
@@ -82,18 +100,48 @@ export function isOriginalPartnerSeed(partners) {
     return Object.keys(partner).length === 5 && partner.id === `partner-${index + 1}` && partner.name === seedName && partner.logoPlaceholder === seedName && partner.replaceable === true && partner.logoMediaId === "";
   });
 }
+
+export function resolvePartnerCopy(copy, partners) {
+  if (!isOriginalPartnerSeed(partners)) return copy;
+  return {
+    ...copy,
+    title: copy.title === LEGACY_PARTNER_TITLE ? CURRENT_PARTNER_TITLE : copy.title,
+    description: !copy.description || copy.description === LEGACY_PARTNER_DESCRIPTION
+      ? CURRENT_PARTNER_DESCRIPTION : copy.description,
+  };
+}
+
+// The old public page already replaced this exact seed. Adopt the same data
+// for editing and for previews without publishing or changing custom lists.
+export function resolveManagedPartnerSeed(content) {
+  if (!isOriginalPartnerSeed(content.partners)) return content;
+  return {
+    ...content,
+    partners: createManagedPartners(),
+    homePage: {
+      ...content.homePage,
+      partners: resolvePartnerCopy(content.homePage.partners, content.partners),
+    },
+  };
+}
+
 export function resolveDisplayPartners(partners, mediaItems) {
-  if (isOriginalPartnerSeed(partners)) return PARTNER_CATALOG;
+  const managed = isOriginalPartnerSeed(partners) ? createManagedPartners() : partners;
   const mediaById = new Map(mediaItems.map(item => [item.id, item]));
-  return partners.map(partner => {
+  return managed.map(partner => {
     const known = catalogueByName.get(normalize(partner.name));
+    const stock = partner.catalogueLogoId == null ? known : catalogueById.get(partner.catalogueLogoId);
     const uploaded = mediaById.get(partner.logoMediaId);
     // An explicit missing/deleted Admin reference must not resurrect a logo.
-    const logo = partner.logoMediaId ? (uploaded?.type === "image" ? uploaded.src : "") : (known?.logo || "");
+    const logo = partner.logoMediaId ? (uploaded?.type === "image" ? uploaded.src : "") : (stock?.logo || "");
     // Original logo variants keep their verified backing. Unknown transparent
     // uploads use a middle-tone surface, readable for both white and dark marks.
-    const theme = partner.logoMediaId ? (known?.logo && uploaded?.src === known.logo ? known.theme : "neutral") : known?.theme;
-    const resolved = { ...known, ...partner, logo, theme, group: known?.group || "other" };
+    const referenceLogo = stock?.logo ? stock : known;
+    const theme = partner.logoMediaId
+      ? (referenceLogo?.logo && uploaded?.src === referenceLogo.logo ? referenceLogo.theme : "neutral")
+      : stock?.theme;
+    const resolved = { ...known, ...partner, logo, theme, group: known?.group || stock?.group || "other",
+      href: partner.destinationUrl || partner.href || known?.href };
     return { ...resolved, href: partnerDestination(resolved) };
   });
 }

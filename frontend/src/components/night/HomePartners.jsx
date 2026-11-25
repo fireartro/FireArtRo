@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import useReducedMotion from "@/hooks/useReducedMotion";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
-import { isOriginalPartnerSeed, resolveDisplayPartners } from "@/data/partnerCatalog";
+import { resolveDisplayPartners, resolvePartnerCopy } from "@/data/partnerCatalog";
 import useManagedContent from "@/hooks/useManagedContent";
 import { useCookieConsent } from "@/lib/cookieConsent";
 import { isOptionalGoogleMedia } from "@/lib/optionalGoogleMedia";
@@ -19,11 +19,9 @@ export default function HomePartners() {
     if (marketingAllowed || !allPartners.some(partner => isOptionalGoogleMedia(partner.logo))) return allPartners;
     return allPartners.map(partner => isOptionalGoogleMedia(partner.logo) ? { ...partner, logo: "" } : partner);
   }, [allPartners, marketingAllowed]);
-  const copy = homePage.partners;
-  const untouchedSeed = isOriginalPartnerSeed(managedPartners);
-  const title = untouchedSeed && copy.title === CMS_DEFAULTS.homePage.partners.title ? "Împreună, dincolo de spectacol." : copy.title;
+  const copy = resolvePartnerCopy(homePage.partners, managedPartners);
   if (!partners.length) return null;
   return <section className="fa-partners fa-partners-gallery" id="parteneri" data-home-scene="partners" data-testid="home-partners" aria-labelledby="fa-partners-title">
-    <PartnerScrollScene partners={partners} copy={copy} title={title} reduceMotion={reduceMotion} />
+    <PartnerScrollScene partners={partners} copy={copy} reduceMotion={reduceMotion} />
   </section>;
 }

@@ -23,7 +23,7 @@ function partnerTexture(partner, onLoad) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = `600 ${image ? 28 : 40}px Arial, sans-serif`;
-    ctx.fillText(partner.name, 320, image ? 202 : 117, 566);
+    ctx.fillText(!image && partner.logoPlaceholder ? partner.logoPlaceholder : partner.name, 320, image ? 202 : 117, 566);
     texture.needsUpdate = true;
   };
   draw(null);

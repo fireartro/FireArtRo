@@ -5,14 +5,16 @@ import PageEnd from "@/components/site/PageEnd";
 import ScrollProgress from "@/components/site/ScrollProgress";
 import { CANONICAL_SITE_URL } from "@/data/businessContent";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
-import { findService, SERVICE_CATALOG } from "@/data/serviceCatalog";
+import { findService, SERVICE_CATALOG, SERVICE_PAGE_DEFAULTS, SERVICE_PAGE_KEYS } from "@/data/serviceCatalog";
 import useManagedContent from "@/hooks/useManagedContent";
 import usePageMeta from "@/hooks/usePageMeta";
 import "@/styles/night-blog.css";
 
 export default function ServicePage({ service: suppliedService } = {}) {
   const { slug } = useParams();
-  const service = suppliedService || findService(slug);
+  const routeService = suppliedService || findService(slug);
+  const servicePages = useManagedContent("servicePages", SERVICE_PAGE_DEFAULTS);
+  const service = routeService && { ...routeService, ...servicePages?.[SERVICE_PAGE_KEYS[routeService.slug]] };
   const siteDetails = useManagedContent("siteDetails", CMS_DEFAULTS.siteDetails);
   const packages = useManagedContent("packages", CMS_DEFAULTS.packages);
   const matchingPackages = service ? packages.filter((item) => item.category === service.category) : [];
@@ -67,7 +69,7 @@ export default function ServicePage({ service: suppliedService } = {}) {
 
           {service ? <>
             {service.sections.map((section, index) => (
-              <section className="fa-blog-body" key={section.title} aria-labelledby={`service-section-${index}`}>
+              <section className="fa-blog-body" key={section.id || index} aria-labelledby={`service-section-${index}`}>
                 <h2 className="fa-kicker" id={`service-section-${index}`}>{section.title}</h2>
                 {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
               </section>
@@ -82,15 +84,15 @@ export default function ServicePage({ service: suppliedService } = {}) {
               </section>
             )}
 
-            <section className="fa-blog-body" aria-labelledby="service-questions-title">
+            {service.faq.length > 0 && <section className="fa-blog-body" aria-labelledby="service-questions-title">
               <h2 className="fa-kicker" id="service-questions-title">Întrebări despre serviciu</h2>
-              {service.faq.map(({ q, a }, index) => (
-                <section className="fa-blog-body" key={q} aria-labelledby={`service-question-${index}`}>
+              {service.faq.map(({ id, q, a }, index) => (
+                <section className="fa-blog-body" key={id || index} aria-labelledby={`service-question-${index}`}>
                   <h3 className="fa-blog-card__meta" id={`service-question-${index}`}>{q}</h3>
                   <p>{a}</p>
                 </section>
               ))}
-            </section>
+            </section>}
 
             <section className="fa-blog-body" aria-labelledby="service-offer-title">
               <h2 className="fa-kicker" id="service-offer-title">Discută evenimentul cu {siteDetails.name}</h2>
@@ -103,7 +105,7 @@ export default function ServicePage({ service: suppliedService } = {}) {
             <nav className="fa-blog-body" aria-label="Alte servicii">
               <h2 className="fa-kicker">Alte servicii</h2>
               {SERVICE_CATALOG.filter((entry) => entry.slug !== service.slug).map((entry) => (
-                <Link className="fa-blog-card__link" key={entry.slug} to={entry.path}>{entry.title}</Link>
+                <Link className="fa-blog-card__link" key={entry.slug} to={entry.path}>{servicePages?.[SERVICE_PAGE_KEYS[entry.slug]]?.title || entry.title}</Link>
               ))}
               <p><Link className="fa-blog-card__link" to="/galerie">Vezi galeria</Link></p>
             </nav>

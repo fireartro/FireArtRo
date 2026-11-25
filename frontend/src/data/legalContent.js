@@ -95,10 +95,14 @@ export function updatePriorLegalCopy(document, { includeFacebookReviews = false 
       return resolved;
     }),
   }));
+  const knownUpdate = /^(Actualizat|Actualizată) la 28 septembrie 2026$/.test(document.updatedLabel);
+  const updatedLabel = knownUpdate || document.updatedLabel === `Actualizat la ${UPDATED}`
+    ? (includeFacebookReviews ? "Actualizat la 24 noiembrie 2026" : `Actualizat la ${UPDATED}`)
+    : document.updatedLabel;
   if (includeFacebookReviews) {
     return {
       ...document,
-      updatedLabel: "Actualizat la 24 noiembrie 2026",
+      updatedLabel,
       sections: [...sections, {
         id: "elfsight-facebook-reviews",
         heading: "Recenzii Facebook prin Elfsight",
@@ -113,7 +117,7 @@ export function updatePriorLegalCopy(document, { includeFacebookReviews = false 
       }],
     };
   }
-  return changed ? { ...document, sections, updatedLabel: `Actualizat la ${UPDATED}` } : document;
+  return changed ? { ...document, sections, updatedLabel } : document;
 }
 
 // Shared source for defaults and the targeted CMS publication. See the legal-review runbook.

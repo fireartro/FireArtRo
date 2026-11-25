@@ -573,7 +573,8 @@
 .cms-revision-list p { margin: 5px 0; color: var(--admin-muted); }
 .cms-preview { position: fixed; z-index: 10000; inset: 0; overflow: auto; background: #080b12; }
 .cms-preview > header { position: sticky; z-index: 10001; top: 0; display: flex; flex-wrap: wrap; min-height: 58px; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; background: #050812; color: white; }
-.cms-preview nav,
+.cms-preview-route { display: flex; align-items: center; gap: 8px; min-width: 0; color: #b6c7df; font-size: 13px; }
+.cms-preview-route select { min-width: 0; max-width: min(320px, 72vw); border: 1px solid #33445d; border-radius: 6px; padding: 7px 10px; background: #101927; color: #f3f6fc; font: inherit; color-scheme: dark; }
 .cms-preview header > div { display: flex; flex-wrap: wrap; gap: 5px; }
 .cms-preview button { border: 1px solid rgba(255,255,255,.16); padding: 7px 10px; background: transparent; color: white; }
 .cms-preview button[aria-pressed=true] { border-color: #7497ff; color: #9db6ff; }

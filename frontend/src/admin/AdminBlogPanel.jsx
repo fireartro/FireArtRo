@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ImagePlus, Plus, Save, Trash2 } from "lucide-react";
+import { Eye, ImagePlus, Plus, Save, Trash2 } from "lucide-react";
 import { useAdminSession } from "@/admin/AdminSessionContext";
 import { useSectionExitGuard } from "./useSectionExitGuard";
 import { prepareAdminImage } from "@/admin/imageUtils";
@@ -42,7 +42,7 @@ const errorMessage = (error) => {
   return error?.message || "Operațiunea nu a putut fi finalizată.";
 };
 
-export default function AdminBlogPanel({ onExitState }) {
+export default function AdminBlogPanel({ onExitState, onPreview }) {
   const { request, status } = useAdminSession();
   const [loadState, setLoadState] = useState("loading");
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -303,6 +303,10 @@ export default function AdminBlogPanel({ onExitState }) {
 
             <footer className="admin-blog-form-actions">
               {message && <p className={`admin-blog-message is-${tone}`} role="status">{message}</p>}
+              {onPreview && <button type="button" className="admin-button" disabled={!draft.title.trim()} onClick={event => {
+                event.currentTarget.focus();
+                onPreview({ ...articlePayload(draft), published_at: draft.published_at });
+              }}><Eye aria-hidden="true" /> Previzualizează articolul</button>}
               <button type="submit" className="admin-button is-primary" disabled={busy}>
                 <Save aria-hidden="true" /> {busy ? "Se salvează…" : "Salvează articolul"}
               </button>

@@ -3,10 +3,11 @@ import { ADMIN_MODULES, makeAdminItem } from './adminConfig';
 import { useAdminDraft } from './AdminDraftContext';
 import AdminField from './AdminField';
 import AdminDialog from './AdminDialog';
+import { resolveDisplayPartners } from '@/data/partnerCatalog';
 
 const technical = new Set(['id','width','height','aspectRatio']);
 
-export default function AdminContentEditor({ moduleKey }) {
+export default function AdminContentEditor({ moduleKey, embedded = false, showUndo = true }) {
   const definition = ADMIN_MODULES[moduleKey];
   const { draft, update, undo, errors=[] } = useAdminDraft();
   const [query, setQuery] = useState('');
@@ -33,7 +34,11 @@ export default function AdminContentEditor({ moduleKey }) {
   const open = item => { setSelected(item.id); setEditing(true); };
   const add = () => { const item = makeAdminItem(moduleKey, items.length); update(moduleKey, [...items, item]); setQuery(''); open(item); };
   const duplicate = () => { const item = { ...JSON.parse(JSON.stringify(current)), id: makeAdminItem(moduleKey, items.length).id, ...('order' in current ? {order:items.length + 1} : {}) }; update(moduleKey, [...items, item]); setQuery(''); open(item); };
+  const partnerThumbnails = moduleKey === 'partners'
+    ? new Map(resolveDisplayPartners(items, draft.mediaItems).map(partner => [partner.id, partner.logo]))
+    : null;
   const thumbnail = item => {
+    if (partnerThumbnails) return partnerThumbnails.get(item.id);
     const media = draft.mediaItems.find(entry => entry.id === (item.logoMediaId || item.imageMediaId || item.mediaId));
     return item.thumbnail || (media?.type === 'image' ? media.thumbnail || media.src : media?.poster);
   };
@@ -42,7 +47,7 @@ export default function AdminContentEditor({ moduleKey }) {
     update(moduleKey, next.map((item, position) => 'order' in item ? { ...item, order: position + 1 } : item)); setSelected(current.id);
   };
   return <section className="cms-panel">
-    <header className="cms-panel-heading"><div><h1>{definition.label}</h1><p>{definition.description}</p></div><button className="admin-button" onClick={undo}>Anulează ultima modificare</button></header>
+    {!embedded && <header className="cms-panel-heading"><div><h1>{definition.label}</h1><p>{definition.description}</p></div>{showUndo && <button className="admin-button" onClick={undo}>Anulează ultima modificare</button>}</header>}
     {moduleKey === 'homePage' && <nav className="cms-page-tabs" aria-label="Editează prima pagină">{[['packageVisuals','Imagini de categorii','Categorii'],['promoSlides','Galerie promovată','Galerie'],['copy','Texte și butoane','Texte și butoane']].map(([key,label,short])=><button type="button" key={key} aria-label={label} aria-pressed={homeTab === key} onClick={()=>setHomeTab(key)}>{short}</button>)}</nav>}
     <div className={items ? 'cms-collection' : ''} data-view={editing && current ? 'editor' : 'list'}>
       {items && <aside className="cms-collection-list"><label>Caută în {definition.label.toLowerCase()}<input value={query} onChange={event => search(event.target.value)} type="search" /></label>

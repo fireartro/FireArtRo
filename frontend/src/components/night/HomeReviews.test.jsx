@@ -1,6 +1,6 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { DraftPreviewProvider } from "@/content/ManagedContentProvider";
+import { DraftPreviewProvider, PublishedContentSnapshotProvider } from "@/content/ManagedContentProvider";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { COOKIE_CONSENT_STORAGE_KEY, OPEN_COOKIE_SETTINGS_EVENT } from "@/lib/cookieConsent";
 import { seedConsent } from "@/lib/consentTestFixture";
@@ -33,9 +33,9 @@ afterEach(async () => {
   delete global.IS_REACT_ACT_ENVIRONMENT;
 });
 const render = async (settings = {}) => act(async () => root.render(
-  <DraftPreviewProvider content={{ ...CMS_DEFAULTS, reviewSettings: {
+  <PublishedContentSnapshotProvider content={{ ...CMS_DEFAULTS, reviewSettings: {
     ...CMS_DEFAULTS.reviewSettings, ...settings,
-  } }}><HomeReviews /></DraftPreviewProvider>,
+  } }}><HomeReviews /></PublishedContentSnapshotProvider>,
 ));
 
 const expectFacebookReviewLink = () => {
@@ -117,4 +117,12 @@ test("Facebook source links identify Facebook rather than Google Maps", async ()
   const source = container.querySelector("[data-review-card] .fa-page-reviews__source");
   expect(source.getAttribute("aria-label")).toBe("Vezi recenzia originală pe Facebook");
   expect(container.textContent).not.toContain("Google Maps");
+});
+
+test("shows enabled sources in the authenticated draft preview without loading external reviews", async () => {
+  seedConsent({ analytics: false, marketing: true });
+  await act(async () => root.render(<DraftPreviewProvider content={CMS_DEFAULTS}><HomeReviews /></DraftPreviewProvider>));
+  expect(container.textContent).toContain("Google, Facebook");
+  expect(global.fetch).not.toHaveBeenCalled();
+  expect(container.querySelector("iframe")).toBeNull();
 });

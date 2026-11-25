@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router-dom";
 import { DraftPreviewProvider } from "@/content/ManagedContentProvider";
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
+import { resolveManagedPartnerSeed } from "@/data/partnerCatalog";
 import HomePartners from "./HomePartners";
 import { useReducedMotion } from "framer-motion";
 
@@ -27,10 +28,14 @@ afterEach(async () => {
 const render = async (patch = {}) => act(async () => root.render(
   <MemoryRouter><DraftPreviewProvider content={{ ...CMS_DEFAULTS, ...patch }}><HomePartners /></DraftPreviewProvider></MemoryRouter>,
 ));
+const legacyPartners = Array.from({ length: 12 }, (_, index) => {
+  const name = `PARTENER ${String(index + 1).padStart(2, "0")}`;
+  return { id: `partner-${index + 1}`, name, logoPlaceholder: name, logoMediaId: "", replaceable: true };
+});
 const names = () => [...container.querySelectorAll("[data-partner-name]")].map(el => el.textContent);
 
 test("replaces only the original empty partner seed with the owner's real collaborations", async () => {
-  await render();
+  await render({ partners: legacyPartners });
   expect(names()).toHaveLength(26);
   expect(names()).toEqual(expect.arrayContaining(["Restaurant Capricci", "Primăria Seini", "Infinity Ballroom", "Colț de Rai", "Palat Ioan Festeleu"]));
   expect(container.textContent).not.toContain("PARTENER 01");
@@ -64,10 +69,11 @@ test("honors an intentionally empty published list without restoring deleted par
 });
 
 test("does not migrate the original list after an Admin placeholder-only edit", async () => {
-  const partners = CMS_DEFAULTS.partners.map((partner, index) => index ? partner : { ...partner, logoPlaceholder: "Sigla locației" });
+  const partners = legacyPartners.map((partner, index) => index ? partner : { ...partner, logoPlaceholder: "Sigla locației" });
+  expect(resolveManagedPartnerSeed({ ...CMS_DEFAULTS, partners }).partners).toEqual(partners);
   await render({ partners });
   expect(names()).toHaveLength(12);
-  expect(names()[0]).toBe("PARTENER 01");
+  expect(names()[0]).toBe("Sigla locației");
 });
 
 test("keeps the dark backing for an official white logo selected through Admin", async () => {

@@ -167,3 +167,20 @@ export const SERVICE_CATALOG = [
 export function findService(slug) {
   return SERVICE_CATALOG.find((service) => service.slug === slug);
 }
+
+export const SERVICE_PAGE_KEYS = {
+  "artificii-nunta": "wedding",
+  "spectacole-drone": "drones",
+  "artificii-de-zi": "day",
+  "efecte-speciale": "effects",
+};
+
+export const SERVICE_PAGE_DEFAULTS = Object.fromEntries(SERVICE_CATALOG.map(service => [
+  SERVICE_PAGE_KEYS[service.slug],
+  {
+    title: service.title,
+    description: service.description,
+    sections: service.sections.map((section, index) => ({ id: `section-${index + 1}`, ...section })),
+    faq: service.faq.map((item, index) => ({ id: `question-${index + 1}`, ...item })),
+  },
+]));

@@ -56,7 +56,12 @@ test('uses a separate responsive viewport and transfers the latest draft only to
     mockDraft = { siteDetails: { name: 'Latest draft edit' } };
     await render(true);
     expect(send).toHaveBeenLastCalledWith({type:'fireart:preview-content',content:mockDraft},window.location.origin);
-    await click('Galerie');
+    const pageSelect = document.querySelector('.cms-preview-route select');
+    expect(pageSelect.options).toHaveLength(13);
+    await act(async () => {
+      pageSelect.value = '/galerie';
+      pageSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
     expect(document.querySelector('iframe').getAttribute('src')).toBe('/admin?previzualizare=1&pagina=%2Fgalerie');
     await click('Telefon');
     expect(document.querySelector('.cms-preview-frame').classList.contains('is-phone')).toBe(true);
@@ -139,7 +144,7 @@ describe('modal lifecycle', () => {
 
   test('wraps Tab and Shift+Tab between the first and last usable controls', async () => {
     await render();
-    const first = button('Acasă');
+    const first = dialog().querySelector('select');
     const last = dialog().querySelector('iframe');
     last.focus();
 
@@ -148,7 +153,7 @@ describe('modal lifecycle', () => {
     expect(press('Tab', first, true).defaultPrevented).toBe(true);
     expect(document.activeElement).toBe(last);
 
-    button('Galerie').focus();
+    button('Desktop').focus();
     expect(press('Tab').defaultPrevented).toBe(false);
     expect(press('Tab', document.activeElement, true).defaultPrevented).toBe(false);
   });
@@ -159,12 +164,12 @@ describe('modal lifecycle', () => {
     expect(document.activeElement).toBe(document.body);
 
     expect(press('Tab', document.body, shift).defaultPrevented).toBe(true);
-    expect(document.activeElement).toBe(shift ? dialog().querySelector('iframe') : button('Acasă'));
+    expect(document.activeElement).toBe(shift ? dialog().querySelector('iframe') : dialog().querySelector('select'));
   });
 
   test('recovers programmatically escaped focus to the last focused modal control', async () => {
     await render();
-    const gallery = button('Galerie');
+    const gallery = button('Desktop');
     gallery.focus();
     opener.focus();
 
@@ -177,19 +182,19 @@ describe('modal lifecycle', () => {
     previewButton.textContent = 'Read-only preview action';
     previewButton.setAttribute('inert','');
     document.querySelector('.cms-preview-frame').append(previewButton);
-    button('Galerie').focus();
+    button('Desktop').focus();
     previewButton.focus();
-    expect(document.activeElement).toBe(button('Galerie'));
+    expect(document.activeElement).toBe(button('Desktop'));
 
-    button('Acasă').disabled = true;
+    dialog().querySelector('select').disabled = true;
     dialog().querySelector('iframe').focus();
     press('Tab');
-    expect(document.activeElement).toBe(button('Galerie'));
+    expect(document.activeElement).toBe(button('Desktop'));
   });
 
   test('uses the dialog as a focus fallback when no usable controls remain', async () => {
     await render();
-    dialog().querySelectorAll('button').forEach(control => { control.disabled = true; });
+    dialog().querySelectorAll('button, select').forEach(control => { control.disabled = true; });
     dialog().querySelector('iframe').tabIndex=-1;
     opener.focus();
 
@@ -200,7 +205,7 @@ describe('modal lifecycle', () => {
 
   test('invokes the latest onClose for Escape without restarting focus or capturing a new opener', async () => {
     await render();
-    const gallery = button('Galerie');
+    const gallery = button('Desktop');
     gallery.focus();
     const nextOnClose = jest.fn();
     mockDraft = { siteDetails: { name: 'Updated while open' } };
@@ -258,7 +263,7 @@ describe('modal lifecycle', () => {
 
   test('restores the connected opener and background when unmounted while open', async () => {
     await render();
-    button('Galerie').focus();
+    button('Desktop').focus();
     await act(async () => root.unmount());
     root = null;
 
@@ -294,7 +299,7 @@ describe('modal lifecycle', () => {
 
   test('cleans up the active modal when its draft disappears', async () => {
     await render();
-    button('Galerie').focus();
+    button('Desktop').focus();
     mockDraft = null;
     await render();
 

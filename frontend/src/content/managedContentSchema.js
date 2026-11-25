@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import contract from './siteContent.schema.json';
+import { resolveManagedPartnerSeed } from '@/data/partnerCatalog';
 
 // The field contract is generated from backend/cms_models.py.
 function fromContract(node) {
@@ -52,6 +53,14 @@ const schema = fromContract(contract).superRefine((content, ctx) => {
     if (visualCategories.has(visual.category)) issue(['homePage', 'packageVisuals', index, 'category'], 'Categoria are deja o imagine aleasă.');
     visualCategories.add(visual.category);
   });
+  for (const [service, page] of Object.entries(content.servicePages || {})) {
+    page.sections.forEach((section, index) => section.paragraphs.forEach((paragraph, paragraphIndex) => {
+      if (!paragraph || paragraph.length > 4000) {
+        issue(['servicePages', service, 'sections', index, 'paragraphs', paragraphIndex],
+          'Paragraful trebuie să aibă între 1 și 4000 de caractere.');
+      }
+    }));
+  }
   const walk = (value, path = []) => {
     if (Array.isArray(value)) {
       const ids = value.map(item => item?.id).filter(id => id !== undefined);
@@ -85,7 +94,8 @@ export function validateManagedContent(content) {
     const clean = value => {
       if (!value || typeof value !== 'object') return;
       for (const [key, item] of Object.entries(value)) {
-        if (['imageFrame', 'packageVisuals', 'mediaSelection'].includes(key) && item === null) delete value[key];
+        if (['imageFrame', 'packageVisuals', 'mediaSelection', 'catalogueLogoId', 'destinationUrl', 'servicePages'].includes(key)
+          && item === null) delete value[key];
         else clean(item);
       }
     };
@@ -98,5 +108,5 @@ export function validateManagedContent(content) {
 export function normalizePublishedContent(content) {
   const result = validateManagedContent(content);
   if (result.errors.length) throw new Error('Conținut public invalid.');
-  return result.content;
+  return resolveManagedPartnerSeed(result.content);
 }

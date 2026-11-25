@@ -7,11 +7,11 @@ function Mark({ partner }) {
   const logo = partner.logo && failed !== partner.logo;
   return <a className="fa-partner__body" data-partner-id={partner.id} href={partnerDestination(partner)} target="_blank" rel="noopener noreferrer" aria-label={`Deschide ${partner.name}`}>
     {logo && <span className="fa-partner__mark" data-theme={partner.theme || 'light'}><img src={partner.logo} alt="" loading="lazy" decoding="async" onError={() => setFailed(partner.logo)} /></span>}
-    <span className="fa-partner__name" data-partner-name>{partner.name}</span>
+    <span className="fa-partner__name" data-partner-name>{!logo && partner.logoPlaceholder ? partner.logoPlaceholder : partner.name}</span>
   </a>;
 }
 
-export default function PartnerScrollScene({ partners, copy, title, reduceMotion }) {
+export default function PartnerScrollScene({ partners, copy, reduceMotion }) {
   const ref = useRef(null);
   const host = useRef(null);
   useEffect(() => {
@@ -54,8 +54,8 @@ export default function PartnerScrollScene({ partners, copy, title, reduceMotion
 
   return <div ref={ref} className="fa-partner-scroll" data-testid="partner-scroll" data-layout="grid">
     <div className="fa-partner-scroll__stage">
-      <header className="fa-partner-scroll__copy"><p className="fa-kicker">{copy.eyebrow}</p><h2 id="fa-partners-title">{title}</h2>
-        <p>Parteneri &amp; colaboratori</p>
+      <header className="fa-partner-scroll__copy"><p className="fa-kicker">{copy.eyebrow}</p><h2 id="fa-partners-title">{copy.title}</h2>
+        {copy.description && <p>{copy.description}</p>}
         {copy.ctaLabel && <Link className="fa-line-link" to={copy.ctaHref}>{copy.ctaLabel}</Link>}
       </header>
       <div ref={host} className="fa-partner-ribbon__canvas" />
