@@ -632,7 +632,7 @@
 .cms-shell .cms-collection-choice small { max-width: 210px; }
 .cms-shell .cms-editor-fields { padding: 20px; }
 .cms-shell .cms-editor-title h2 { margin: 0 0 14px; font-size: 18px; overflow-wrap: anywhere; }
-.cms-shell .cms-back-to-list { display: none; }
+.cms-shell .cms-editor-title > .cms-back-to-list { display: none; }
 .cms-shell .cms-form-grid { gap: 14px; }
 .cms-shell .cms-field-group { padding: 14px; border-radius: 7px; }
 .cms-shell .cms-technical-fields { grid-column: 1 / -1; margin-top: 12px; border-top: 1px solid var(--admin-border); padding-top: 12px; }
@@ -674,7 +674,7 @@
   .cms-shell .cms-collection { grid-template-columns: minmax(0, 1fr); }
   .cms-shell .cms-collection[data-view=list] .cms-editor-fields { display: none; }
   .cms-shell .cms-collection[data-view=editor] .cms-collection-list { display: none; }
-  .cms-shell .cms-back-to-list { display: inline-flex; margin-bottom: 14px; }
+  .cms-shell .cms-editor-title > .cms-back-to-list { display: inline-flex; margin-bottom: 14px; }
   .cms-shell .cms-collection-list { border-right: 0; }
 }
 @media (max-width: 600px) {
