@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 
 // Retain an initialized scene when it leaves view; its own lifecycle can pause
 // rendering without repeatedly downloading/rebuilding expensive resources.
-export default function useNearViewport(ref, rootMargin = '600px') {
+export default function useNearViewport(ref, rootMargin = '600px', enabled = true) {
   const [near, setNear] = useState(false);
   useEffect(() => {
     const target = ref.current;
-    if (!target) return undefined;
+    if (!enabled || !target) return undefined;
     if (typeof IntersectionObserver === 'undefined') {
       setNear(true);
       return undefined;
@@ -19,6 +19,6 @@ export default function useNearViewport(ref, rootMargin = '600px') {
     }, { rootMargin });
     observer.observe(target);
     return () => observer.disconnect();
-  }, [ref, rootMargin]);
+  }, [ref, rootMargin, enabled]);
   return near;
 }
