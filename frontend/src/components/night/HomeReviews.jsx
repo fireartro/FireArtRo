@@ -179,14 +179,14 @@ function ReviewRail({ data, marketingAllowed }) {
 }
 
 
-function FacebookReviewWidget({ marketingAllowed, near }) {
+function FacebookReviewWidget({ marketingAllowed }) {
   return (
     <div className="fa-page-reviews__lane" data-review-provider="facebook">
       <div className="fa-page-reviews__lane-head nr-shell">
         <span>Facebook</span>
         <ReviewPlatformLink />
       </div>
-      {marketingAllowed ? near && (
+      {marketingAllowed ? (
         <FacebookReviewFrame reviewsHref={FACEBOOK_REVIEWS_URL} />
       ) : (
         <p className="fa-page-reviews__notice nr-shell">
@@ -211,8 +211,6 @@ export default function HomeReviews() {
   const anchor = useRef(null);
   const enabled = settings.enabled && (settings.googleEnabled || settings.facebookEnabled);
   const near = useNearViewport(anchor, "300px", enabled && !preview);
-  const facebookNear = useNearViewport(anchor, "0px 0px 1200px",
-    enabled && !preview && settings.facebookEnabled && marketingAllowed);
   const [providers, setProviders] = useState([]);
   useEffect(() => {
     if (preview || !enabled || !near) return undefined;
@@ -251,7 +249,7 @@ export default function HomeReviews() {
         Surse activate în draft: {[settings.googleEnabled && "Google", settings.facebookEnabled && "Facebook"].filter(Boolean).join(", ")}.
         Disponibilitatea recenziilor se verifică în Admin, în Recenzii.
       </p>}
-      {!preview && hasFacebookWidget && <FacebookReviewWidget marketingAllowed={marketingAllowed} near={facebookNear} />}
+      {!preview && hasFacebookWidget && <FacebookReviewWidget marketingAllowed={marketingAllowed} />}
       {visibleProviders.map((provider) => (
         <ReviewRail
           data={{ ...provider, reviews: provider.reviews.slice(0, settings.maxItems) }}
