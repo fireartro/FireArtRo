@@ -35,6 +35,9 @@ test("only the mounted widget can expand the same frame and dismiss its full-pag
       window.dispatchEvent(message(false, { data: { type: "fireart:review-ready" } }));
     });
     expect(dialog.getAttribute("aria-hidden")).toBeNull();
+    await act(async () => frame.dispatchEvent(new Event("load")));
+    expect(host.querySelector(".fa-review-frame-slot").dataset.widgetState).toBe("ready");
+    expect(dialog.getAttribute("aria-hidden")).toBeNull();
 
     window.dispatchEvent(message(true));
     window.dispatchEvent(message(true));
@@ -75,12 +78,13 @@ test("a frame load alone keeps the panel hidden and falls back to the original r
     await act(async () => root.render(<FacebookReviewFrame reviewsHref={href} />));
     const frame = host.querySelector("iframe");
     const post = jest.spyOn(frame.contentWindow, "postMessage");
+    await act(async () => jest.advanceTimersByTime(7000));
     await act(async () => frame.dispatchEvent(new Event("load")));
     expect(post).toHaveBeenCalledWith({ type: "fireart:check-review-ready" }, new URL(frame.src).origin);
     expect(host.querySelector("dialog").getAttribute("aria-hidden")).toBe("true");
     expect(host.querySelector("a").href).toBe(href);
 
-    await act(async () => jest.advanceTimersByTime(9000));
+    await act(async () => jest.advanceTimersByTime(2000));
     expect(host.querySelector("iframe")).toBeNull();
     expect(host.querySelector("[role='status']").textContent).toContain("nu sunt disponibile");
     expect(host.querySelector("a").href).toBe(href);

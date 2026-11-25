@@ -89,11 +89,15 @@ test("loads the live Facebook widget only with current external-content consent"
   window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify({ ...prior, version: 3 }));
   await render();
   expect(container.querySelector("iframe")).toBeNull();
+  const fallback = container.querySelector("[data-review-provider='facebook'] .fa-page-reviews__notice a");
+  expect(fallback.textContent.trim()).toBe("Vezi recenziile pe Facebook");
+  expect(fallback.href).toBe("https://www.facebook.com/FireArtRo/reviews");
   expectFacebookReviewLink();
 
   await act(async () => seedConsent({ marketing: true }));
   expect(container.querySelector("iframe[title='Recenzii FireArtRo de pe Facebook']").getAttribute("src"))
     .toMatch(/^https:\/\/[a-f0-9]{32}\.elf\.site\/?$/);
+  expect(container.querySelector("iframe").getAttribute("loading")).toBe("eager");
   expectFacebookReviewLink();
 
   await act(async () => seedConsent());
@@ -125,4 +129,31 @@ test("shows enabled sources in the authenticated draft preview without loading e
   expect(container.textContent).toContain("Google, Facebook");
   expect(global.fetch).not.toHaveBeenCalled();
   expect(container.querySelector("iframe")).toBeNull();
+});
+
+test("observes the review section when enabled and starts the widget before it is on screen", async () => {
+  const priorObserver = global.IntersectionObserver;
+  const observe = jest.fn();
+  const intersections = new Map();
+  global.IntersectionObserver = jest.fn((callback, options) => {
+    intersections.set(options.rootMargin, callback);
+    return { observe, disconnect: jest.fn() };
+  });
+  try {
+    seedConsent({ marketing: true });
+    await render({ enabled: false });
+    expect(observe).not.toHaveBeenCalled();
+    await render();
+    expect(global.IntersectionObserver).toHaveBeenCalledWith(expect.any(Function), { rootMargin: "0px 0px 1200px" });
+    expect(observe).toHaveBeenCalledWith(container.querySelector("#recenzii"));
+    expect(container.querySelector("iframe")).toBeNull();
+
+    await act(async () => intersections.get("0px 0px 1200px")([{ isIntersecting: true }]));
+    expect(container.querySelector("iframe")).not.toBeNull();
+    expect(global.fetch).not.toHaveBeenCalled();
+    await act(async () => intersections.get("300px")([{ isIntersecting: true }]));
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  } finally {
+    global.IntersectionObserver = priorObserver;
+  }
 });

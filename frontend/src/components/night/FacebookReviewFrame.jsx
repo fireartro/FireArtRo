@@ -15,7 +15,6 @@ export default function FacebookReviewFrame({ reviewsHref }) {
     const dialog = dialogRef.current;
     const frame = frameRef.current;
     let currentStatus = "loading";
-    let timer;
     let probes;
 
     function restoreInline() {
@@ -29,22 +28,9 @@ export default function FacebookReviewFrame({ reviewsHref }) {
       window.clearInterval(probes);
     }
 
-    function waitForReviews() {
-      if (currentStatus === "unavailable") return;
-      stopChecks();
-      currentStatus = "loading";
-      setStatus(currentStatus);
-      timer = window.setTimeout(() => {
-        stopChecks();
-        currentStatus = "unavailable";
-        setStatus(currentStatus);
-      }, WIDGET_READY_TIMEOUT_MS);
-    }
-
     function probeFrame() {
-      restoreInline();
-      waitForReviews();
       if (currentStatus !== "loading") return;
+      window.clearInterval(probes);
       const requestReady = () => {
         frame.contentWindow?.postMessage({ type: "fireart:check-review-ready" }, WIDGET_ORIGIN);
       };
@@ -82,8 +68,15 @@ export default function FacebookReviewFrame({ reviewsHref }) {
     window.addEventListener("message", syncWidget);
     dialog.addEventListener("cancel", cancelDialog);
     frame.addEventListener("load", probeFrame);
-    // An iframe load event can also signal a blocked document. Wait for the widget itself.
-    waitForReviews();
+    // The widget can report readiness before all iframe resources finish loading.
+    // Use one deadline for the whole attempt, including the frame navigation.
+    const timer = window.setTimeout(() => {
+      stopChecks();
+      currentStatus = "unavailable";
+      setStatus(currentStatus);
+    }, WIDGET_READY_TIMEOUT_MS);
+    // Attach the message and load listeners before navigating, even with a warm cache.
+    if (!frame.hasAttribute("src")) frame.src = WIDGET_ORIGIN;
     return () => {
       stopChecks();
       window.removeEventListener("message", syncWidget);
@@ -107,8 +100,7 @@ export default function FacebookReviewFrame({ reviewsHref }) {
           ref={frameRef}
           className="fa-page-reviews__widget"
           title="Recenzii FireArtRo de pe Facebook"
-          src={WIDGET_ORIGIN}
-          loading="lazy"
+          loading="eager"
           referrerPolicy="no-referrer"
           sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
         />

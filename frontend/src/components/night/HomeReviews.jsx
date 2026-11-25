@@ -194,7 +194,10 @@ function FacebookReviewWidget({ marketingAllowed, near }) {
           <button type="button" className="fa-page-reviews__notice-link"
             onClick={() => window.dispatchEvent(new Event(OPEN_COOKIE_SETTINGS_EVENT))}>
             permite conținutul extern
-          </button>.
+          </button>.{" "}
+          <a className="fa-page-reviews__notice-link" href={FACEBOOK_REVIEWS_URL} target="_blank" rel="noopener noreferrer">
+            Vezi recenziile pe Facebook
+          </a>
         </p>
       )}
     </div>
@@ -206,9 +209,11 @@ export default function HomeReviews() {
   const { preview } = useManagedContentSnapshot();
   const marketingAllowed = useCookieConsent()?.marketing === true;
   const anchor = useRef(null);
-  const near = useNearViewport(anchor, "300px");
-  const [providers, setProviders] = useState([]);
   const enabled = settings.enabled && (settings.googleEnabled || settings.facebookEnabled);
+  const near = useNearViewport(anchor, "300px", enabled && !preview);
+  const facebookNear = useNearViewport(anchor, "0px 0px 1200px",
+    enabled && !preview && settings.facebookEnabled && marketingAllowed);
+  const [providers, setProviders] = useState([]);
   useEffect(() => {
     if (preview || !enabled || !near) return undefined;
     const controller = new AbortController();
@@ -246,7 +251,7 @@ export default function HomeReviews() {
         Surse activate în draft: {[settings.googleEnabled && "Google", settings.facebookEnabled && "Facebook"].filter(Boolean).join(", ")}.
         Disponibilitatea recenziilor se verifică în Admin, în Recenzii.
       </p>}
-      {!preview && hasFacebookWidget && <FacebookReviewWidget marketingAllowed={marketingAllowed} near={near} />}
+      {!preview && hasFacebookWidget && <FacebookReviewWidget marketingAllowed={marketingAllowed} near={facebookNear} />}
       {visibleProviders.map((provider) => (
         <ReviewRail
           data={{ ...provider, reviews: provider.reviews.slice(0, settings.maxItems) }}
