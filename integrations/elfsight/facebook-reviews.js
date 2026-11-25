@@ -27,30 +27,41 @@
       swiper.params.threshold = 9;
       swiper.params.longSwipesRatio = 0.32;
       swiper.params.grabCursor = true;
-      if (enhancedCarousels.get(element) === swiper) continue;
-      enhancedCarousels.set(element, swiper);
+      const carousel = element.closest('.es-carousel-layout');
+      const previous = enhancedCarousels.get(carousel);
+      if (previous?.swiper === swiper) continue;
+      if (previous) carousel.removeEventListener('wheel', previous.onWheel, true);
       swiper.setGrabCursor?.();
 
       let lastWheel = 0;
       let distance = 0;
       let advanced = false;
-      element.addEventListener('wheel', event => {
+      function onWheel(event) {
         if (element.swiper !== swiper || swiper.destroyed || event.ctrlKey
-          || Math.abs(event.deltaX) <= Math.abs(event.deltaY) * 1.2) return;
+          || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
         const now = performance.now();
-        if (now - lastWheel > 170) { distance = 0; advanced = false; }
+        if (now - lastWheel > 170) {
+          distance = 0;
+          advanced = false;
+        }
         lastWheel = now;
+
         const forward = event.deltaX > 0;
         if (swiper.isLocked || (!swiper.params.loop && (forward ? swiper.isEnd : swiper.isBeginning))) return;
-        event.preventDefault();
-        if (advanced || swiper.animating) return;
-        distance += event.deltaX * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? element.clientWidth : 1);
-        if (Math.abs(distance) < 40) return;
-        advanced = true;
+        if (event.cancelable) event.preventDefault();
+        if (advanced) return;
+
+        // A two-finger swipe delivers several small horizontal wheel deltas.
+        const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? element.clientWidth : 1;
+        distance += event.deltaX * unit;
+        if (Math.abs(distance) < 18 || swiper.animating) return;
+
         const speed = motion.matches ? 0 : 330;
-        if (distance > 0) swiper.slideNext(speed);
-        else swiper.slidePrev(speed);
-      }, { passive: false });
+        const moved = distance > 0 ? swiper.slideNext(speed) : swiper.slidePrev(speed);
+        advanced = moved !== false;
+      }
+      enhancedCarousels.set(carousel, { swiper, onWheel });
+      carousel.addEventListener('wheel', onWheel, { capture: true, passive: false });
     }
   }
 
