@@ -9,6 +9,8 @@ import AdminDashboard from './AdminDashboard';
 import AdminContentEditor from './AdminContentEditor';
 import AdminPublishDialog from './AdminPublishDialog';
 import AdminPreview from './AdminPreview';
+import AdminReviews from './AdminReviews';
+import { ARTICLE_PREVIEW_PATH, previewTargetForSection } from './adminPreviewRoutes';
 import AdminRevisions from './AdminRevisions';
 import AdminBlogPanel from './AdminBlogPanel';
 import AdminQuotes from './AdminQuotes';
@@ -24,10 +26,10 @@ import { CMS_DEFAULTS } from '@/data/cmsDefaults';
 const special = new Set(['dashboard', 'revisions', 'blog', 'quotes', 'inbox', 'media', 'integrations']);
 const knownSections = new Set([...special, ...MODULE_ORDER]);
 const groups = [
-  ['Pagini', ['homePage', 'galleryPage', 'packagesPage', 'faqPage', 'contactPage', 'blogPage']],
+  ['Pagini', ['homePage', 'galleryPage', 'packagesPage', 'faqPage', 'contactPage', 'blogPage', 'servicePages', 'legalPages']],
   ['Conținut', ['media', 'mediaItems', 'packages', 'faqs', 'partners', 'blog', 'testimonials']],
   ['Solicitări', ['quotes', 'inbox']],
-  ['Setări', ['siteDetails', 'contactSettings', 'businessHours', 'socialLinks', 'navigation', 'footer', 'reviewSettings', 'cookieSettings', 'legalPages', 'integrations', 'revisions']],
+  ['Setări', ['siteDetails', 'contactSettings', 'businessHours', 'socialLinks', 'navigation', 'footer', 'cookieSettings', 'integrations', 'revisions']],
 ];
 const labels = {blog:'Articole Blog',quotes:'Cereri de ofertă',inbox:'Mesaje',revisions:'Istoric publicări',media:'Biblioteca media',integrations:'Integrări'};
 function Navigation({section, choose}) {
@@ -48,11 +50,12 @@ export default function AdminLayout() {
   const [params, setParams] = useSearchParams();
   const [menu, setMenu] = useState(false);
   const [publish, setPublish] = useState(false);
-  const [preview, setPreview] = useState(false);
+  const [previewTarget, setPreviewTarget] = useState(null);
   const [exitState, setExitState] = useState('ready');
   const [exitNotice, setExitNotice] = useState(false);
   const requestedSection = params.get('sectiune');
-  const section = knownSections.has(requestedSection) ? requestedSection : 'dashboard';
+  const section = requestedSection === 'reviewSettings' ? 'testimonials'
+    : knownSections.has(requestedSection) ? requestedSection : 'dashboard';
   const linkedMessage = params.get('mesaj');
   const operationBusy = exitState === 'busy' || draft.pendingUploads > 0;
   const allowExit = () => {
@@ -60,6 +63,7 @@ export default function AdminLayout() {
     return exitState !== 'dirty' || window.confirm('Ai modificări nesalvate în această secțiune. Pleci fără să le salvezi?');
   };
   const choose = key => {
+    if (key === 'reviewSettings') key = 'testimonials';
     if (!knownSections.has(key)) return;
     if (key === section) { setMenu(false); return; }
     if (!allowExit()) return;
@@ -88,15 +92,15 @@ export default function AdminLayout() {
       <Dialog.Portal><Dialog.Overlay className="cms-dialog-overlay" /><Dialog.Content className="admin-mobile-navigation admin-shell" aria-describedby={undefined}><Dialog.Title>Secțiuni administrare</Dialog.Title><Navigation section={section} choose={choose}/>{exitNotice && <p role="status">Așteaptă finalizarea operației înainte de a părăsi secțiunea.</p>}<div className="cms-drawer-actions"><button type="button" className="admin-button" onClick={signOut}><LogOut aria-hidden="true"/>Ieși din cont</button><Dialog.Close className="admin-button" aria-label="Închide secțiunile">Închide</Dialog.Close></div></Dialog.Content></Dialog.Portal>
     </Dialog.Root><Link to="/" onClick={event => { if (!allowExit()) event.preventDefault(); }}>FIREARTRO</Link><span>Administrare</span></div>
       <div className="admin-appbar-context">{labels[section] || ADMIN_MODULES[section]?.label || 'Panou principal'}</div>
-      <div className="admin-appbar-actions"><span className={`cms-save-state is-${draft.status}`} aria-live="polite">{STATUS[draft.status] || draft.status}</span><button className="admin-button cms-appbar-undo" aria-label="Anulează modificarea" disabled={!draft.canUndo} onClick={draft.undo}><Undo2 aria-hidden="true"/></button><button className="admin-button cms-appbar-preview" aria-label="Previzualizează" onClick={event => { event.currentTarget.focus(); setPreview(true); }}><Eye aria-hidden="true"/><span>Previzualizează</span></button><button className="admin-button is-primary" aria-label="Publică modificările" disabled={draft.status !== 'saved' || !draft.changedModules.length} onClick={() => setPublish(true)}><Send aria-hidden="true"/><span>Publică modificările</span></button>
+      <div className="admin-appbar-actions"><span className={`cms-save-state is-${draft.status}`} aria-live="polite">{STATUS[draft.status] || draft.status}</span><button className="admin-button cms-appbar-undo" aria-label="Anulează modificarea" disabled={!draft.canUndo} onClick={draft.undo}><Undo2 aria-hidden="true"/></button><button className="admin-button cms-appbar-preview" aria-label="Previzualizează" onClick={event => { event.currentTarget.focus(); setPreviewTarget(previewTargetForSection(section)); }}><Eye aria-hidden="true"/><span>Previzualizează</span></button><button className="admin-button is-primary" aria-label="Publică modificările" disabled={draft.status !== 'saved' || !draft.changedModules.length} onClick={() => setPublish(true)}><Send aria-hidden="true"/><span>Publică modificările</span></button>
       <span className="admin-session-user">{admin?.username}</span><button className="admin-session-logout" aria-label="Ieși din cont" onClick={signOut}><LogOut aria-hidden="true"/><span>Ieși</span></button></div></header>
     <div className="admin-workspace"><aside className="admin-sidebar"><Navigation section={section} choose={choose}/></aside>
       <div className="cms-main">{exitNotice && !menu && <p className="cms-notice" role="status">Așteaptă finalizarea operației înainte de a părăsi secțiunea.</p>}<AdminFeedback onNavigate={choose}/>{section === 'dashboard' ? <AdminDashboard onNavigate={choose} />
-        : section === 'revisions' ? <AdminRevisions /> : section === 'blog' ? <AdminBlogPanel onExitState={setExitState} /> : section === 'quotes' ? <AdminQuotes onExitState={setExitState} /> : section === 'inbox' ? <AdminInbox key={linkedMessage || 'inbox'} initialMessageId={linkedMessage} onExitState={setExitState} /> : section === 'media' ? <AdminMediaLibrary />
-        : section === 'integrations' ? <><AdminIntegrations/><AdminMigrationPanel/></>
-        : section === 'cookieSettings' ? <><AdminContentEditor key={section} moduleKey={section} /><AdminConsentReceipt /></>
-        : ADMIN_MODULES[section] ? <AdminContentEditor key={section} moduleKey={section} /> : <AdminDashboard onNavigate={choose} />}</div></div>
-    <AdminPublishDialog open={publish} onOpenChange={setPublish} /><AdminPreview open={preview} onClose={() => setPreview(false)} />
+        : section === 'revisions' ? <AdminRevisions /> : section === 'blog' ? <AdminBlogPanel onExitState={setExitState} onPreview={article => setPreviewTarget({ path: ARTICLE_PREVIEW_PATH, article })} /> : section === 'quotes' ? <AdminQuotes onExitState={setExitState} /> : section === 'inbox' ? <AdminInbox key={linkedMessage || 'inbox'} initialMessageId={linkedMessage} onExitState={setExitState} /> : section === 'media' ? <AdminMediaLibrary />
+        : section === 'testimonials' ? <AdminReviews onPreview={() => setPreviewTarget(previewTargetForSection(section))} /> : section === 'integrations' ? <><AdminIntegrations/><AdminMigrationPanel/></>
+        : section === 'cookieSettings' ? <><AdminContentEditor key={section} moduleKey={section} showUndo={false} /><AdminConsentReceipt /></>
+        : ADMIN_MODULES[section] ? <AdminContentEditor key={section} moduleKey={section} showUndo={false} /> : <AdminDashboard onNavigate={choose} />}</div></div>
+    <AdminPublishDialog open={publish} onOpenChange={setPublish} /><AdminPreview open={Boolean(previewTarget)} target={previewTarget} onClose={() => setPreviewTarget(null)} />
     <AdminHistoryGuard busy={operationBusy} dirty={exitState === 'dirty'} onBusy={setExitNotice} />
   </main>;
 }

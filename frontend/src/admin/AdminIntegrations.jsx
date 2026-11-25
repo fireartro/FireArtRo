@@ -8,8 +8,8 @@ const INTEGRATIONS = [
   ['resend', 'Email Resend'],
   ['turnstile', 'Protecție formular'],
   ['analytics', 'Google Analytics'],
-  ['google', 'Recenzii Google'],
-  ['facebook', 'Recenzii Facebook'],
+  ['google', 'Google Places pentru recenzii'],
+  ['facebook', 'Meta API pentru recenzii Facebook'],
 ];
 
 function stateCopy(value) {
@@ -46,7 +46,7 @@ export default function AdminIntegrations() {
 
   return <section className="cms-panel cms-integrations" aria-labelledby="cms-integrations-title">
     <header className="cms-panel-heading"><div><h2 id="cms-integrations-title">Starea integrărilor</h2>
-      <p>Verifică disponibilitatea serviciilor fără a afișa parole sau tokenuri.</p></div>
+      <p>Verifică serviciile conectate la server. Widgetul Facebook prin Elfsight se verifică pe site.</p></div>
       <button className="admin-button" disabled={loading} onClick={() => load(true)}>Verifică din nou</button></header>
     {loading && !data ? <p role="status">Se verifică integrările…</p> : null}
     {error ? <div className="cms-notice is-error" role="alert">{error}</div> : null}

@@ -10,7 +10,8 @@ import {
   TESTIMONIAL_ITEMS,
 } from "./businessContent";
 import { NAV_LINKS } from "./content";
-import { HOME_GALLERY, PARTNER_PLACEHOLDERS } from "./homeExperience";
+import { HOME_GALLERY } from "./homeExperience";
+import { createManagedPartners, CURRENT_PARTNER_DESCRIPTION, CURRENT_PARTNER_TITLE } from "./partnerCatalog";
 import { FAQ_DEFAULTS } from "./faqContent";
 import { LEGAL_PAGES_DEFAULT } from "./legalContent";
 import ownerRevision from "./ownerRevision.json";
@@ -103,7 +104,7 @@ export const CMS_DEFAULTS = applyOwnerRevision({
       title: "Suntem echipa din spatele spectacolului.",
       body: ["FireArtRo planifică și produce în România show-uri cu drone, artificii profesionale și efecte scenice. Coordonăm conceptul, partea tehnică, logistica și execuția pentru fiecare eveniment."],
     },
-    partners: section("Un show se construiește împreună", "O rețea care prinde formă.", "", "", ""),
+    partners: section("Un show se construiește împreună", CURRENT_PARTNER_TITLE, "", "", CURRENT_PARTNER_DESCRIPTION),
     brief: section("Următorul spectacol", "Spune-ne ce sărbătorești.\nNoi aprindem restul.", "Începe conversația", "/contact"),
     promoSlides: HOME_GALLERY.map((item) => ({
       ...PROMO_SLIDE_TEMPLATE,
@@ -161,9 +162,7 @@ export const CMS_DEFAULTS = applyOwnerRevision({
   faqs: FAQ_DEFAULTS,
   // Existing placeholders remain explicitly marked; no reviews or articles are invented.
   testimonials: TESTIMONIAL_ITEMS.map((item) => ({ ...item, source: item.source.toLowerCase() })),
-  partners: PARTNER_PLACEHOLDERS.map((item) => ({
-    id: item.id, name: item.name, logoPlaceholder: item.name, logoMediaId: "", replaceable: true,
-  })),
+  partners: createManagedPartners(),
   reviewSettings: {
     enabled: true, heading: "Recenzii verificate", description: "",
     googleEnabled: true, facebookEnabled: true, maxItems: 8,

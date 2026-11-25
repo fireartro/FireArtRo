@@ -2,6 +2,7 @@ import { ArrowUpRight, Star, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { getPublicReviews } from "@/lib/reviewsApi";
 import { OPEN_COOKIE_SETTINGS_EVENT, useCookieConsent } from "@/lib/cookieConsent";
+import { useManagedContentSnapshot } from "@/content/ManagedContentProvider";
 import { allowedGoogleMedia } from "@/lib/optionalGoogleMedia";
 import useManagedContent from "@/hooks/useManagedContent";
 import useNearViewport from "@/hooks/useNearViewport";
@@ -202,19 +203,20 @@ function FacebookReviewWidget({ marketingAllowed, near }) {
 
 export default function HomeReviews() {
   const settings = useManagedContent("reviewSettings", CMS_DEFAULTS.reviewSettings);
+  const { preview } = useManagedContentSnapshot();
   const marketingAllowed = useCookieConsent()?.marketing === true;
   const anchor = useRef(null);
   const near = useNearViewport(anchor, "300px");
   const [providers, setProviders] = useState([]);
   const enabled = settings.enabled && (settings.googleEnabled || settings.facebookEnabled);
   useEffect(() => {
-    if (!enabled || !near) return undefined;
+    if (preview || !enabled || !near) return undefined;
     const controller = new AbortController();
     getPublicReviews({ signal: controller.signal }).then(result => {
       if (!controller.signal.aborted) setProviders(result);
     });
     return () => controller.abort();
-  }, [enabled, near]);
+  }, [enabled, near, preview]);
 
   const visibleProviders = providers.filter(provider =>
     (provider.id === "google" && settings.googleEnabled)
@@ -223,7 +225,7 @@ export default function HomeReviews() {
     && !visibleProviders.some(provider => provider.id === "facebook");
   if (!enabled) return null;
   // Keep no cross-page Places content cache; fetch only when this area approaches view.
-  if (!hasFacebookWidget && !visibleProviders.length) return <div ref={anchor} aria-hidden="true" />;
+  if (!preview && !hasFacebookWidget && !visibleProviders.length) return <div ref={anchor} aria-hidden="true" />;
 
   const heading = settings.heading?.trim().toLowerCase() === "recenzii verificate"
     ? "Recenzii" : settings.heading;
@@ -241,7 +243,11 @@ export default function HomeReviews() {
         <a className="fa-page-reviews__notice-link" href={REVIEW_POLICY_HREF}>Sursă și verificare</a>
         {settings.description ? <p className="fa-page-reviews__notice">{settings.description}</p> : null}
       </div>
-      {hasFacebookWidget && <FacebookReviewWidget marketingAllowed={marketingAllowed} near={near} />}
+      {preview && <p className="fa-page-reviews__notice nr-shell">
+        Surse activate în draft: {[settings.googleEnabled && "Google", settings.facebookEnabled && "Facebook"].filter(Boolean).join(", ")}.
+        Disponibilitatea recenziilor se verifică în Admin, în Recenzii.
+      </p>}
+      {!preview && hasFacebookWidget && <FacebookReviewWidget marketingAllowed={marketingAllowed} near={near} />}
       {visibleProviders.map((provider) => (
         <ReviewRail
           data={{ ...provider, reviews: provider.reviews.slice(0, settings.maxItems) }}

@@ -23,19 +23,24 @@ const roDate = new Intl.DateTimeFormat("ro-RO", {
   year: "numeric",
 });
 
-export default function BlogArticlePage() {
+export default function BlogArticlePage({ previewPost = null }) {
   const { slug } = useParams();
   const initialPost = usePublicRenderData()?.post;
   const siteDetails = useManagedContent("siteDetails", CMS_DEFAULTS.siteDetails);
   const [requestVersion, setRequestVersion] = useState(0);
-  const [state, setState] = useState({
+  const [publicState, setState] = useState({
     loading: initialPost?.slug !== slug,
     post: initialPost?.slug === slug ? initialPost : null,
     error: "",
     notFound: false,
   });
 
+  const state = previewPost
+    ? { loading: false, post: previewPost, error: "", notFound: false }
+    : publicState;
+
   useEffect(() => {
+    if (previewPost) return undefined;
     let active = true, controller;
     setState(current => current.post?.slug === slug ? current : { loading: true, post: null, error: "", notFound: false });
     const load = async (background = false, signal) => {
@@ -65,7 +70,7 @@ export default function BlogArticlePage() {
     load();
     const stop = watchBlogPublications({ refresh: ({ signal }) => load(true, signal) });
     return () => { active = false; stop(); controller?.abort(); };
-  }, [requestVersion, slug]);
+  }, [previewPost, requestVersion, slug]);
 
   const image = state.post?.cover_media_id
     ? blogMediaUrl(state.post.cover_media_id)
@@ -86,7 +91,7 @@ export default function BlogArticlePage() {
     description: state.post?.excerpt || "Articol din Blogul FireArtRo.",
     path: `/blog/${slug}`,
     image,
-    noindex: state.notFound,
+    noindex: Boolean(previewPost) || state.notFound,
     schema,
   });
 

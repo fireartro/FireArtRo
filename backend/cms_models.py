@@ -53,7 +53,7 @@ class StrictModel(BaseModel):
     @model_serializer(mode="wrap")
     def omit_unconfigured_presentation(self, handler):
         data = handler(self)
-        for key in ("imageFrame", "packageVisuals", "mediaSelection"):
+        for key in ("imageFrame", "packageVisuals", "mediaSelection", "servicePages"):
             if data.get(key, ...) is None:
                 data.pop(key, None)
         return data
@@ -501,6 +501,26 @@ class PartnerItem(StrictModel):
     logoPlaceholder: str = Field(default="", max_length=120)
     logoMediaId: str = Field(default="", max_length=80, pattern=rf"^$|{ID_PATTERN}")
     replaceable: bool = False
+    catalogueLogoId: str | None = Field(default=None, max_length=80, pattern=rf"^$|{ID_PATTERN}")
+    destinationUrl: str | None = Field(default=None, max_length=500)
+
+    @model_serializer(mode="wrap")
+    def omit_unspecified_catalogue_fields(self, handler):
+        data = handler(self)
+        for key in ("catalogueLogoId", "destinationUrl"):
+            if data.get(key) is None:
+                data.pop(key, None)
+        return data
+
+    @field_validator("destinationUrl")
+    @classmethod
+    def validate_destination_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        url = _safe_web_url(value, allow_empty=True)
+        if url and (re.search(r"[\x00-\x20\\]", url) or urlsplit(url).username is not None):
+            raise ValueError("Linkul partenerului trebuie să fie o adresă web fără credențiale.")
+        return url
 
 
 class ReviewSettings(StrictModel):
@@ -560,6 +580,39 @@ class LegalPages(StrictModel):
     cookies: LegalDocument
 
 
+class ServiceSection(StrictModel):
+    id: str = Field(min_length=1, max_length=80, pattern=ID_PATTERN)
+    title: str = Field(min_length=1, max_length=200)
+    paragraphs: list[str] = Field(max_length=20)
+
+    @field_validator("paragraphs")
+    @classmethod
+    def validate_paragraphs(cls, values: list[str]) -> list[str]:
+        if any(not value or len(value) > 4000 for value in values):
+            raise ValueError("Paragrafele serviciului trebuie să aibă între 1 și 4000 de caractere.")
+        return values
+
+
+class ServicePageContent(StrictModel):
+    title: str = Field(min_length=1, max_length=160)
+    description: str = Field(min_length=1, max_length=600)
+    sections: list[ServiceSection] = Field(max_length=20)
+    faq: list[FaqItem] = Field(max_length=30)
+
+    @model_validator(mode="after")
+    def unique_items(self):
+        _assert_unique_ids(self.sections, "sections")
+        _assert_unique_ids(self.faq, "faq")
+        return self
+
+
+class ServicePages(StrictModel):
+    wedding: ServicePageContent
+    drones: ServicePageContent
+    day: ServicePageContent
+    effects: ServicePageContent
+
+
 class SiteContent(StrictModel):
     schema_version: Literal[1] = 1
     siteDetails: SiteDetails
@@ -582,6 +635,7 @@ class SiteContent(StrictModel):
     reviewSettings: ReviewSettings
     cookieSettings: CookieSettings
     legalPages: LegalPages
+    servicePages: ServicePages | None = None
 
     @model_validator(mode="after")
     def enforce_snapshot_integrity(self):

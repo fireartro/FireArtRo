@@ -69,7 +69,7 @@ export default function AdminField({ field, path }) {
   const onChange = next => update(path, next);
   const id = `cms-field-${path}`;
   const error = errors.find(item => item.path === path)?.message;
-  const common = { id, name: path, required: field.required, readOnly: field.readOnly, 'aria-invalid': Boolean(error), 'aria-describedby': error ? `${id}-error` : undefined };
+  const common = { id, name: path, required: field.required, readOnly: field.readOnly, maxLength: field.maxLength, 'aria-invalid': Boolean(error), 'aria-describedby': error ? `${id}-error` : undefined };
   if (field.type === 'homeVisuals') return <AdminHomeVisuals/>;
   if (field.type === 'imageFrame') {
     const parentPath=path.split('.').slice(0,-1).join('.');

@@ -1,5 +1,11 @@
 import { normalizePublishedContent, validateManagedContent } from '@/content/managedContentSchema';
 import { fetchPublishedContent } from '@/lib/contentApi';
+import { SERVICE_PAGE_DEFAULTS } from '@/data/serviceCatalog';
+
+function editorContent(content) {
+  const normalized = normalizePublishedContent(content);
+  return normalized.servicePages ? normalized : { ...normalized, servicePages: SERVICE_PAGE_DEFAULTS };
+}
 
 export function setContentPath(content, path, value) {
   const keys = Array.isArray(path) ? path : path.split('.');
@@ -11,7 +17,11 @@ export function setContentPath(content, path, value) {
   return next;
 }
 
-export const changedModules = (before, after) => after ? Object.keys(after).filter(key => key !== 'schema_version' && JSON.stringify(before?.[key]) !== JSON.stringify(after[key])) : [];
+export const changedModules = (before, after) => after ? Object.keys(after).filter(key => {
+  if (key === 'schema_version') return false;
+  const previous = before?.[key] ?? (before && key === 'servicePages' ? SERVICE_PAGE_DEFAULTS : undefined);
+  return JSON.stringify(previous) !== JSON.stringify(after[key]);
+}) : [];
 
 export function createDraftStore(request, getPublication = fetchPublishedContent) {
   let state = { draft: null, version: null, publishedContent: null, publishedRevisionId: null,
@@ -24,7 +34,7 @@ export function createDraftStore(request, getPublication = fetchPublishedContent
   const emit = patch => { state = { ...state, ...patch }; listeners.forEach(listener => listener()); };
   const accept = payload => {
     if (!Number.isInteger(payload.version) || payload.version < 0) throw new Error('Versiunea draftului nu este validă.');
-    return { draft: normalizePublishedContent(payload.content), version: payload.version,
+    return { draft: editorContent(payload.content), version: payload.version,
       publishedRevisionId: payload.published_revision_id, publishedAt: payload.published_at, updatedAt: payload.updated_at };
   };
   const failure = error => emit({

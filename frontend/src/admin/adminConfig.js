@@ -1,4 +1,6 @@
 import { CMS_DEFAULTS, MEDIA_TEMPLATE, PACKAGE_TEMPLATE, PROMO_SLIDE_TEMPLATE } from "@/data/cmsDefaults";
+import { SERVICE_CATALOG, SERVICE_PAGE_KEYS } from "@/data/serviceCatalog";
+import { PARTNER_CATALOG } from "@/data/partnerCatalog";
 
 export const ADMIN_DEFAULTS = CMS_DEFAULTS;
 
@@ -108,6 +110,20 @@ export const ADMIN_MODULES = {
     textarea("consentLabel", "Text consimțământ"), text("submitLabel", "Text trimitere"),
   ]), "Formular, opțiuni și texte"),
   blogPage: moduleDefinition(object("blogPage", "Pagina Blog", PAGE_FIELDS), "Introducere și SEO; articolele au editor separat"),
+  servicePages: moduleDefinition(object("servicePages", "Pagini de servicii", SERVICE_CATALOG.map(service =>
+    object(SERVICE_PAGE_KEYS[service.slug], service.title, [
+      text("title", "Titlu", { required: true, maxLength: 160 }),
+      textarea("description", "Introducere și descriere SEO", { required: true, maxLength: 600 }),
+      collection("sections", "Secțiuni", { id: "section", title: "", paragraphs: [] }, [
+        text("title", "Titlu secțiune", { required: true, maxLength: 200 }),
+        lines("paragraphs", "Paragrafe", { help: "Câte un paragraf pe rând.", rows: 6 }),
+      ]),
+      collection("faq", "Întrebări despre serviciu", { id: "question", q: "", a: "" }, [
+        textarea("q", "Întrebare", { required: true, maxLength: 240 }),
+        textarea("a", "Răspuns", { required: true, maxLength: 4000 }),
+      ], { titleKey: "q" }),
+    ])
+  )), "Titluri, introduceri, secțiuni și întrebări pentru cele patru pagini publice. Pachetele se editează din Pachete."),
   mediaItems: moduleDefinition(collection("mediaItems", "Galerie / media", MEDIA_TEMPLATE, [
     id(), select("type", "Tip", ["image", "video", "youtube", "promo"]),
     text("title", "Titlu"), textarea("shortDescription", "Descriere"),
@@ -121,7 +137,7 @@ export const ADMIN_MODULES = {
     number("width", "Lățime", { min: 1, nullable: true }), number("height", "Înălțime", { min: 1, nullable: true }),
     number("aspectRatio", "Raport de aspect", { min: 0.01, step: "any", nullable: true }),
     field("imageFrame", "imageFrame", "Încadrarea imaginii în galerie", {surface:'gallery'}),
-  ], { subtitleKey: "category", previewKey: "thumbnail" }), "Catalogul comun de imagini și videoclipuri"),
+  ], { subtitleKey: "category", previewKey: "thumbnail" }), "Catalog comun. Pagina Galerie afișează fotografii. Videoclipurile pot fi folosite în cadrele promovate și la pachete."),
   packages: moduleDefinition(collection("packages", "Pachete", PACKAGE_TEMPLATE, [
     id(), text("title", "Nume pachet"), select("category", "Categorie", ["Artificii de zi", "Artificii de noapte", "Show drone", "Drone + artificii", "Efecte speciale", "Corporate / Festival"]),
     text("bestFor", "Potrivit pentru"), textarea("shortDescription", "Descriere"),
@@ -129,7 +145,7 @@ export const ADMIN_MODULES = {
     number("droneCount", "Număr drone", { min: 0, nullable: true }),
     number("effectsCount", "Grupe de efecte", { min: 0, nullable: true }),
     text("badge", "Etichetă"), text("cta", "Text buton"), url("ctaHref", "Destinație buton"),
-    mediaId("imageMediaId", "Imagine proprie", {imageOnly:true,framing:true}), field("imageFrame", "imageFrame", "Încadrarea imaginii pachetului", {sourceKey:'imageMediaId',surface:'package'}), field("tags", "highlights", "Caracteristici"),
+    mediaId("imageMediaId", "Imagine proprie", {imageOnly:true,framing:true}), field("imageFrame", "imageFrame", "Încadrarea imaginii pachetului", {sourceKey:'imageMediaId',surface:'package'}), field("tags", "highlights", "Caracteristici", { help: "Cardul pachetului afișează primele trei caracteristici." }),
     textarea("bonus", "Bonus / elemente incluse"), url("videoUrl", "Video principal"),
     textarea("videoNote", "Notă video"), lines("moreVideoUrls", "Alte videoclipuri", { help: "Câte un link YouTube pe rând. După Publică, toate apar în lista de videoclipuri a pachetului, alături de videoul principal." }),
   ], { subtitleKey: "category" }), "Opțiuni și configurații comerciale"),
@@ -144,15 +160,21 @@ export const ADMIN_MODULES = {
     checkbox("replaceable", "Conținut demonstrativ"),
   ], { titleKey: "name", subtitleKey: "eventType" }), "Arhivă de testimoniale manuale. Benzile de pe site folosesc integrarea Google/Facebook, configurată în Starea integrărilor și Setări recenzii."),
   partners: moduleDefinition(collection("partners", "Parteneri", {
-    id: "partner", name: "", logoPlaceholder: "", logoMediaId: "", replaceable: false,
+    id: "partner", name: "", logoPlaceholder: "", logoMediaId: "", catalogueLogoId: "", destinationUrl: "", replaceable: false,
   }, [
     id(), text("name", "Nume"), text("logoPlaceholder", "Nume afișat fără siglă"),
-    mediaId("logoMediaId", "Logo"), checkbox("replaceable", "Conținut demonstrativ"),
-  ], { titleKey: "name" }), "Identități și logo-uri aprobate"),
+    url("destinationUrl", "Site-ul partenerului"),
+    select("catalogueLogoId", "Siglă din catalog", [
+      { value: "", label: "Nicio siglă din catalog" },
+      ...PARTNER_CATALOG.filter(entry => entry.logo).map(entry => ({ value: entry.id, label: entry.name })),
+    ]),
+    mediaId("logoMediaId", "Siglă din bibliotecă", { imageOnly: true, help: "Sigla aleasă aici are prioritate față de cea din catalog." }),
+    checkbox("replaceable", "Marcaj demonstrativ"),
+  ], { titleKey: "name", subtitleKey: "destinationUrl" }), "Lista publică din secțiunea Parteneri de pe prima pagină. Ordinea listei stabilește ordinea pe site."),
   reviewSettings: moduleDefinition(object("reviewSettings", "Setări recenzii", [
     checkbox("enabled", "Afișează recenziile"), text("heading", "Titlu"),
     textarea("description", "Descriere"), checkbox("googleEnabled", "Google"),
-    checkbox("facebookEnabled", "Facebook"), number("maxItems", "Număr maxim", { min: 1, max: 20 }),
+    checkbox("facebookEnabled", "Facebook"), number("maxItems", "Limită pe sursă API", { min: 1, max: 20, help: "Widgetul Facebook Elfsight folosește setările proprii." }),
   ]), "Afișare Google/Facebook. Google Places furnizează cel mult 5 recenzii; numărul maxim poate limita afișarea, fără să extindă rezultatele sursei. Cheile și tokenurile se configurează numai în Vercel."),
   cookieSettings: moduleDefinition(object("cookieSettings", "Cookies", [
     text("title", "Titlu"), textarea("summary", "Rezumat"),
@@ -171,7 +193,7 @@ export const ADMIN_MODULES = {
 
 export const MODULE_ORDER = [
   "siteDetails", "contactSettings", "businessHours", "socialLinks", "navigation", "footer",
-  "homePage", "galleryPage", "packagesPage", "faqPage", "contactPage", "blogPage",
+  "homePage", "galleryPage", "packagesPage", "faqPage", "contactPage", "blogPage", "servicePages",
   "mediaItems", "packages", "faqs", "testimonials", "partners", "reviewSettings",
   "cookieSettings", "legalPages", "blog",
 ];

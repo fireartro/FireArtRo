@@ -10,7 +10,7 @@ export default function AdminDashboard({ onNavigate }) {
       <p className="cms-publication-date">Ultima publicare: {draft.publishedAt ? new Date(draft.publishedAt).toLocaleString('ro-RO') : 'Nu există o publicare confirmată.'}</p>
     </section>
     <section className="cms-dashboard-work"><h2>Lucrează la site</h2><nav className="cms-shortcuts" aria-label="Acces rapid">{[
-      ['homePage','Prima pagină','Texte, imagini de categorii și cadre promovate'],['packages','Pachete','Imagini, încadrare, opțiuni și videoclipuri'],['mediaItems','Galerie / media','Descrieri, categorii și încadrarea fotografiilor'],['partners','Parteneri','Sigle și numele colaboratorilor'],['quotes','Cereri de ofertă','Solicitările primite prin site'],['inbox','Mesaje','Corespondența cu clienții'],
+      ['homePage','Prima pagină','Texte, imagini de categorii și cadre promovate'],['packages','Pachete','Imagini, încadrare, opțiuni și videoclipuri'],['mediaItems','Galerie / media','Descrieri, categorii și încadrarea fotografiilor'],['partners','Parteneri','Sigle și numele colaboratorilor'],['testimonials','Recenzii','Afișare pe site, surse și arhivă manuală'],['quotes','Cereri de ofertă','Solicitările primite prin site'],['inbox','Mesaje','Corespondența cu clienții'],
     ].map(([key,label,description])=><button className="admin-button" key={key} onClick={()=>onNavigate(key)}><span><strong>{label}</strong><small>{description}</small></span></button>)}</nav></section>
   </section>;
 }

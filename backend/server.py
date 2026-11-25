@@ -365,7 +365,7 @@ class QuoteCreate(BaseModel):
     email: str = Field(min_length=5, max_length=160)
     locality: str = Field(min_length=2, max_length=120)
     event_location: Optional[str] = Field(default="", max_length=180)
-    event_type: str = Field(min_length=2, max_length=80)
+    event_type: str = Field(min_length=1, max_length=120)
     event_date: str = Field(min_length=10, max_length=10)
     services: List[str] = Field(min_length=1, max_length=12)
     package_id: Optional[str] = Field(default="", max_length=100)

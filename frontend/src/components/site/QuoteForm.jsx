@@ -78,13 +78,14 @@ const submissionKey = ({ company_website: _honeypot, ...data }) => JSON.stringif
   ])),
 );
 
-const queryPrefill = (showOptions) => {
-  if (typeof window === "undefined") return {};
-  const requestedService = new URLSearchParams(window.location.search).get("service");
-  const service = showOptions.find(
-    (item) => item.label.localeCompare(requestedService || "", "ro", { sensitivity: "base" }) === 0,
-  );
-  return service ? { services: [service.label] } : {};
+const sameServiceLabel = (label, query) => label.localeCompare(query || "", "ro", { sensitivity: "base" }) === 0;
+
+const findServiceOption = (options, query) => {
+  const legacyLabel = query === "Efecte speciale" ? "Alte efecte pirotehnice" : query;
+  const defaultOption = CMS_DEFAULTS.contactPage.showOptions.find(option => sameServiceLabel(option.label, legacyLabel));
+  return options.find(option => option.id === query)
+    || options.find(option => sameServiceLabel(option.label, query))
+    || options.find(option => defaultOption && option.id === defaultOption.id);
 };
 
 export const QuoteForm = () => {
@@ -117,12 +118,11 @@ export const QuoteForm = () => {
   );
 
   useEffect(() => {
-    const resolveService = (label) => {
-      const mapped = label === "Efecte speciale" ? "Alte efecte pirotehnice" : label;
-      return showOptions.find((option) => option.label.localeCompare(mapped || "", "ro", { sensitivity: "base" }) === 0)?.label;
-    };
+    const resolveService = value => findServiceOption(showOptions, value)?.label;
     const storedPrefill = readContactPrefill();
-    const urlPrefill = queryPrefill(showOptions);
+    const requestedService = new URLSearchParams(window.location.search).get("service");
+    const service = resolveService(requestedService);
+    const urlPrefill = service ? { services: [service] } : {};
     if (Object.keys(storedPrefill).length || Object.keys(urlPrefill).length) {
       setForm((current) => ({
         ...current,

@@ -26,6 +26,7 @@ export default function usePageMeta({
   const schemaText = schema ? JSON.stringify(schema).replace(/</g, "\\u003c") : "";
 
   useEffect(() => {
+    if (window.location.pathname === "/admin") return;
     const canonicalUrl = `${CANONICAL_SITE_URL}${path}`;
     const imageUrl = image.startsWith("http") ? image : `${CANONICAL_SITE_URL}${image}`;
     document.title = title;

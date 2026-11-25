@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAdminDraft } from './AdminDraftContext';
+import { ADMIN_PREVIEW_ROUTES, ARTICLE_PREVIEW_PATH } from './adminPreviewRoutes';
 
-const pages = {'/':'Acasă','/galerie':'Galerie','/pachete':'Pachete','/intrebari-frecvente':'Întrebări','/contact':'Contact','/blog':'Blog'};
 const sizes = {desktop:[1440,900],tablet:[834,1112],phone:[390,844]};
-export default function AdminPreview({ open, onClose }) {
+export default function AdminPreview({ open, onClose, target }) {
   const { draft } = useAdminDraft();
   const [path, setPath] = useState('/');
   const [viewport, setViewport] = useState('desktop');
@@ -15,8 +15,17 @@ export default function AdminPreview({ open, onClose }) {
   const frameRef=useRef(null);
   const draftRef=useRef(draft);
   draftRef.current=draft;
+  const article = path === ARTICLE_PREVIEW_PATH ? target?.article : undefined;
+  const anchor = path === target?.path ? target.anchor : undefined;
+  const articleRef = useRef(article);
+  articleRef.current = article;
   const readyRef=useRef(false);
   const [available,setAvailable]=useState(()=>window.innerWidth-32);
+  const frameSource = `/admin?previzualizare=1&pagina=${encodeURIComponent(path)}${anchor ? `&ancora=${encodeURIComponent(anchor)}` : ''}`;
+
+  useLayoutEffect(() => {
+    if (visible && target) setPath(target.path);
+  }, [visible, target]);
 
   useEffect(()=>{
     if(!visible) return undefined;
@@ -26,22 +35,23 @@ export default function AdminPreview({ open, onClose }) {
       if(event.data?.type === 'fireart:preview-key') {
         if(event.data.key === 'Escape')onCloseRef.current();
         if(event.data.key === 'Tab') {
-          const buttons=[...dialogRef.current.querySelectorAll('header button')].filter(button=>!button.disabled);
-          (event.data.shiftKey ? buttons[buttons.length-1] : buttons[0])?.focus();
+          const controls=[...dialogRef.current.querySelectorAll('header button, header select')].filter(control=>!control.disabled);
+          (event.data.shiftKey ? controls[controls.length-1] : controls[0])?.focus();
         }
         return;
       }
       if(event.data?.type !== 'fireart:preview-ready')return;
       readyRef.current=true;
-      frameRef.current.contentWindow.postMessage({type:'fireart:preview-content',content:draftRef.current},window.location.origin);
+      const article = articleRef.current;
+      frameRef.current.contentWindow.postMessage({type:'fireart:preview-content',content:draftRef.current,...(article ? {article} : {})},window.location.origin);
     };
     const resize=()=>setAvailable(Math.max(200,window.innerWidth-32));
     resize();window.addEventListener('message',receive);window.addEventListener('resize',resize);
     return ()=>{window.removeEventListener('message',receive);window.removeEventListener('resize',resize);readyRef.current=false;};
-  },[visible,path]);
+  },[visible,frameSource]);
   useEffect(()=>{
-    if(visible && readyRef.current) frameRef.current?.contentWindow.postMessage({type:'fireart:preview-content',content:draft},window.location.origin);
-  },[draft,visible]);
+    if(visible && readyRef.current) frameRef.current?.contentWindow.postMessage({type:'fireart:preview-content',content:draft,...(article ? {article} : {})},window.location.origin);
+  },[draft,article,visible]);
 
   useLayoutEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
@@ -122,11 +132,17 @@ export default function AdminPreview({ open, onClose }) {
   const [width,height]=sizes[viewport];
   const scale=Math.min(1,available/width);
   return createPortal(<div ref={dialogRef} tabIndex={-1} className="cms-preview" role="dialog" aria-modal="true" aria-labelledby="cms-preview-title">
-    <header><strong id="cms-preview-title">Previzualizare draft</strong><nav>{Object.entries(pages).map(([key, label]) => <button key={key} aria-pressed={path === key} onClick={() => setPath(key)}>{label}</button>)}</nav>
+    <header><strong id="cms-preview-title">Previzualizare draft</strong>
+      <label className="cms-preview-route">Pagină
+        <select value={path} onChange={event => setPath(event.target.value)}>
+          {Object.entries(ADMIN_PREVIEW_ROUTES).map(([key, label]) => <option value={key} key={key}>{label}</option>)}
+          {target?.article && <option value={ARTICLE_PREVIEW_PATH}>Articolul din editor</option>}
+        </select>
+      </label>
       <div><button aria-pressed={viewport === 'desktop'} onClick={() => setViewport('desktop')}>Desktop</button><button aria-pressed={viewport === 'tablet'} onClick={() => setViewport('tablet')}>Tabletă</button><button aria-pressed={viewport === 'phone'} onClick={() => setViewport('phone')}>Telefon</button><button ref={closeButtonRef} onClick={onClose}>Închide</button></div></header>
     <p className="cms-preview-dimensions">{width} × {height} px · previzualizare a draftului curent</p>
     <div className={`cms-preview-frame is-${viewport}`} style={{width:width*scale,height:height*scale,minHeight:0}}>
-      <iframe key={path} ref={frameRef} title="Previzualizare site" aria-description="Previzualizare doar pentru citire. Folosește Page Down pentru derulare și Escape pentru închidere." tabIndex={0} src={`/admin?previzualizare=1&pagina=${encodeURIComponent(path)}`} style={{width,height,transform:`scale(${scale})`,transformOrigin:'top left'}}/>
+      <iframe key={frameSource} ref={frameRef} title="Previzualizare site" aria-description="Previzualizare doar pentru citire. Folosește Page Down pentru derulare și Escape pentru închidere." tabIndex={0} src={frameSource} style={{width,height,transform:`scale(${scale})`,transformOrigin:'top left'}}/>
     </div>
   </div>, document.body);
 }

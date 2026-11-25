@@ -246,6 +246,8 @@ main.fa-blog-page[data-design="night-runway"] {
 .fa-blog-hero .fa-kicker { grid-column: 1 / -1; }
 .fa-blog-hero h1 { font-size: clamp(3.5rem, 4vw, 7rem); line-height: 0.9; }
 .fa-blog-hero .nr-shell > p:last-child { max-width: 42rem; margin: 0; padding-left: 1.2rem; border-left: 1px solid var(--nr-electric); color: var(--nr-muted); font-size: var(--nr-type-lead); line-height: 1.6; }
+.fa-blog-hero .fa-blog-hero__media { display: block; margin-top: clamp(1.25rem, 3vw, 2.5rem); }
+.fa-blog-hero .fa-blog-hero__media:empty { display: none; }
 
 .fa-blog-archive { min-height: 45vh; }
 .fa-blog-archive.nr-section { padding-block: clamp(3.5rem, 5vw, 5rem); }

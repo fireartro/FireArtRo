@@ -56,6 +56,16 @@ test('renders archive and article content supplied by the public data reader', (
   expect(article.meta.title).toContain('Eveniment real');
 });
 
+test('renders the Blog archive hero media selected in the CMS', () => {
+  const media = CMS_DEFAULTS.mediaItems.find((item) => item.type === 'image' && item.alt);
+  const content = { ...CMS_DEFAULTS, blogPage: { ...CMS_DEFAULTS.blogPage, heroMediaId: media.id } };
+  const archive = renderPublicPage('/blog', { ...data, publication: { ...publication, content } });
+  const hero = archive.html.match(/<header class="fa-blog-hero">[\s\S]*?<\/header>/)?.[0];
+
+  expect(hero).toContain(`alt="${media.alt}"`);
+  expect(renderPublicPage('/blog', data).html).not.toContain('fa-blog-hero__media');
+});
+
 test('unknown pages, private routes and malformed blog slugs have no public renderer', () => {
   for (const path of ['/admin', '/api/content', '/does-not-exist', '/blog/a/b', '//evil.example', '/blog/%2fadmin']) {
     expect(publicPageForPath(path)).toBeNull();

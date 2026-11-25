@@ -1,0 +1,127 @@
+.cms-reviews .cms-reviews__actions,
+.cms-reviews .cms-reviews__sources > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cms-reviews .cms-reviews__actions a {
+  text-decoration: none;
+}
+
+.cms-reviews :is(.cms-reviews__settings, .cms-reviews__sources, .cms-reviews__archive) > p,
+.cms-reviews .cms-reviews__sources > header p {
+  margin: 5px 0 14px;
+  max-width: 80ch;
+  color: var(--admin-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.cms-reviews .cms-reviews__settings,
+.cms-reviews .cms-reviews__sources {
+  margin-block: 20px 28px;
+}
+
+.cms-reviews .cms-reviews__settings h2,
+.cms-reviews .cms-reviews__sources h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.cms-reviews .cms-reviews__sources > header {
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.cms-reviews .cms-reviews__sources > header p {
+  margin-bottom: 0;
+}
+
+.cms-reviews__source-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cms-reviews__source-grid > article {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  background: var(--admin-surface);
+}
+
+.cms-reviews__source-grid :is(h3, h4, p, dl, dd) {
+  margin: 0;
+}
+
+.cms-reviews__source-grid h3 {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.cms-reviews__source-grid :is(p, dt) {
+  color: var(--admin-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.cms-reviews__display-states {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 20px;
+  row-gap: 8px;
+}
+
+.cms-reviews__display-states dd {
+  color: var(--admin-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cms-reviews__api {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--admin-border);
+}
+
+.cms-reviews__api h4,
+.cms-reviews__diagnostic strong {
+  margin-bottom: 3px;
+  color: var(--admin-ink);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.cms-reviews__diagnostic {
+  overflow-wrap: anywhere;
+}
+
+.cms-reviews .cms-reviews__policy a {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 6px;
+  color: var(--admin-accent);
+}
+
+.cms-reviews :is(a, button) svg {
+  width: 15px;
+  height: 15px;
+}
+
+@media (max-width: 680px) {
+  .cms-reviews__source-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cms-reviews .cms-reviews__actions > .admin-button,
+  .cms-reviews .cms-reviews__sources > header > .admin-button {
+    min-height: 44px;
+  }
+}
