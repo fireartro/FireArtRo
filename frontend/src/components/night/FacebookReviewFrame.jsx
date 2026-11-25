@@ -75,6 +75,8 @@ export default function FacebookReviewFrame({ reviewsHref }) {
       currentStatus = "unavailable";
       setStatus(currentStatus);
     }, WIDGET_READY_TIMEOUT_MS);
+    // Attach the message and load listeners before navigating, even with a warm cache.
+    if (!frame.hasAttribute("src")) frame.src = WIDGET_ORIGIN;
     return () => {
       stopChecks();
       window.removeEventListener("message", syncWidget);
@@ -98,7 +100,6 @@ export default function FacebookReviewFrame({ reviewsHref }) {
           ref={frameRef}
           className="fa-page-reviews__widget"
           title="Recenzii FireArtRo de pe Facebook"
-          src={WIDGET_ORIGIN}
           loading="eager"
           referrerPolicy="no-referrer"
           sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
