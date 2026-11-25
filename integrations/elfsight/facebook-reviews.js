@@ -33,32 +33,37 @@
       if (previous) carousel.removeEventListener('wheel', previous.onWheel, true);
       swiper.setGrabCursor?.();
 
-      let lastWheel = 0;
-      let distance = 0;
-      let advanced = false;
+      let settleTimer;
       function onWheel(event) {
-        if (element.swiper !== swiper || swiper.destroyed || event.ctrlKey
+        if (element.swiper !== swiper || swiper.destroyed || swiper.isLocked
+          || swiper.touchEventsData?.isTouched || event.ctrlKey
           || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
-        const now = performance.now();
-        if (now - lastWheel > 170) {
-          distance = 0;
-          advanced = false;
-        }
-        lastWheel = now;
 
-        const forward = event.deltaX > 0;
-        if (swiper.isLocked || (!swiper.params.loop && (forward ? swiper.isEnd : swiper.isBeginning))) return;
-        if (event.cancelable) event.preventDefault();
-        if (advanced) return;
-
-        // A two-finger swipe delivers several small horizontal wheel deltas.
         const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? element.clientWidth : 1;
-        distance += event.deltaX * unit;
-        if (Math.abs(distance) < 18 || swiper.animating) return;
+        const direction = swiper.rtlTranslate ? -1 : 1;
+        const position = swiper.animating ? swiper.getTranslate() : swiper.translate * direction;
+        const next = Math.max(swiper.maxTranslate(), Math.min(swiper.minTranslate(),
+          position - event.deltaX * unit * direction));
+        if (next === position) return;
+        if (event.cancelable) event.preventDefault();
 
-        const speed = motion.matches ? 0 : 330;
-        const moved = distance > 0 ? swiper.slideNext(speed) : swiper.slidePrev(speed);
-        advanced = moved !== false;
+        if (swiper.animating) {
+          // Finish Swiper's pending transition before taking control of its position.
+          swiper.setTransition(0);
+          swiper.wrapperEl.dispatchEvent(new Event('transitionend'));
+        }
+        swiper.setTranslate(next);
+        swiper.updateActiveIndex();
+        swiper.updateSlidesClasses();
+
+        // Trackpads already send momentum deltas. Align when those events stop.
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(() => {
+          if (element.swiper === swiper && !swiper.destroyed && !swiper.animating
+            && !swiper.touchEventsData?.isTouched) {
+            swiper.slideToClosest(motion.matches ? 0 : 180);
+          }
+        }, 150);
       }
       enhancedCarousels.set(carousel, { swiper, onWheel });
       carousel.addEventListener('wheel', onWheel, { capture: true, passive: false });
