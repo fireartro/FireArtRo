@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import contract from './siteContent.schema.json';
+import { REVIEW_SECTION_TITLE } from '@/data/cmsDefaults';
 import { resolveManagedPartnerSeed } from '@/data/partnerCatalog';
 
 // The field contract is generated from backend/cms_models.py.
@@ -105,8 +106,11 @@ export function validateManagedContent(content) {
     errors: result.error.issues.map(issue => ({ path: issue.path.join('.'), message: issue.code === 'custom' ? issue.message : 'Verifică valoarea și limitele acestui câmp.' })),
   };
 }
-export function normalizePublishedContent(content) {
-  const result = validateManagedContent(content);
+export function normalizePublishedContent(snapshot) {
+  const result = validateManagedContent(snapshot);
   if (result.errors.length) throw new Error('Conținut public invalid.');
-  return resolveManagedPartnerSeed(result.content);
+  const content = resolveManagedPartnerSeed(result.content);
+  const reviews = content.reviewSettings;
+  if (reviews.heading.toLowerCase() !== 'recenzii verificate') return content;
+  return { ...content, reviewSettings: { ...reviews, heading: REVIEW_SECTION_TITLE } };
 }

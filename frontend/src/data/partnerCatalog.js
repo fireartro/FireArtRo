@@ -76,8 +76,7 @@ const normalize = name => name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").
 const catalogueByName = new Map(PARTNER_CATALOG.flatMap(partner => [partner.name, ...(partner.aliases || [])].map(name => [normalize(name), partner])));
 const catalogueById = new Map(PARTNER_CATALOG.map(partner => [partner.id, partner]));
 
-export const CURRENT_PARTNER_TITLE = "Împreună, dincolo de spectacol.";
-export const CURRENT_PARTNER_DESCRIPTION = "Parteneri & colaboratori";
+export const CURRENT_PARTNER_TITLE = "Parteneri și colaboratori";
 const LEGACY_PARTNER_TITLE = "O rețea care prinde formă.";
 const LEGACY_PARTNER_DESCRIPTION = "Locații, organizatori și echipe tehnice intră în aceeași orbită.";
 
@@ -101,28 +100,22 @@ export function isOriginalPartnerSeed(partners) {
   });
 }
 
-export function resolvePartnerCopy(copy, partners) {
-  if (!isOriginalPartnerSeed(partners)) return copy;
+export function resolvePartnerCopy(copy) {
+  if (![LEGACY_PARTNER_TITLE, "Împreună, dincolo de spectacol."].includes(copy.title)) return copy;
   return {
     ...copy,
-    title: copy.title === LEGACY_PARTNER_TITLE ? CURRENT_PARTNER_TITLE : copy.title,
-    description: !copy.description || copy.description === LEGACY_PARTNER_DESCRIPTION
-      ? CURRENT_PARTNER_DESCRIPTION : copy.description,
+    title: CURRENT_PARTNER_TITLE,
+    description: [LEGACY_PARTNER_DESCRIPTION, "Parteneri & colaboratori"].includes(copy.description) ? "" : copy.description,
   };
 }
 
 // The old public page already replaced this exact seed. Adopt the same data
 // for editing and for previews without publishing or changing custom lists.
 export function resolveManagedPartnerSeed(content) {
-  if (!isOriginalPartnerSeed(content.partners)) return content;
-  return {
-    ...content,
-    partners: createManagedPartners(),
-    homePage: {
-      ...content.homePage,
-      partners: resolvePartnerCopy(content.homePage.partners, content.partners),
-    },
-  };
+  const copy = resolvePartnerCopy(content.homePage.partners);
+  const partners = isOriginalPartnerSeed(content.partners) ? createManagedPartners() : content.partners;
+  if (copy === content.homePage.partners && partners === content.partners) return content;
+  return { ...content, partners, homePage: { ...content.homePage, partners: copy } };
 }
 
 export function resolveDisplayPartners(partners, mediaItems) {

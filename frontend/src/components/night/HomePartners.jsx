@@ -19,7 +19,7 @@ export default function HomePartners() {
     if (marketingAllowed || !allPartners.some(partner => isOptionalGoogleMedia(partner.logo))) return allPartners;
     return allPartners.map(partner => isOptionalGoogleMedia(partner.logo) ? { ...partner, logo: "" } : partner);
   }, [allPartners, marketingAllowed]);
-  const copy = resolvePartnerCopy(homePage.partners, managedPartners);
+  const copy = resolvePartnerCopy(homePage.partners);
   if (!partners.length) return null;
   return <section className="fa-partners fa-partners-gallery" id="parteneri" data-home-scene="partners" data-testid="home-partners" aria-labelledby="fa-partners-title">
     <PartnerScrollScene partners={partners} copy={copy} reduceMotion={reduceMotion} />

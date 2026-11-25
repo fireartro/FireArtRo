@@ -11,7 +11,7 @@ import {
 } from "./businessContent";
 import { NAV_LINKS } from "./content";
 import { HOME_GALLERY } from "./homeExperience";
-import { createManagedPartners, CURRENT_PARTNER_DESCRIPTION, CURRENT_PARTNER_TITLE } from "./partnerCatalog";
+import { createManagedPartners, CURRENT_PARTNER_TITLE } from "./partnerCatalog";
 import { FAQ_DEFAULTS } from "./faqContent";
 import { LEGAL_PAGES_DEFAULT } from "./legalContent";
 import ownerRevision from "./ownerRevision.json";
@@ -46,6 +46,8 @@ const links = (items, prefix) => items.map((item) => ({ id: `${prefix}-${optionI
 
 // The single, JSON-only SiteContent v1 fallback shared by public rendering and Admin.
 // Empty published arrays are intentional: consumers must never repopulate them.
+export const REVIEW_SECTION_TITLE = "Ce spun clienții despre noi";
+
 export const CMS_DEFAULTS = applyOwnerRevision({
   schema_version: 1,
   siteDetails: {
@@ -104,7 +106,7 @@ export const CMS_DEFAULTS = applyOwnerRevision({
       title: "Suntem echipa din spatele spectacolului.",
       body: ["FireArtRo planifică și produce în România show-uri cu drone, artificii profesionale și efecte scenice. Coordonăm conceptul, partea tehnică, logistica și execuția pentru fiecare eveniment."],
     },
-    partners: section("Un show se construiește împreună", CURRENT_PARTNER_TITLE, "", "", CURRENT_PARTNER_DESCRIPTION),
+    partners: section("Un show se construiește împreună", CURRENT_PARTNER_TITLE),
     brief: section("Următorul spectacol", "Spune-ne ce sărbătorești.\nNoi aprindem restul.", "Începe conversația", "/contact"),
     promoSlides: HOME_GALLERY.map((item) => ({
       ...PROMO_SLIDE_TEMPLATE,
@@ -164,7 +166,7 @@ export const CMS_DEFAULTS = applyOwnerRevision({
   testimonials: TESTIMONIAL_ITEMS.map((item) => ({ ...item, source: item.source.toLowerCase() })),
   partners: createManagedPartners(),
   reviewSettings: {
-    enabled: true, heading: "Recenzii verificate", description: "",
+    enabled: true, heading: REVIEW_SECTION_TITLE, description: "",
     googleEnabled: true, facebookEnabled: true, maxItems: 8,
   },
   cookieSettings: COOKIE_SETTINGS_DEFAULT,
