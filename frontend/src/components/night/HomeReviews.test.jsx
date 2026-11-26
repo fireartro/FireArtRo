@@ -65,6 +65,9 @@ test("preserves Google Maps author attribution and source links only while exter
   seedConsent({ analytics: false, marketing: true });
   await render();
   const card = container.querySelector("[data-review-card]");
+  expect(container.querySelector("[data-review-provider='google'] h2").textContent).toBe("Recenzii de pe Google Maps");
+  expect(card.querySelector("blockquote").contains(card.querySelector("footer"))).toBe(false);
+  expect(card.querySelector("[aria-label='5 din 5 stele']").children).toHaveLength(5);
   expect(card.querySelector(`a[href='${review.url}']`)).not.toBeNull();
   expect(card.querySelector(`a[href='${review.author_url}']`).textContent).toContain("Ana M.");
   expect(card.querySelector("img").getAttribute("src")).toBe(review.author_photo_url);

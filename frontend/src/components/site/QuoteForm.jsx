@@ -7,6 +7,7 @@ import { buildWhatsappLink } from "@/lib/constants";
 import { readContactPrefill } from "@/lib/contactNavigation";
 import { trackQuoteAccepted } from "@/lib/analytics";
 import useManagedContent from "@/hooks/useManagedContent";
+import ContactLocations from "./ContactLocations";
 import TurnstileWidget from "./TurnstileWidget";
 
 const BACKEND_URL = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
@@ -351,6 +352,7 @@ export const QuoteForm = () => {
             )}
           </div>
           <p className="nr-contact-hours">{businessHours.label}</p>
+          <ContactLocations siteDetails={siteDetails} />
         </header>
 
         <div className="nr-contact-form-wrap">

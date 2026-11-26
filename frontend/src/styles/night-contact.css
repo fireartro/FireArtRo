@@ -169,6 +169,24 @@
   line-height: 1.5;
 }
 
+.nr-contact-locations {
+  max-width: 28rem;
+  margin-top: 1.5rem;
+  scroll-margin-top: 6rem;
+}
+
+.nr-contact-locations .nr-contact-direct { margin-top: 0.65rem; }
+
+.nr-contact-counties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  margin-top: 0.8rem;
+  font-size: var(--nr-type-label);
+}
+
+.nr-contact-counties a { color: #b8ddff; text-underline-offset: 0.2em; }
+
 .nr-contact-form-wrap {
   position: relative;
   min-width: 0;

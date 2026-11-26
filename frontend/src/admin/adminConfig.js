@@ -50,7 +50,7 @@ export const ADMIN_MODULES = {
     text("legalName", "Denumire juridică"), text("registrationNumber", "Nr. Registrul Comerțului"),
     text("taxId", "CUI"), textarea("registeredOffice", "Sediu social"),
     text("shareCapital", "Capital social", { maxLength: 80, help: "Completează numai valoarea confirmată din documentele firmei." }),
-    textarea("mainOffice", "Sediu principal"), textarea("secondaryOffice", "Sediu secundar"),
+    textarea("mainOffice", "Magazin și punct de lucru"), textarea("secondaryOffice", "Locație administrativă"),
     text("seoTitle", "Titlu SEO", { maxLength: 160 }), textarea("seoDescription", "Descriere SEO", { maxLength: 320 }),
   ]), "Identitate, contact, sedii și SEO"),
   contactSettings: moduleDefinition(object("contactSettings", "Contact direct", [
@@ -123,7 +123,7 @@ export const ADMIN_MODULES = {
         textarea("a", "Răspuns", { required: true, maxLength: 4000 }),
       ], { titleKey: "q" }),
     ])
-  )), "Titluri, introduceri, secțiuni și întrebări pentru cele patru pagini publice. Pachetele se editează din Pachete."),
+  )), "Titluri, texte și întrebări pentru paginile de servicii și zonele deservite. Pachetele se editează din Pachete."),
   mediaItems: moduleDefinition(collection("mediaItems", "Galerie / media", MEDIA_TEMPLATE, [
     id(), select("type", "Tip", ["image", "video", "youtube", "promo"]),
     text("title", "Titlu"), textarea("shortDescription", "Descriere"),

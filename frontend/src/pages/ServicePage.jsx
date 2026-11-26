@@ -38,7 +38,9 @@ export default function ServicePage({ service: suppliedService } = {}) {
           description: service.description,
           url: `${CANONICAL_SITE_URL}${path}`,
           provider: { "@type": "Organization", name: siteDetails.name, url: `${CANONICAL_SITE_URL}/` },
-          areaServed: { "@type": "Country", name: siteDetails.areaServed },
+          areaServed: service.county
+            ? { "@type": "AdministrativeArea", name: `Județul ${service.county}` }
+            : { "@type": "Country", name: siteDetails.areaServed },
         },
         {
           "@type": "BreadcrumbList",

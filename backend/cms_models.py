@@ -611,6 +611,13 @@ class ServicePages(StrictModel):
     drones: ServicePageContent
     day: ServicePageContent
     effects: ServicePageContent
+    satuMare: ServicePageContent | None = None
+    cluj: ServicePageContent | None = None
+    maramures: ServicePageContent | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_unspecified_regional_pages(self, handler):
+        return {key: page for key, page in handler(self).items() if page is not None}
 
 
 class SiteContent(StrictModel):

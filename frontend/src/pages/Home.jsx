@@ -1,5 +1,6 @@
 import { CMS_DEFAULTS } from "@/data/cmsDefaults";
 import { CANONICAL_SITE_URL } from "@/data/businessContent";
+import { ORGANIZATION_ID } from "@/data/storeLocation";
 import Navbar from "@/components/site/Navbar";
 import Hero from "@/components/site/Hero";
 import PageEnd from "@/components/site/PageEnd";
@@ -14,7 +15,6 @@ import "@/styles/night-home-film.css";
 
 export default function Home() {
   const siteDetails = useManagedContent("siteDetails", CMS_DEFAULTS.siteDetails);
-  const businessHours = useManagedContent("businessHours", CMS_DEFAULTS.businessHours);
   const socialLinks = useManagedContent("socialLinks", CMS_DEFAULTS.socialLinks);
 
   usePageMeta({
@@ -25,7 +25,8 @@ export default function Home() {
       "@context": "https://schema.org",
       "@graph": [
         {
-          "@type": ["Organization", "LocalBusiness", "ProfessionalService"],
+          "@type": "Organization",
+          "@id": ORGANIZATION_ID,
           name: siteDetails.name,
           legalName: siteDetails.legalName,
           url: CANONICAL_SITE_URL,
@@ -34,19 +35,18 @@ export default function Home() {
           taxID: siteDetails.taxId,
           address: {
             "@type": "PostalAddress",
-            streetAddress: siteDetails.mainOffice,
+            streetAddress: siteDetails.registeredOffice,
             addressCountry: "RO",
           },
           sameAs: socialLinks.map((profile) => profile.href),
           areaServed: { "@type": "Country", name: siteDetails.areaServed },
-          openingHours: businessHours.schema,
           description:
             "Show-uri de artificii profesionale, show-uri de drone și alte efecte pirotehnice pentru evenimente.",
         },
         {
           "@type": "Service",
           name: "Show-uri de artificii profesionale și drone",
-          provider: { "@type": "Organization", name: siteDetails.name },
+          provider: { "@id": ORGANIZATION_ID },
           areaServed: { "@type": "Country", name: siteDetails.areaServed },
         },
       ],

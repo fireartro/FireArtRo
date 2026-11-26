@@ -4,7 +4,7 @@ import { SERVICE_PAGE_DEFAULTS } from '@/data/serviceCatalog';
 
 function editorContent(content) {
   const normalized = normalizePublishedContent(content);
-  return normalized.servicePages ? normalized : { ...normalized, servicePages: SERVICE_PAGE_DEFAULTS };
+  return { ...normalized, servicePages: { ...SERVICE_PAGE_DEFAULTS, ...normalized.servicePages } };
 }
 
 export function setContentPath(content, path, value) {
@@ -19,7 +19,7 @@ export function setContentPath(content, path, value) {
 
 export const changedModules = (before, after) => after ? Object.keys(after).filter(key => {
   if (key === 'schema_version') return false;
-  const previous = before?.[key] ?? (before && key === 'servicePages' ? SERVICE_PAGE_DEFAULTS : undefined);
+  const previous = before && key === 'servicePages' ? { ...SERVICE_PAGE_DEFAULTS, ...before.servicePages } : before?.[key];
   return JSON.stringify(previous) !== JSON.stringify(after[key]);
 }) : [];
 
