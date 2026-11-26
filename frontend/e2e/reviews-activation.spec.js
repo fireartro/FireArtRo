@@ -133,6 +133,40 @@ test('a legacy API response leaves the Facebook link available when Google has n
   await expect(section.locator('[data-review-provider="google"]')).toHaveCount(0);
 });
 
+test('Google cards use the Facebook glass dimensions and scroll freely with wheel and mouse drag', async ({page}) => {
+  await page.setViewportSize({width:834,height:1112});
+  await mockFacebookWidget(page);
+  const [google] = payload.providers;
+  const reviews = Array.from({length:5}, (_, index) => ({
+    ...google.reviews[0], id:`test-google-${index}`, author:`Autor test ${index + 1}`, author_photo_url:'',
+  }));
+  await openReviews(page, {providers:[{...google, reviews}]});
+  await permitExternalContent(page);
+  const rail = page.getByRole('region',{name:'Recenzii de pe Google Maps',exact:true});
+  const bubble = rail.locator('blockquote').first();
+  await expect(bubble).toHaveCSS('border-radius','12px');
+  await expect(bubble).toHaveCSS('height','166px');
+  await expect(bubble).toHaveCSS('padding','24px');
+  await expect(rail).toHaveAttribute('data-scrollable','true');
+  await rail.scrollIntoViewIfNeeded();
+  const box = await rail.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + 44);
+  await page.mouse.wheel(740, 0);
+  await expect.poll(() => rail.evaluate(element => element.scrollLeft)).toBeGreaterThan(650);
+  await page.getByRole('button',{name:'Mergi la recenzia 1',exact:true}).click();
+  await expect.poll(() => rail.evaluate(element => element.scrollLeft)).toBe(0);
+  await rail.scrollIntoViewIfNeeded();
+  const dragBox = await rail.boundingBox();
+  await page.mouse.move(dragBox.x + dragBox.width * 0.8, dragBox.y + 44);
+  await page.mouse.down();
+  await page.mouse.move(dragBox.x + dragBox.width * 0.12, dragBox.y + 44, {steps:7});
+  await page.mouse.up();
+  await expect.poll(() => rail.evaluate(element => element.scrollLeft)).toBeGreaterThan(460);
+  await rail.focus();
+  await page.keyboard.press('End');
+  await expect(page.getByRole('button',{name:'Mergi la recenzia 4',exact:true})).toHaveAttribute('aria-current','true');
+});
+
 test('Facebook fallback at the end of Contact respects consent and links to the legal notice',async({page})=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await mockFacebookWidget(page);

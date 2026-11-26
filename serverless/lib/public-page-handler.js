@@ -12,6 +12,7 @@ const PUBLIC_PATHS = new Set([
   '/confidentialitate', '/termeni-si-conditii', '/cookies',
   '/servicii/artificii-nunta', '/servicii/spectacole-drone',
   '/servicii/artificii-de-zi', '/servicii/efecte-speciale',
+  '/servicii/artificii-satu-mare', '/servicii/artificii-cluj', '/servicii/artificii-maramures',
 ]);
 const LEGAL_REDIRECTS = new Map([
   ['/legal/confidentialitate', '/confidentialitate'],

@@ -23,9 +23,7 @@ test("the hydrated homepage schema keeps the crawlable FireArtRo logo", async ()
   });
 
   const schema = JSON.parse(document.getElementById("page-structured-data").textContent);
-  const organization = schema["@graph"].find((item) => (
-    Array.isArray(item["@type"]) && item["@type"].includes("Organization")
-  ));
+  const organization = schema["@graph"].find((item) => item["@type"] === "Organization");
 
   expect(organization.logo).toBe("https://fireart.ro/icon-512.png");
 

@@ -1,3 +1,5 @@
+import { REGIONAL_SERVICES } from "./regionalServices";
+
 // Public service explanations. Package configurations and contact details stay
 // in the published CMS snapshot; this catalogue does not duplicate prices,
 // authorisations, fleet sizes, reviews or event credits.
@@ -162,6 +164,7 @@ export const SERVICE_CATALOG = [
       },
     ],
   },
+  ...REGIONAL_SERVICES,
 ];
 
 export function findService(slug) {
@@ -173,6 +176,7 @@ export const SERVICE_PAGE_KEYS = {
   "spectacole-drone": "drones",
   "artificii-de-zi": "day",
   "efecte-speciale": "effects",
+  ...Object.fromEntries(REGIONAL_SERVICES.map(service => [service.slug, service.key])),
 };
 
 export const SERVICE_PAGE_DEFAULTS = Object.fromEntries(SERVICE_CATALOG.map(service => [

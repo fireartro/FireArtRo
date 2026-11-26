@@ -1470,6 +1470,39 @@
         },
         "effects": {
           "$ref": "#/$defs/ServicePageContent"
+        },
+        "satuMare": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServicePageContent"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "cluj": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServicePageContent"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "maramures": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServicePageContent"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [

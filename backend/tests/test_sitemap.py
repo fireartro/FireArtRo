@@ -54,6 +54,9 @@ def test_sitemap_uses_canonical_origin_and_fixed_public_routes_only():
         "/intrebari-frecvente",
         "/contact",
         "/blog",
+        "/servicii/artificii-satu-mare",
+        "/servicii/artificii-cluj",
+        "/servicii/artificii-maramures",
         "/confidentialitate",
         "/termeni-si-conditii",
         "/cookies",
@@ -103,10 +106,13 @@ def test_service_pages_are_unique_canonical_entries_alongside_existing_pages_and
         f"{CANONICAL_ORIGIN}/servicii/spectacole-drone",
         f"{CANONICAL_ORIGIN}/servicii/artificii-de-zi",
         f"{CANONICAL_ORIGIN}/servicii/efecte-speciale",
+        f"{CANONICAL_ORIGIN}/servicii/artificii-satu-mare",
+        f"{CANONICAL_ORIGIN}/servicii/artificii-cluj",
+        f"{CANONICAL_ORIGIN}/servicii/artificii-maramures",
     }
     actual_services = {location for location in locations if "/servicii/" in location}
     assert actual_services == expected_services
-    assert len(locations) == len(set(locations)) == 14
+    assert len(locations) == len(set(locations)) == 17
     assert all(urlsplit(location).scheme == "https" for location in locations)
     assert all(urlsplit(location).netloc == "fireart.ro" for location in locations)
     assert f"{CANONICAL_ORIGIN}/contact" in locations

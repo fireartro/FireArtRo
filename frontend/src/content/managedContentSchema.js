@@ -55,6 +55,7 @@ const schema = fromContract(contract).superRefine((content, ctx) => {
     visualCategories.add(visual.category);
   });
   for (const [service, page] of Object.entries(content.servicePages || {})) {
+    if (!page) continue;
     page.sections.forEach((section, index) => section.paragraphs.forEach((paragraph, paragraphIndex) => {
       if (!paragraph || paragraph.length > 4000) {
         issue(['servicePages', service, 'sections', index, 'paragraphs', paragraphIndex],
@@ -101,6 +102,11 @@ export function validateManagedContent(content) {
       }
     };
     clean(result.data);
+    if (result.data.servicePages) {
+      for (const [page, value] of Object.entries(result.data.servicePages)) {
+        if (value === null) delete result.data.servicePages[page];
+      }
+    }
   }
   return result.success ? { content: result.data, errors: [] } : { content: null,
     errors: result.error.issues.map(issue => ({ path: issue.path.join('.'), message: issue.code === 'custom' ? issue.message : 'Verifică valoarea și limitele acestui câmp.' })),

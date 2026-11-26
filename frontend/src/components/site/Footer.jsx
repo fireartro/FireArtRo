@@ -64,6 +64,7 @@ export const Footer = () => {
                 <Phone aria-hidden="true" />
                 <span>{phoneDisplay || "Telefon"}</span>
               </a>
+              {siteDetails.mainOffice && <a href="/contact#locatii">Magazin și punct de lucru</a>}
               <a
                 href={whatsappTarget}
                 {...(whatsAppHref ? { target: "_blank", rel: "noopener noreferrer" } : {})}

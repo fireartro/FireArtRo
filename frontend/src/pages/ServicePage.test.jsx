@@ -41,6 +41,7 @@ async function render(slug, content = CMS_DEFAULTS) {
 test("the public service catalogue resolves only known service slugs", () => {
   expect(SERVICE_CATALOG.map((service) => service.slug)).toEqual([
     "artificii-nunta", "spectacole-drone", "artificii-de-zi", "efecte-speciale",
+    "artificii-satu-mare", "artificii-cluj", "artificii-maramures",
   ]);
   expect(findService("spectacole-drone").category).toBe("Show drone");
   expect(findService("__proto__")).toBeUndefined();
@@ -48,7 +49,7 @@ test("the public service catalogue resolves only known service slugs", () => {
   expect(findService("serviciu-inexistent")).toBeUndefined();
 });
 
-test.each(["artificii-nunta", "spectacole-drone", "artificii-de-zi", "efecte-speciale"])(
+test.each(SERVICE_CATALOG.map(service => service.slug))(
   "%s exposes its own canonical, visible description and matching service schema",
   async (slug) => {
     await render(slug);
@@ -62,6 +63,7 @@ test.each(["artificii-nunta", "spectacole-drone", "artificii-de-zi", "efecte-spe
     expect(description.url).toBe(`https://fireart.ro${service.path}`);
     expect(description.description).toBe(service.description);
     expect(description.name).toBe(container.querySelector("h1").textContent);
+    if (service.county) expect(description.areaServed).toEqual({ "@type": "AdministrativeArea", name: `Județul ${service.county}` });
     const crumbs = schema["@graph"].find((entry) => entry["@type"] === "BreadcrumbList");
     expect(crumbs.itemListElement.map((entry) => entry.name)).toEqual(["Acasă", service.title]);
     expect(container.querySelector('nav[aria-label="Fir de navigare"] [aria-current="page"]').textContent).toBe(service.title);

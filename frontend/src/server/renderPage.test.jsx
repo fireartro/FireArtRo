@@ -47,6 +47,22 @@ test('lets the browser select the portrait hero before the client script starts'
   expect(first).toContain('preload="none"');
 });
 
+test('exposes the actual store and links to the counties in the indexable Contact response', () => {
+  const page = renderPublicPage('/contact', data);
+  expect(page.html).toContain('Magazin și punct de lucru');
+  expect(page.html).toContain('Piața Unirii nr. 2, Seini');
+  expect(page.html).toContain('Strada Oltului nr. 1');
+  expect(page.meta.description).toContain('Seini');
+  for (const slug of ['artificii-satu-mare', 'artificii-cluj', 'artificii-maramures']) {
+    const path = `/servicii/${slug}`;
+    expect(page.html).toContain(`href="${path}"`);
+    const county = renderPublicPage(path, data);
+    expect(county.html).toMatch(/<h1[^>]*>Artificii pentru evenimente în /);
+    expect(county.meta.path).toBe(path);
+    expect(county.meta.noindex).toBeFalsy();
+  }
+});
+
 test('renders archive and article content supplied by the public data reader', () => {
   const post = { id: 'public-article', slug: 'eveniment-real', title: 'Eveniment real', excerpt: 'Descriere verificată', body: 'Conținut publicat', published_at: '2026-10-01T12:00:00Z', updated_at: '2026-10-02T12:00:00Z', category: '', cover_media_id: '', cover_alt: '' };
   const archive = renderPublicPage('/blog', { ...data, posts: [post] });
