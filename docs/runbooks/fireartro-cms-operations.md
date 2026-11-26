@@ -16,7 +16,7 @@ Nu publica dacă vezi `Conflict`, `Eroare`, `Câmpuri invalide` sau o încărcar
 
 ## Starea integrărilor
 
-- `Setări → Integrări` arată numai stări: baza de date, media Blob, Google și Facebook. Nu afișează parole, tokenuri, URL-uri interne sau răspunsuri de la furnizori.
+- `Setări → Integrări` afișează stările serviciilor serverului, inclusiv Google Places. Cardul Facebook trimite către verificarea widgetului Elfsight pe site, după acordul pentru Conținut extern.
 - `Necesită configurare` înseamnă că lipsesc variabilele necesare din Vercel. `Configurat` confirmă prezența lor, iar `Funcțional` confirmă și ultima verificare reușită.
 - `Eroare temporară` nu publică date private și nu oprește restul site-ului; verifică logurile Vercel/Atlas, apoi apasă `Verifică din nou` după ce corectezi infrastructura.
 
@@ -56,8 +56,8 @@ Procedura actuală, starea conturilor și pașii proprietarului: [activarea rece
 - Google apare numai când există atât `GOOGLE_PLACES_API_KEY`, cât și `GOOGLE_PLACE_ID`.
 - Recenziile Google sunt cerute proaspăt pentru fiecare răspuns public; nu se pune conținutul Places într-un cache comun. Cardurile păstrează atribuirea autorului, avatarul când este oferit și linkul individual către Google Maps.
 - Cheia Google Places rămâne numai în variabilele server-side. Restricționează cheia la Places API (New), nu o pune în `REACT_APP_*` și nu activa facturarea automat prin cod.
-- Facebook apare numai când există atât `META_PAGE_ID`, cât și `META_PAGE_ACCESS_TOKEN`.
-- Dacă o integrare eșuează, ea dispare fără să blocheze site-ul sau celălalt furnizor.
+- Sursa Facebook se activează în Admin → Recenzii. Pe site, vizitatorii pot deschide pagina de recenzii Facebook, iar widgetul Elfsight se încarcă după acordul pentru Conținut extern.
+- O eroare Google Places lasă sursa Facebook disponibilă. Dacă widgetul Elfsight eșuează, vizitatorii pot accesa recenziile direct pe Facebook.
 
 ## Întreținere
 

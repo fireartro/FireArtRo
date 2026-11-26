@@ -19,7 +19,7 @@ GOOGLE_ENV = {
     "GOOGLE_PLACE_ID": "ChIJFireArtRo",
 }
 
-FACEBOOK_ENV = {
+LEGACY_META_ENV = {
     "META_PAGE_ID": "123456789",
     "META_PAGE_ACCESS_TOKEN": "meta-secret",
     "META_GRAPH_API_VERSION": "v99.0",
@@ -52,19 +52,6 @@ GOOGLE_PAYLOAD = {
     ],
 }
 
-FACEBOOK_PAYLOAD = {
-    "data": [
-        {
-            "id": "facebook-1",
-            "review_text": "Organizare excelentă și un show memorabil.",
-            "rating": 5,
-            "created_time": "2026-08-18T20:00:00+0000",
-            "reviewer": {"name": "Mihai P."},
-        }
-    ]
-}
-
-
 class FakeResponse:
     def __init__(self, payload, status_code=200):
         self.payload = payload
@@ -84,27 +71,22 @@ class FakeResponse:
 
 
 class FakeAsyncClient:
-    def __init__(self, google=None, facebook=None):
+    def __init__(self, google=None):
         self.google = google
-        self.facebook = facebook
         self.calls = []
 
     async def get(self, url, **kwargs):
         self.calls.append((url, kwargs))
         if "places.googleapis.com" in url:
             return self.google
-        if "graph.facebook.com" in url:
-            return self.facebook
         raise AssertionError(f"Unexpected provider URL: {url}")
 
 
-def public_client(env, fake_client, ttl_seconds=900, now=lambda: 0):
+def public_client(env, fake_client, now=lambda: 0):
     app = FastAPI()
     service = ReviewsService(
         env=env,
         http_client=fake_client,
-        ttl_seconds=ttl_seconds,
-        now=now,
         budget=MongoReviewBudget(
             MemoryCollection(), "review-test-secret-with-at-least-32-bytes",
             clock=lambda: datetime.fromtimestamp(now(), tz=timezone.utc),
@@ -116,7 +98,7 @@ def public_client(env, fake_client, ttl_seconds=900, now=lambda: 0):
 
 def test_missing_or_partial_credentials_keep_reviews_absent():
     client, _ = public_client(
-        {"GOOGLE_PLACES_API_KEY": "google-secret", "META_PAGE_ID": "123"},
+        {"GOOGLE_PLACES_API_KEY": "google-secret"},
         FakeAsyncClient(),
     )
 
@@ -164,68 +146,43 @@ def test_google_reviews_are_normalized_and_empty_text_is_omitted():
     assert options["params"] == {"languageCode": "ro"}
 
 
-def test_one_provider_failure_does_not_hide_the_other_or_expose_secrets():
-    fake = FakeAsyncClient(
-        google=FakeResponse({"error": "denied"}, status_code=403),
-        facebook=FakeResponse(FACEBOOK_PAYLOAD),
-    )
-    client, _ = public_client({**GOOGLE_ENV, **FACEBOOK_ENV}, fake)
+def test_google_failure_returns_no_reviews_or_credentials():
+    fake = FakeAsyncClient(google=FakeResponse({"error": "denied"}, status_code=403))
+    client, _ = public_client(GOOGLE_ENV, fake)
 
     response = client.get("/api/reviews")
 
     assert response.status_code == 200
-    payload = response.json()
-    assert [provider["id"] for provider in payload["providers"]] == ["facebook"]
-    assert payload["providers"][0]["reviews"][0] == {
-        "id": "facebook-1",
-        "provider": "facebook",
-        "author": "Mihai P.",
-        "text": "Organizare excelentă și un show memorabil.",
-        "rating": 5.0,
-        "published_at": "2026-08-18T20:00:00+0000",
-        "url": "",
+    assert response.json() == {"providers": []}
+
+
+def test_legacy_meta_configuration_never_triggers_a_review_request():
+    fake = FakeAsyncClient()
+    client, service = public_client(LEGACY_META_ENV, fake)
+
+    response = client.get("/api/reviews")
+    health = asyncio.run(service.integration_health())
+
+    assert len(fake.calls) == 0
+    assert response.status_code == 200
+    assert response.json() == {"providers": []}
+    assert health == {
+        "google": {"configured": False, "healthy": None, "checked_at": None, "review_count": None},
     }
-    serialized = response.text
-    assert "google-secret" not in serialized
-    assert "meta-secret" not in serialized
 
 
-def test_facebook_snapshot_is_reused_until_the_cache_expires():
-    clock = {"value": 100.0}
-    fake = FakeAsyncClient(facebook=FakeResponse(FACEBOOK_PAYLOAD))
-    client, _ = public_client(
-        FACEBOOK_ENV,
-        fake,
-        ttl_seconds=60,
-        now=lambda: clock["value"],
-    )
-
-    first = client.get("/api/reviews")
-    second = client.get("/api/reviews")
-    clock["value"] = 161.0
-    third = client.get("/api/reviews")
-
-    assert first.json() == second.json() == third.json()
-    assert len(fake.calls) == 2
-
-
-def test_google_content_is_fetched_per_request_while_facebook_can_use_short_cache():
-    fake = FakeAsyncClient(
-        google=FakeResponse(GOOGLE_PAYLOAD),
-        facebook=FakeResponse(FACEBOOK_PAYLOAD),
-    )
-    client, _ = public_client(
-        {**GOOGLE_ENV, **FACEBOOK_ENV}, fake, ttl_seconds=60,
-    )
+def test_google_content_is_fetched_per_request_with_legacy_meta_configuration():
+    fake = FakeAsyncClient(google=FakeResponse(GOOGLE_PAYLOAD))
+    client, _ = public_client({**GOOGLE_ENV, **LEGACY_META_ENV}, fake)
 
     first = client.get("/api/reviews")
     second = client.get("/api/reviews")
 
     assert first.status_code == second.status_code == 200
-    assert [url for url, _ in fake.calls if "places.googleapis.com" in url] == [
-        fake.calls[0][0], fake.calls[2][0],
-    ]
-    assert len([url for url, _ in fake.calls if "graph.facebook.com" in url]) == 1
+    assert len(fake.calls) == 2
+    assert all(url.startswith("https://places.googleapis.com/") for url, _ in fake.calls)
+    assert [provider["id"] for provider in first.json()["providers"]] == ["google"]
+    assert first.json() == second.json()
 
 
 def test_reviews_route_disables_intermediary_caching():
@@ -258,7 +215,6 @@ def test_google_failure_does_not_reuse_a_previous_google_snapshot():
 
 
 def test_empty_reviews_are_distinguished_from_provider_failure_in_private_health():
-    import asyncio
     fake = FakeAsyncClient(google=FakeResponse({"reviews": []}))
     client, service = public_client(GOOGLE_ENV, fake)
     assert client.get("/api/reviews").json() == {"providers": []}
@@ -266,7 +222,6 @@ def test_empty_reviews_are_distinguished_from_provider_failure_in_private_health
     assert state["google"]["configured"] is True
     assert state["google"]["healthy"] is True
     assert state["google"]["review_count"] == 0
-    assert state["facebook"]["review_count"] is None
     fake.google = FakeResponse({}, status_code=403)
     failed = asyncio.run(service.integration_health())
     assert failed["google"]["healthy"] is False
@@ -381,7 +336,7 @@ async def test_cancelled_first_waiter_does_not_close_the_shared_http_client(monk
 
 
 @pytest.mark.asyncio
-async def test_separate_service_instances_share_limits_and_force_cannot_bypass_them():
+async def test_separate_service_instances_share_limits():
     fake = FakeAsyncClient(google=FakeResponse(GOOGLE_PAYLOAD))
     _, first = public_client(GOOGLE_ENV, fake)
     second = ReviewsService(GOOGLE_ENV, http_client=fake, budget=MongoReviewBudget(
@@ -389,9 +344,9 @@ async def test_separate_service_instances_share_limits_and_force_cannot_bypass_t
     ))
     for i in range(10):
         service = first if i % 2 == 0 else second
-        await service.get_snapshot(client_ip="192.0.2.1", force=bool(i % 2))
+        await service.get_snapshot(client_ip="192.0.2.1")
     with pytest.raises(ReviewBudgetError) as error:
-        await second.get_snapshot(client_ip="192.0.2.1", force=True)
+        await second.get_snapshot(client_ip="192.0.2.1")
     assert error.value.status_code == 429
     assert len(fake.calls) == 10
     # A different client is independently eligible, while the global budget applies.
@@ -400,26 +355,25 @@ async def test_separate_service_instances_share_limits_and_force_cannot_bypass_t
 
 
 @pytest.mark.asyncio
-async def test_private_health_refresh_uses_the_same_global_budget():
+async def test_private_health_uses_the_same_global_budget():
     fake = FakeAsyncClient(google=FakeResponse(GOOGLE_PAYLOAD))
     _, service = public_client(GOOGLE_ENV, fake)
     service.budget.day_limit = 1
     await service.get_snapshot(client_ip="192.0.2.1")
-    state = await service.integration_health(refresh=True)
+    state = await service.integration_health()
     assert state["google"]["configured"] is True
     assert state["google"]["healthy"] is False
     assert len(fake.calls) == 1
 
 
-def test_exhausted_google_budget_keeps_a_working_facebook_provider_visible():
-    fake = FakeAsyncClient(google=FakeResponse(GOOGLE_PAYLOAD), facebook=FakeResponse(FACEBOOK_PAYLOAD))
-    client, service = public_client({**GOOGLE_ENV, **FACEBOOK_ENV}, fake)
+def test_exhausted_google_budget_ignores_legacy_meta_configuration():
+    fake = FakeAsyncClient(google=FakeResponse(GOOGLE_PAYLOAD))
+    client, service = public_client({**GOOGLE_ENV, **LEGACY_META_ENV}, fake)
     service.budget.day_limit = 1
     assert client.get("/api/reviews").status_code == 200
     second = client.get("/api/reviews")
-    assert second.status_code == 200
-    assert [provider["id"] for provider in second.json()["providers"]] == ["facebook"]
-    assert len(fake.calls) == 2
+    assert second.status_code == 429
+    assert len(fake.calls) == 1
 
 
 def test_missing_shared_guard_blocks_configured_provider_without_outbound_work():
@@ -473,7 +427,7 @@ async def test_actual_server_composition_enforces_its_injected_shared_guard(serv
         assert [response.status_code for response in responses] == [200] * 10 + [429]
         assert len(fake.calls) == 10
         server.reviews_budget.day_limit = 10
-        health = await server.reviews_service.integration_health(refresh=True)
+        health = await server.reviews_service.integration_health()
         assert health["google"]["healthy"] is False
         assert len(fake.calls) == 10
     await server.resend_http_client.aclose()

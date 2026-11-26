@@ -26,7 +26,7 @@ class Reviews:
     def __init__(self):
         self.calls = 0
 
-    async def integration_health(self, *, refresh=False):
+    async def integration_health(self):
         self.calls += 1
         return {
             "google": {"configured": True, "healthy": True, "checked_at": datetime(2026, 9, 3, tzinfo=timezone.utc)},
@@ -40,8 +40,6 @@ def environment(**changes):
         "VERCEL_BLOB_MEDIA_ORIGIN": "https://localtest.public.blob.vercel-storage.com",
         "GOOGLE_PLACES_API_KEY": "google-secret-value",
         "GOOGLE_PLACE_ID": "place-id",
-        "META_PAGE_ID": "page-id",
-        "META_PAGE_ACCESS_TOKEN": "meta-secret-value",
         "RESEND_ENABLED": "true",
         "RESEND_API_KEY": "resend-secret-value",
         "RESEND_WEBHOOK_SECRET": "webhook-secret-value",
@@ -59,7 +57,9 @@ def environment(**changes):
 
 def test_status_is_authenticated_redacts_secrets_and_throttles_refreshes():
     database, reviews = Database(), Reviews()
-    service = IntegrationsService(database, reviews, environment(), minimum_refresh_seconds=60)
+    service = IntegrationsService(database, reviews, environment(
+        META_PAGE_ID="legacy-page-id", META_PAGE_ACCESS_TOKEN="meta-secret-value",
+    ), minimum_refresh_seconds=60)
     app = FastAPI()
     app.state.auth_service = RouteAuthService()
     app.include_router(create_integrations_router(service))
@@ -83,7 +83,7 @@ def test_status_is_authenticated_redacts_secrets_and_throttles_refreshes():
         assert body["analytics"]["configured"] is True
         assert body["google"]["configured"] is True
         assert body["google"]["healthy"] is True
-        assert body["facebook"]["healthy"] is False
+        assert "facebook" not in body
 
         again = client.get("/api/admin/integrations?refresh=true", headers=headers)
         assert again.status_code == 200
@@ -99,8 +99,6 @@ def test_unconfigured_or_unavailable_services_return_only_safe_states():
             BLOB_READ_WRITE_TOKEN="",
             GOOGLE_PLACES_API_KEY="",
             GOOGLE_PLACE_ID="",
-            META_PAGE_ID="",
-            META_PAGE_ACCESS_TOKEN="",
             RESEND_API_KEY="",
             TURNSTILE_ENABLED="false",
             TURNSTILE_SECRET_KEY="",
@@ -121,27 +119,23 @@ def test_unconfigured_or_unavailable_services_return_only_safe_states():
     assert state.analytics.configured is False
     assert state.google.configured is False
     assert state.google.healthy is None
-    assert state.facebook.configured is False
     assert "secret" not in state.model_dump_json()
 
 
 def test_reviews_name_only_missing_configuration_and_never_credential_values():
     service = IntegrationsService(Database(), None, environment(
         GOOGLE_PLACES_API_KEY="", GOOGLE_PLACE_ID="existing-private-place-id",
-        META_PAGE_ID="", META_PAGE_ACCESS_TOKEN="existing-private-meta-token",
     ))
     state = asyncio.run(service.status())
     assert state.google.message == "Lipsește GOOGLE_PLACES_API_KEY în Vercel."
-    assert state.facebook.message == "Lipsește META_PAGE_ID în Vercel."
     assert "existing-private" not in state.model_dump_json()
     missing = asyncio.run(IntegrationsService(Database(), None, {}).status())
     assert missing.google.message == "Lipsesc GOOGLE_PLACES_API_KEY, GOOGLE_PLACE_ID în Vercel."
-    assert missing.facebook.message == "Lipsesc META_PAGE_ID, META_PAGE_ACCESS_TOKEN în Vercel."
 
 
 def test_reviews_explain_empty_results_without_mistaking_them_for_outage():
     class EmptyReviews:
-        async def integration_health(self, *, refresh=False):
+        async def integration_health(self):
             return {"google": {"configured": True, "healthy": True, "review_count": 0}}
     state = asyncio.run(IntegrationsService(Database(), EmptyReviews(), environment()).status())
     assert state.google.healthy is True

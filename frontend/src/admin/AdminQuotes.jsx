@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAdminSession } from "./AdminSessionContext";
 import { useSectionExitGuard } from "./useSectionExitGuard";
@@ -188,8 +188,9 @@ function QuoteDetail({ id, request, onSaved, onBlocked }) {
 export default function AdminQuotes({ onExitState }) {
   const { request, status: sessionStatus } = useAdminSession();
   const [params, setParams] = useSearchParams();
-  const { q, status, page } = quoteFilters(params);
-  const [search, setSearch] = useState(q);
+  const { status, page } = quoteFilters(params);
+  const [q, setSubmittedSearch] = useState("");
+  const [search, setSearch] = useState("");
   const [filter, setFilter] = useState(status);
   const [selected, setSelected] = useState(null);
   const [guard, setGuard] = useState("ready");
@@ -198,6 +199,12 @@ export default function AdminQuotes({ onExitState }) {
   const [revision, setRevision] = useState(0);
   const [list, setList] = useState({ items: [], total: 0, loading: true, error: "" });
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
+  useEffect(() => {
+    if (!params.has("q")) return;
+    const clean = new URLSearchParams(params);
+    clean.delete("q");
+    setParams(clean, { replace: true });
+  }, [params, setParams]);
   useEffect(() => { setSearch(q); setFilter(status); setSelected(null); }, [q, status, page]);
   useEffect(() => {
     if (sessionStatus !== "authenticated") return undefined;
@@ -216,9 +223,12 @@ export default function AdminQuotes({ onExitState }) {
     if (blocked) return;
     const next = new URLSearchParams(params);
     next.set("page", String(nextPage));
-    if (nextSearch.trim()) next.set("q", nextSearch.trim()); else next.delete("q");
+    next.delete("q");
     if (nextStatus) next.set("status", nextStatus); else next.delete("status");
-    setParams(next);
+    startTransition(() => {
+      setSubmittedSearch(nextSearch.trim());
+      if (next.toString() !== params.toString()) setParams(next);
+    });
   };
   if (sessionStatus !== "authenticated") return <p role="status">Este necesară o sesiune Admin activă.</p>;
   const pages = Math.min(1000, Math.max(1, Math.ceil(list.total / 25)));
@@ -228,7 +238,7 @@ export default function AdminQuotes({ onExitState }) {
       <fieldset disabled={blocked} style={{ ...rowStyle, border: 0, padding: 0, minWidth: 0 }}>
         <legend className="admin-visually-hidden">Filtre</legend>
         <div className="admin-field" style={{ flex: "1 1 220px" }}><label htmlFor="quote-search">Caută cereri</label>
-          <input id="quote-search" name="quote-search" type="search" maxLength={120} value={search} onChange={(event) => setSearch(event.target.value)} /></div>
+          <input id="quote-search" name="quote-search" type="search" autoComplete="off" maxLength={120} value={search} onChange={(event) => setSearch(event.target.value)} /></div>
         <div className="admin-field"><label htmlFor="quote-filter">Filtrează după status</label>
           <select id="quote-filter" name="quote-filter" value={filter} onChange={(event) => setFilter(event.target.value)}><option value="">Toate statusurile</option><StatusOptions /></select></div>
         <button className="admin-button" type="submit">Aplică filtrele</button>

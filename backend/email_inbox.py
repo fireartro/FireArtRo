@@ -1675,14 +1675,16 @@ def create_inbound_admin_router(
 
     @router.get("")
     async def list_messages(
-        q: str = Query(default="", max_length=MAX_SEARCH_LENGTH),
+        request: Request,
         category: InboxCategory | None = None,
         page: int = Query(default=1, ge=1, le=MAX_PAGE),
         page_size: int = Query(default=20, ge=1, le=MAX_PAGE_SIZE),
     ):
+        if "q" in request.query_params:
+            raise _inbox_error(400, "Folosește căutarea din Admin.")
         try:
             listing = await inbox_page(
-                q=q,
+                q="",
                 category=category,
                 page=page,
                 page_size=page_size,

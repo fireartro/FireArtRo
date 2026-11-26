@@ -1,30 +1,29 @@
 # FireArtRo — activarea recenziilor Google și Facebook
 
-Stare verificată în Chrome la 2 noiembrie 2026. Acest document nu conține chei, tokenuri, parole sau recenzii de clienți.
+Constatările despre conturile Google datează din 2 și 4 noiembrie 2026.
 
 ## Ce este pregătit
 
-- Gateway public: `GET /api/reviews`; carduri Google/Facebook cu sursa, autorul, data și nota numai când furnizorul o oferă.
-- Cererile Places sunt făcute de server, în română (`languageCode=ro`). Datele Google nu sunt păstrate într-un cache comun. Facebook folosește cache-ul scurt existent.
-- Sursele care nu răspund sau nu au recenzii cu text nu produc carduri goale și nu blochează cealaltă sursă.
-- Admin → Starea integrărilor indică numele variabilelor lipsă, fără valorile lor, și diferențiază un răspuns gol de o eroare de acces/provider.
-- Admin → Setări recenzii controlează afișarea și limita; Google Places întoarce cel mult cinci recenzii. Arhiva de testimoniale manuale nu alimentează benzile externe.
+- Gateway-ul public `GET /api/reviews` furnizează recenziile Google Places. Serverul le solicită în română (`languageCode=ro`) și le livrează cu sursa, autorul, data și nota atunci când Google le oferă. Conținutul Google este cerut proaspăt.
+- Recenziile Facebook apar prin widgetul Elfsight după acordul pentru Conținut extern. Dacă widgetul este indisponibil, vizitatorii pot deschide recenziile direct pe Facebook.
+- Admin → Setări → Integrări indică numele variabilelor Google care lipsesc și diferențiază un răspuns gol de o eroare de acces. Cardul Elfsight trimite către verificarea pe site.
+- Admin → Recenzii controlează afișarea ambelor surse și limita Google Places. Google întoarce cel mult cinci recenzii. Testimonialele manuale se gestionează în arhiva din Admin.
 - Proiect Cloud existent: `vital-charger-508519-f0` / **FireArtRo Google Reviews**. Places API (New) este deja activ. Nu crea un proiect sau un profil Business duplicat.
 
 ## Protecția consumului de recenzii — 4 noiembrie 2026
 
-Gateway-ul aplică limite înainte de fiecare apel nou către Google sau Facebook:
+Gateway-ul aplică următoarele limite înaintea fiecărui apel nou către Google Places.
 
-- cel mult 10 apeluri pe minut pentru același client și furnizor;
-- cel mult 60 de apeluri pe minut și 1.000 într-o zi pentru fiecare furnizor, cumulate între toate instanțele;
-- un singur apel în curs pentru fiecare furnizor, cu un lease Mongo de 15 secunde și termen absolut de 5 secunde pentru cererea externă;
-- pauză comună de 30 de secunde după o eroare a furnizorului.
+- Cel mult 10 apeluri pe minut pentru același client.
+- Cel mult 60 de apeluri pe minut și 1.000 într-o zi, cumulate între toate instanțele.
+- Un singur apel în curs, cu un lease Mongo de 15 secunde și termen absolut de 5 secunde pentru cererea externă.
+- Pauză comună de 30 de secunde după o eroare a furnizorului.
 
-Ferestrele sunt glisante și sunt verificate în cod; ștergerea TTL nu resetează prematur cotele. Colecția `review_provider_budgets` conține cel mult două documente, cu timpi, identificatori HMAC ai clienților și metadate de lease/backoff. Nu stochează adrese IP în clar, chei sau conținut Google. Indexul TTL pe `expires_at` este creat la pornire.
+Ferestrele sunt glisante. Colecția `review_provider_budgets` păstrează timpi, identificatori HMAC ai clienților și metadate de lease și de pauză pentru Google. Indexul TTL pe `expires_at` este creat la pornire și permite expirarea eventualelor documente Facebook istorice.
 
-Cererile simultane din același event loop reutilizează numai apelul aflat în curs. Rezultatul Google nu este păstrat după încheierea taskului. Alte instanțe/event loop-uri sunt protejate de același lease și aceleași cote în Mongo. Anularea unui vizitator nu închide clientul HTTP folosit de ceilalți. `force=True` și verificarea din Admin folosesc aceeași protecție.
+Cererile simultane din același event loop reutilizează apelul aflat în curs. Alte instanțe și event loop-uri folosesc același lease și aceleași cote în Mongo. Clientul HTTP aparține apelului comun, astfel încât ceilalți vizitatori pot primi rezultatul dacă un vizitator întrerupe cererea. Verificarea din Admin folosește aceeași protecție.
 
-Dacă un furnizor funcționează, răspunsul său rămâne vizibil când celălalt este blocat. Dacă nu există date disponibile și o cotă/lease/pauză împiedică apelul, gateway-ul întoarce HTTP 429 cu `Retry-After`. Dacă protecția comună nu este disponibilă, întoarce HTTP 503 fără apel extern. Ambele răspunsuri au `Cache-Control: no-store, private`. Fără credențiale de furnizor, răspunsul rămâne HTTP 200 cu `providers: []`. Facebook își păstrează cache-ul scurt existent.
+Când cota, lease-ul sau pauza oprește o cerere Google, gateway-ul întoarce HTTP 429 cu `Retry-After`. Dacă protecția comună este indisponibilă, gateway-ul întoarce HTTP 503 și oprește apelul extern. Ambele răspunsuri au `Cache-Control: no-store, private`. Fără configurarea Google, gateway-ul răspunde cu HTTP 200 și `providers: []`. Widgetul Facebook se încarcă independent.
 
 În Google Cloud verifică separat cota strictă a metodei Places Details din proiectul existent și restricția cheii la Places API (New). O cotă externă de cel mult 60 de cereri/minut este un al doilea prag, independent de plafonul glisant de 1.000/zi din aplicație. Nu activa facturare, trial-uri sau chei noi pentru această verificare. Alertele de buget nu opresc consumul. Limitele aplicației nu dovedesc că aceste setări externe sunt deja aplicate; consemnează separat verificarea live.
 
@@ -35,7 +34,6 @@ Verificare live în Chrome la 4 noiembrie 2026: proiectul afișează „This pro
 1. **Google Business:** profilul existent apare neconfirmat. Google oferă „Trimite un videoclip al companiei”, cu locația, echipamentul și dovada gestionării. Proprietarul trebuie să facă filmarea reală prin fluxul Google: https://business.google.com/locations . Nu trimite o filmare de spectacol sau un montaj drept dovadă a administrării.
 2. **Google Cloud:** proiectul nu are cont de facturare asociat. Proprietarul alege și asociază contul de facturare și stabilește consumul acceptat: https://console.cloud.google.com/billing/linkedaccount?project=vital-charger-508519-f0 . Nu porni automat un trial sau o plată. O alertă de buget nu este o limită de cheltuială.
 3. **Google key:** lista Credentials nu conține chei API. După decizia de facturare, creează sau autorizează explicit crearea unei chei restricționate la Places API (New), cu cotele potrivite. Cheia este pentru server; o restricție HTTP-referrer de browser nu se aplică gateway-ului Python. Transferă cheia direct în Vercel, fără chat, capturi sau Git.
-4. **Meta:** în Chrome nu există sesiune Facebook autentificată. Proprietarul se autentifică pe https://developers.facebook.com/apps/ cu un cont care administrează pagina FireArtRo. Verifică aplicația existentă și accesul permis înainte să creezi o altă aplicație sau un token nou.
 
 Nu este necesară trimiterea parolelor către agent. Verificarea fizică, autentificarea și alegerea facturării se fac în paginile oficiale. După acești pași, identificatorii publici și configurarea tehnică pot fi finalizate în aceeași sesiune.
 
@@ -45,11 +43,8 @@ Nu este necesară trimiterea parolelor către agent. Verificarea fizică, autent
 | --- | --- | --- |
 | `GOOGLE_PLACE_ID` | Place ID al profilului public FireArtRo, verificat; nu codul intern Business și nu un ID ghicit | server-only |
 | `GOOGLE_PLACES_API_KEY` | Cheia restricționată din proiectul Cloud de mai sus | Sensitive, server-only |
-| `META_PAGE_ID` | ID numeric al paginii FireArtRo administrate | server-only |
-| `META_PAGE_ACCESS_TOKEN` | Token de pagină valid, cu acces confirmat la recenzii | Sensitive, server-only |
-| `META_GRAPH_API_VERSION` | Versiunea folosită și validată pentru aplicație; implicitul actual este `v23.0` | server-only |
 
-Nu introduce valori demonstrative sau variabile goale doar ca integrarea să pară configurată. Pentru Preview folosește credențiale de test distincte sau lasă furnizorii neconfigurați. Niciun secret de recenzii nu are prefix `REACT_APP_`.
+Pentru Preview folosește credențiale Google de test distincte sau lasă integrarea neconfigurată. Păstrează cheia Google Places în configurația serverului.
 
 După configurare:
 
@@ -57,7 +52,7 @@ După configurare:
 2. Fă un deployment al codului curent pe Production pentru a aplica variabilele.
 3. Admin → Starea integrărilor → Verifică din nou: confirmă conectarea și existența recenziilor cu text. Un răspuns fără recenzii este posibil și nu trebuie înlocuit cu un testimonial inventat.
 4. Verifică `/api/reviews`: numai recenzii publice, fără credențiale. Compară autorul, textul, nota, data și linkul cu platforma sursă.
-5. Verifică telefon, desktop, texte lungi, linkuri, animație și răspunsul cu un singur furnizor disponibil. Testele locale au fixtures izolate; ele nu dovedesc accesul real Google/Meta.
+5. Verifică pe telefon și desktop textele lungi, linkurile și dialogul recenziilor Google. Verifică widgetul Facebook pe site după acordul pentru Conținut extern, apoi retrage acordul și confirmă că linkul Facebook rămâne disponibil. Confirmă accesul real separat de testele locale cu răspunsuri simulate.
 6. Adaugă linkul de lăsat o recenzie numai după ce profilul public corect este verificat. Colectarea directă pe site nu este implementată de acest gateway.
 
 ## Surse oficiale

@@ -28,7 +28,7 @@ test('renders only safe integration states and refreshes explicitly through the 
     resend: { configured: true, healthy: null, message: 'Configurat' },
     turnstile: { configured: false, healthy: null, message: 'Dezactivat' },
     analytics: { configured: true, healthy: null, message: 'Configurat' },
-    google: { configured: true, healthy: null, message: 'Configurat' },
+    google: { configured: true, healthy: false, message: 'Eroare temporară' },
     facebook: { configured: true, healthy: false, message: 'Eroare temporară' },
   });
   container = document.createElement('div');
@@ -46,6 +46,11 @@ test('renders only safe integration states and refreshes explicitly through the 
   expect(container.textContent).toContain('Necesită configurare');
   expect(container.textContent).toContain('Eroare temporară');
   expect(container.textContent).not.toContain('google-secret');
+  const facebook = container.querySelector('[data-integration="facebook"]');
+  expect(facebook.textContent).toContain('Elfsight');
+  expect(facebook.textContent).toContain('Conținut extern');
+  expect(facebook.textContent).not.toContain('Eroare temporară');
+  expect(facebook.querySelector('a').getAttribute('href')).toBe('/#recenzii');
 
   await act(async () => [...container.querySelectorAll('button')].find((button) => button.textContent.includes('Verifică din nou')).click());
   expect(mockRequest).toHaveBeenNthCalledWith(1, '/api/admin/integrations');

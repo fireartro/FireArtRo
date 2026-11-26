@@ -1,5 +1,7 @@
 # Reviews activation implementation plan
 
+Historical plan. See the [reviews runbook](../runbooks/fireartro-reviews-activation.md) for the current integration.
+
 Goal: finish the existing Google/Facebook integration up to the steps that need the owner's verification, login or billing decision.
 
 Architecture: retain the public `/api/reviews` gateway, server-only credentials and the current two review rails. Keep provider failures independent and hide absent reviews. Improve the authenticated Admin diagnostics instead of inserting placeholder credentials or publishing demo reviews.

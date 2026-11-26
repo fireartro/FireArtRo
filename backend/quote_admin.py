@@ -43,6 +43,19 @@ def _error(status, message, **headers):
     )
 
 
+async def _read_quote_command(request, model, validation_message):
+    # Parse after session/CSRF verification and keep private input out of errors.
+    body = bytearray()
+    async for chunk in request.stream():
+        if len(body) + len(chunk) > QUOTE_WRITE_MAX_BYTES:
+            raise _error(413, "Cererea este prea mare.")
+        body.extend(chunk)
+    try:
+        return model.model_validate_json(bytes(body))
+    except ValidationError:
+        raise _error(422, validation_message) from None
+
+
 class QuoteSummary(BaseModel):
     # Explicit allowlist: list responses omit contact details, messages and notes.
     id: str
@@ -81,6 +94,15 @@ class QuoteDetail(QuoteSummary):
     version: int = 0  # legacy submissions gain version 1 on their first CAS update
     updated_at: datetime | None = None
     notification: QuoteNotification | None = None
+
+
+class QuoteSearchFilters(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    q: str = Field(default="", max_length=120)
+    status: QuoteStatus | None = None
+    page: int = Field(default=1, ge=1, le=1000)
+    page_size: int = Field(default=25, ge=1, le=100)
 
 
 class QuoteAdminUpdate(BaseModel):
@@ -470,14 +492,21 @@ def create_quote_admin_router(repository, notification_service=None):
 
     @router.get("")
     async def list_quotes(
+        request: Request,
         status: QuoteStatus | None = None,
-        q: str = Query(default="", max_length=120),
         page: int = Query(default=1, ge=1, le=1000),
         page_size: int = Query(default=25, ge=1, le=100),
     ):
-        return response(
-            await repository.list(status=status, q=q, page=page, page_size=page_size)
+        if "q" in request.query_params:
+            raise _error(400, "Folosește căutarea din Admin.")
+        return response(await repository.list(status=status, page=page, page_size=page_size))
+
+    @router.post("/search")
+    async def search_quotes(request: Request):
+        filters = await _read_quote_command(
+            request, QuoteSearchFilters, "Filtre de căutare invalide."
         )
+        return response(await repository.list(**filters.model_dump()))
 
     @router.get("/{quote_id}")
     async def get_quote(
@@ -490,19 +519,11 @@ def create_quote_admin_router(repository, notification_service=None):
         request: Request,
         quote_id: str = Path(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$"),
     ):
-        # Parse after session/CSRF verification; never echo a private note in errors.
-        body = bytearray()
-        async for chunk in request.stream():
-            if len(body) + len(chunk) > QUOTE_WRITE_MAX_BYTES:
-                raise _error(413, "Cererea este prea mare.")
-            body.extend(chunk)
-        try:
-            change = QuoteAdminUpdate.model_validate_json(bytes(body))
-        except ValidationError:
-            raise _error(
-                422,
-                "Status, notă sau versiune invalidă. Nota poate avea cel mult 4000 de caractere.",
-            ) from None
+        change = await _read_quote_command(
+            request,
+            QuoteAdminUpdate,
+            "Status, notă sau versiune invalidă. Nota poate avea cel mult 4000 de caractere.",
+        )
         return response(
             (await repository.update(quote_id, change)).model_dump(mode="json")
         )

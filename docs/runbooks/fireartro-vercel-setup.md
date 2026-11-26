@@ -56,10 +56,10 @@ Această procedură se face o singură dată, după ce codul este aprobat. O pub
 | `REACT_APP_GA_MEASUREMENT_ID` | public | opțional, format `G-...`; destinația GA4 pentru `send_to` pe fiecare eveniment explicit și pentru `ga-disable`; fără el Analytics nu se încarcă |
 | `REACT_APP_GA_TAG_ID` | public | opțional, format `G-...` sau `GT-...`; ID-ul Google tag folosit la încărcarea `gtag.js` și în `gtag("config", ...)`; necesită rebuild |
 | `GOOGLE_PLACES_API_KEY`, `GOOGLE_PLACE_ID` | secret | opțional; fără ambele Google rămâne ascuns |
-| `META_PAGE_ID`, `META_PAGE_ACCESS_TOKEN` | secret | opțional; fără ambele Facebook rămâne ascuns |
-| `META_GRAPH_API_VERSION` | normal | opțional; păstrează versiunea aprobată |
 
-Nu crea niciodată variabile `REACT_APP_*` pentru secrete. Valorile publice permise sunt cheia de site Turnstile, Measurement ID-ul GA4 și ID-ul opțional Google tag; browserul nu primește parola Admin, hashuri, tokenuri Blob, cheia secretă Turnstile sau tokenuri Google/Meta.
+Păstrează parolele, hashurile, tokenurile Blob, cheia secretă Turnstile și cheia Google Places în configurația serverului. Cheia publică de site Turnstile, Measurement ID-ul GA4 și ID-ul opțional Google tag pot folosi prefixul `REACT_APP_*`.
+
+Recenziile Facebook se încarcă prin widgetul Elfsight după acordul pentru Conținut extern. Dacă în Vercel a rămas configurarea Meta Graph dedicată fostei integrări de recenzii, elimină acele variabile din mediile în care există.
 Fișierele locale `backend/.env` sunt excluse explicit din pachetul Python; nu le urca și nu le folosi ca mecanism de configurare în Vercel.
 
 ## ID-ul Google tag și destinația GA4

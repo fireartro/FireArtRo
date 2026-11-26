@@ -1,8 +1,7 @@
-"""Credential-gated provider adapters for public FireArtRo reviews."""
+"""Credential-gated Google Places reviews for FireArtRo."""
 
 import asyncio
 import logging
-from time import monotonic
 from datetime import datetime, timezone
 from typing import Mapping, Optional
 from urllib.parse import quote, urlparse
@@ -18,7 +17,6 @@ from review_budget import MongoReviewBudget, ReviewBudgetError
 logger = logging.getLogger(__name__)
 
 GOOGLE_FIELDS = "displayName,googleMapsUri,reviews"
-META_DEFAULT_API_VERSION = "v23.0"
 PROVIDER_TIMEOUT_SECONDS = 5.0
 
 
@@ -93,23 +91,6 @@ def _google_review(item: dict, index: int) -> Optional[dict]:
     return review
 
 
-def _facebook_review(item: dict, index: int) -> Optional[dict]:
-    text = _clean_text(item.get("review_text"))
-    if not text:
-        return None
-
-    reviewer = item.get("reviewer") or {}
-    return {
-        "id": _clean_text(item.get("id")) or f"facebook-{index}",
-        "provider": "facebook",
-        "author": _clean_text(reviewer.get("name")),
-        "text": text,
-        "rating": _optional_rating(item.get("rating")),
-        "published_at": _clean_text(item.get("created_time")),
-        "url": _clean_text(item.get("url")),
-    }
-
-
 async def fetch_google_reviews(client, api_key: str, place_id: str) -> Optional[dict]:
     response = await client.get(
         f"https://places.googleapis.com/v1/places/{quote(place_id, safe='')}",
@@ -144,86 +125,28 @@ async def fetch_google_reviews(client, api_key: str, place_id: str) -> Optional[
     }
 
 
-async def fetch_facebook_reviews(
-    client,
-    page_id: str,
-    access_token: str,
-    api_version: str,
-) -> Optional[dict]:
-    version = _clean_text(api_version) or META_DEFAULT_API_VERSION
-    response = await client.get(
-        f"https://graph.facebook.com/{quote(version, safe='.')}/{quote(page_id, safe='')}/ratings",
-        params={
-            "access_token": access_token,
-            "fields": "id,rating,review_text,created_time,reviewer",
-            "limit": 25,
-        },
-        headers={"Accept": "application/json"},
-    )
-    response.raise_for_status()
-    payload = response.json()
-    if not isinstance(payload, dict):
-        return None
-
-    reviews = [
-        normalized
-        for index, item in enumerate(payload.get("data") or [])
-        if isinstance(item, dict)
-        for normalized in [_facebook_review(item, index)]
-        if normalized
-    ]
-    if not reviews:
-        return None
-
-    return {
-        "id": "facebook",
-        "href": f"https://www.facebook.com/{quote(page_id, safe='')}/reviews",
-        "reviews": reviews,
-    }
-
-
 class ReviewsService:
-    """Fetch and cache sanitized provider data without exposing credentials."""
+    """Fetch sanitized Google reviews within the shared request budget."""
 
     def __init__(
         self,
         env: Mapping[str, str],
         http_client=None,
-        ttl_seconds: int = 900,
-        now=monotonic,
         budget=None,
     ):
         self.env = env
         self.http_client = http_client
-        self.ttl_seconds = max(0, ttl_seconds)
-        self.now = now
-        self._cached_facebook = None
-        self._facebook_cache_expires_at = 0.0
-        self._provider_health = {}
+        self._google_health = {}
         self.budget = budget if budget is not None else MongoReviewBudget(
             None, env.get("ADMIN_SESSION_SECRET", ""),
         )
         self._inflight = {}
 
-    def _provider_jobs(self):
-        jobs = []
-
-        google_key = _clean_text(self.env.get("GOOGLE_PLACES_API_KEY"))
-        google_place_id = _clean_text(self.env.get("GOOGLE_PLACE_ID"))
-        if google_key and google_place_id:
-            jobs.append(("google", lambda client: fetch_google_reviews(client, google_key, google_place_id)))
-
-        meta_page_id = _clean_text(self.env.get("META_PAGE_ID"))
-        meta_token = _clean_text(self.env.get("META_PAGE_ACCESS_TOKEN"))
-        if meta_page_id and meta_token:
-            jobs.append(("facebook", lambda client: fetch_facebook_reviews(
-                    client,
-                    meta_page_id,
-                    meta_token,
-                    self.env.get("META_GRAPH_API_VERSION", META_DEFAULT_API_VERSION),
-                )))
-
-        return jobs
+    def _google_credentials(self):
+        return (
+            _clean_text(self.env.get("GOOGLE_PLACES_API_KEY")),
+            _clean_text(self.env.get("GOOGLE_PLACE_ID")),
+        )
 
     def _forget_inflight(self, key, task):
         if self._inflight.get(key) is task:
@@ -231,112 +154,83 @@ class ReviewsService:
         if not task.cancelled():
             task.exception()  # Also consume failures if every HTTP waiter left.
 
-    async def _run_provider(self, provider, job, client_ip):
-        token = await self.budget.reserve(provider, client_ip)
+    async def _run_google(self, api_key, place_id, client_ip):
+        token = await self.budget.reserve("google", client_ip)
         failed = True
         try:
             if self.http_client is not None:
-                result = await asyncio.wait_for(job(self.http_client), timeout=PROVIDER_TIMEOUT_SECONDS)
+                result = await asyncio.wait_for(
+                    fetch_google_reviews(self.http_client, api_key, place_id),
+                    timeout=PROVIDER_TIMEOUT_SECONDS,
+                )
             else:
                 # The task, not its first HTTP waiter, owns this client. Leaving
                 # that request cannot close a connection another waiter uses.
                 async with httpx.AsyncClient(timeout=PROVIDER_TIMEOUT_SECONDS) as client:
-                    result = await asyncio.wait_for(job(client), timeout=PROVIDER_TIMEOUT_SECONDS)
+                    result = await asyncio.wait_for(
+                        fetch_google_reviews(client, api_key, place_id),
+                        timeout=PROVIDER_TIMEOUT_SECONDS,
+                    )
             failed = False
             return result
         finally:
             # A disconnected waiter must not cancel the shared provider task.
             # If storage fails here, the existing lease expires conservatively.
             try:
-                await self.budget.complete(provider, token, failed=failed)
+                await self.budget.complete("google", token, failed=failed)
             except ReviewBudgetError:
                 logger.warning("Review provider budget completion unavailable")
 
-    async def _provider_result(self, provider, job, client_ip):
+    async def _google_result(self, api_key, place_id, client_ip):
         # Tasks belong to one runtime loop. Other loops/instances use the same
         # Mongo lease, rather than awaiting a foreign-loop future.
-        key = (asyncio.get_running_loop(), provider)
+        key = asyncio.get_running_loop()
         task = self._inflight.get(key)
         if task is None or task.done():
-            task = asyncio.create_task(self._run_provider(provider, job, client_ip))
+            task = asyncio.create_task(self._run_google(api_key, place_id, client_ip))
             self._inflight[key] = task
             task.add_done_callback(lambda done: self._forget_inflight(key, done))
         return await asyncio.shield(task)
 
-    async def _fetch_snapshot(self, now_value: float, *, force=False, client_ip="internal") -> dict:
-        jobs = self._provider_jobs()
-        if not jobs:
+    async def get_snapshot(self, *, client_ip="internal") -> dict:
+        api_key, place_id = self._google_credentials()
+        if not (api_key and place_id):
             return {"providers": []}
 
-        results_by_provider = {}
-        pending = []
-        pending_ids = []
-        for provider_id, job in jobs:
-            if (
-                provider_id == "facebook"
-                and not force
-                and self._cached_facebook is not None
-                and now_value < self._facebook_cache_expires_at
-            ):
-                results_by_provider[provider_id] = self._cached_facebook
-                continue
-            pending_ids.append(provider_id)
-            pending.append(self._provider_result(provider_id, job, client_ip))
-
-        results = await asyncio.gather(*pending, return_exceptions=True) if pending else []
-        providers = []
-        budget_errors = []
-        checked_at = datetime.now(timezone.utc)
-        for provider_id, result in zip(pending_ids, results):
-            if isinstance(result, Exception):
-                if isinstance(result, ReviewBudgetError):
-                    budget_errors.append(result)
-                logger.warning("Review provider %s is unavailable", provider_id)
-                self._provider_health[provider_id] = {"healthy": False, "checked_at": checked_at}
-                if provider_id == "facebook":
-                    self._cached_facebook = None
-                    self._facebook_cache_expires_at = 0.0
-                continue
-            self._provider_health[provider_id] = {
-                "healthy": True,
-                "checked_at": checked_at,
-                "review_count": len(result["reviews"]) if result else 0,
+        try:
+            result = await self._google_result(api_key, place_id, client_ip)
+        except Exception as error:
+            logger.warning("Review provider google is unavailable")
+            self._google_health = {
+                "healthy": False,
+                "checked_at": datetime.now(timezone.utc),
             }
-            if provider_id == "facebook":
-                self._cached_facebook = result
-                self._facebook_cache_expires_at = now_value + self.ttl_seconds
-            results_by_provider[provider_id] = result
-        for provider_id, _ in jobs:
-            result = results_by_provider.get(provider_id)
-            if result:
-                providers.append(result)
-        if not providers and budget_errors:
-            # Keep a functioning sibling provider visible; otherwise preserve
-            # explicit throttle/unavailable semantics instead of an empty 200.
-            raise max(budget_errors, key=lambda error: error.status_code)
-        return {"providers": providers}
+            if isinstance(error, ReviewBudgetError):
+                raise
+            return {"providers": []}
 
-    async def get_snapshot(self, *, force=False, client_ip="internal") -> dict:
-        return await self._fetch_snapshot(self.now(), force=force, client_ip=client_ip)
-
-    async def integration_health(self, *, refresh=False) -> dict:
-        configured = {
-            "google": bool(_clean_text(self.env.get("GOOGLE_PLACES_API_KEY")) and _clean_text(self.env.get("GOOGLE_PLACE_ID"))),
-            "facebook": bool(_clean_text(self.env.get("META_PAGE_ID")) and _clean_text(self.env.get("META_PAGE_ACCESS_TOKEN"))),
+        self._google_health = {
+            "healthy": True,
+            "checked_at": datetime.now(timezone.utc),
+            "review_count": len(result["reviews"]) if result else 0,
         }
-        if any(configured.values()):
+        return {"providers": [result] if result else []}
+
+    async def integration_health(self) -> dict:
+        configured = all(self._google_credentials())
+        if configured:
             try:
-                await self.get_snapshot(force=refresh)
+                await self.get_snapshot()
             except ReviewBudgetError:
                 pass  # Sanitized health metadata, never bypass the shared guard.
+        health = self._google_health if configured else {}
         return {
-            provider: {
-                "configured": is_configured,
-                "healthy": self._provider_health.get(provider, {}).get("healthy") if is_configured else None,
-                "checked_at": self._provider_health.get(provider, {}).get("checked_at") if is_configured else None,
-                "review_count": self._provider_health.get(provider, {}).get("review_count") if is_configured else None,
-            }
-            for provider, is_configured in configured.items()
+            "google": {
+                "configured": configured,
+                "healthy": health.get("healthy"),
+                "checked_at": health.get("checked_at"),
+                "review_count": health.get("review_count"),
+            },
         }
 
 

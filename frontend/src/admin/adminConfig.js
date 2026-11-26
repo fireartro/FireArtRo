@@ -174,8 +174,8 @@ export const ADMIN_MODULES = {
   reviewSettings: moduleDefinition(object("reviewSettings", "Setări recenzii", [
     checkbox("enabled", "Afișează recenziile"), text("heading", "Titlu"),
     textarea("description", "Descriere"), checkbox("googleEnabled", "Google"),
-    checkbox("facebookEnabled", "Facebook"), number("maxItems", "Limită pe sursă API", { min: 1, max: 20, help: "Widgetul Facebook Elfsight folosește setările proprii." }),
-  ]), "Afișare Google/Facebook. Google Places furnizează cel mult 5 recenzii; numărul maxim poate limita afișarea, fără să extindă rezultatele sursei. Cheile și tokenurile se configurează numai în Vercel."),
+    checkbox("facebookEnabled", "Facebook"), number("maxItems", "Limită pentru Google Places", { min: 1, max: 20, help: "Widgetul Facebook Elfsight folosește setările proprii." }),
+  ]), "Google Places furnizează cel mult cinci recenzii, cu cheia configurată în Vercel. Facebook se afișează prin Elfsight după acordul pentru Conținut extern."),
   cookieSettings: moduleDefinition(object("cookieSettings", "Cookies", [
     text("title", "Titlu"), textarea("summary", "Rezumat"),
     text("necessaryLabel", "Titlu strict necesare"), textarea("necessaryDescription", "Descriere strict necesare"),

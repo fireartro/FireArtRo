@@ -49,10 +49,24 @@ async function openReviews(page,body=payload,status=200){
 }
 
 async function permitExternalContent(page){
-  await page.getByRole('button',{name:'permite conținutul extern',exact:true}).click();
+  await page.locator('[data-review-provider="facebook"]').getByRole('button',{name:'permite conținutul extern',exact:true}).click();
   const dialog=page.getByRole('dialog');
   await dialog.getByRole('checkbox',{name:/Conținut extern/}).check();
   await dialog.getByRole('button',{name:'Salvează preferințele',exact:true}).click();
+}
+
+async function mockFacebookWidget(page){
+  await page.route(`${widgetUrl}/**`,route=>route.fulfill({
+    contentType:'text/html',
+    body:`<p>Widget Facebook de test</p><script>
+      let probes = 0;
+      window.addEventListener('message', event => {
+        if (event.source === window.parent && event.data?.type === 'fireart:check-review-ready' && ++probes > 1) {
+          window.parent.postMessage({type:'fireart:review-ready'}, event.origin);
+        }
+      });
+    </script>`,
+  }));
 }
 
 for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
@@ -64,21 +78,23 @@ for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
       avatarRequests.push(route.request().url());
       return route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"/>'});
     });
+    await mockFacebookWidget(page);
     await openReviews(page);
     const section=page.getByTestId('home-reviews');
     await expect(section).toBeVisible();
     const google=section.locator('[data-review-provider="google"]');
     const facebook=section.locator('[data-review-provider="facebook"]');
-    await expect(section.locator('[data-review-card]')).toHaveCount(1);
+    await expect(section.locator('[data-review-card]')).toHaveCount(0);
+    await expect(facebook.locator('iframe')).toHaveCount(0);
     await expect(google.getByRole('link',{name:/Vezi pe Google Maps/})).toBeVisible();
     await expect(facebook.getByRole('link',{name:/Adaugă recenzie pe Facebook/})).toHaveCSS('border-radius','999px');
     expect(avatarRequests).toEqual([]);
     await permitExternalContent(page);
-    await expect(section.locator('[data-review-card]')).toHaveCount(2);
+    await expect(section.locator('[data-review-card]')).toHaveCount(1);
     await expect.poll(()=>avatarRequests.length).toBeGreaterThan(0);
     await expect(google.getByRole('link',{name:'Vezi recenzia originală pe Google Maps',exact:true})).toHaveAttribute('href',payload.providers[0].reviews[0].url);
-    await expect(facebook.getByRole('link',{name:'Vezi recenzia originală pe Facebook',exact:true})).toHaveAttribute('href',payload.providers[1].reviews[0].url);
-    await expect(facebook.locator('[data-review-card] .fa-page-reviews__rating')).toHaveCount(0);
+    await expect(facebook.locator('[data-widget-state="ready"] iframe')).toBeVisible();
+    await expect(facebook.locator('[data-review-card]')).toHaveCount(0);
     const expandGoogle=google.getByRole('button',{name:'Citește mai mult',exact:true});
     await section.screenshot({path:testInfo.outputPath(`${name}-test-reviews.png`)});
     await expandGoogle.click();
@@ -102,38 +118,24 @@ for(const [name,width,height] of [['desktop',1440,900],['phone',390,844]]){
     await page.keyboard.press('Escape');
     await expect(googleDialog).toHaveCount(0);
     await expect(expandGoogle).toBeFocused();
-    const expandFacebook=facebook.getByRole('button',{name:'Citește mai mult',exact:true});
-    await expandFacebook.click();
-    const facebookDialog=page.getByRole('dialog',{name:'Recenzie de pe Facebook',exact:true});
-    await expect(facebookDialog).toContainText(payload.providers[1].reviews[0].text);
-    await facebookDialog.getByRole('button',{name:'Închide recenzia',exact:true}).click();
-    await expect(expandFacebook).toBeFocused();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width+1);
     expect(await section.locator('[aria-hidden="true"] a:not([tabindex="-1"])').count()).toBe(0);
     expect(errors).toEqual([]);
   });
 }
 
-test('a provider without reviews does not hide the available provider',async({page})=>{
+test('a legacy API response leaves the Facebook link available when Google has no reviews',async({page})=>{
   await openReviews(page,{providers:[payload.providers[1]]});
   const section=page.getByTestId('home-reviews');
   await expect(section.locator('[data-review-provider="facebook"]')).toBeVisible();
+  await expect(section.getByRole('link',{name:'Vezi recenziile pe Facebook',exact:true})).toBeVisible();
+  await expect(section.locator('[data-review-card]')).toHaveCount(0);
   await expect(section.locator('[data-review-provider="google"]')).toHaveCount(0);
 });
 
 test('Facebook fallback at the end of Contact respects consent and links to the legal notice',async({page})=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.route(`${widgetUrl}/**`,route=>route.fulfill({
-    contentType:'text/html',
-    body:`<p>Widget Facebook de test</p><script>
-      let probes = 0;
-      window.addEventListener('message', event => {
-        if (event.source === window.parent && event.data?.type === 'fireart:check-review-ready' && ++probes > 1) {
-          window.parent.postMessage({type:'fireart:review-ready'}, event.origin);
-        }
-      });
-    </script>`,
-  }));
+  await mockFacebookWidget(page);
   await openReviews(page,{providers:[]},503);
   const reviews=page.getByTestId('home-reviews');
   await expect(reviews.locator('iframe')).toHaveCount(0);
@@ -142,6 +144,12 @@ test('Facebook fallback at the end of Contact respects consent and links to the 
   await permitExternalContent(page);
   await expect(reviews.locator('iframe')).toHaveAttribute('src',widgetUrl);
   await expect(reviews.locator('[data-widget-state="ready"] iframe')).toBeVisible();
+  await page.getByRole('button',{name:'Setări cookies',exact:true}).click();
+  const preferences=page.getByRole('dialog');
+  await preferences.getByRole('checkbox',{name:/Conținut extern/}).uncheck();
+  await preferences.getByRole('button',{name:'Salvează preferințele',exact:true}).click();
+  await expect(reviews.locator('iframe')).toHaveCount(0);
+  await expect(reviews.getByRole('link',{name:'Vezi recenziile pe Facebook',exact:true})).toBeVisible();
   await reviews.getByRole('link',{name:'Sursă și verificare',exact:true}).click();
   await expect(page).toHaveURL(/\/termeni-si-conditii#terms-section-8$/);
   const policy=page.locator('#terms-section-8');

@@ -111,16 +111,26 @@ test("disabled settings do not request external review data", async () => {
   expect(container.textContent).toBe("");
 });
 
-test("Facebook source links identify Facebook rather than Google Maps", async () => {
+test("legacy Facebook API cards cannot replace the consent-gated widget", async () => {
   global.fetch.mockResolvedValue({ ok: true, json: async () => ({ providers: [{
     id: "facebook", href: "https://www.facebook.com/FireArtRo",
     reviews: [{ ...review, provider: "facebook", url: "https://www.facebook.com/review/123", author_url: "", author_photo_url: "" }],
   }] }) });
   await render();
   expectFacebookReviewLink();
-  const source = container.querySelector("[data-review-card] .fa-page-reviews__source");
-  expect(source.getAttribute("aria-label")).toBe("Vezi recenzia originală pe Facebook");
-  expect(container.textContent).not.toContain("Google Maps");
+  expect(container.querySelector("[data-review-card]")).toBeNull();
+  expect(container.querySelector("iframe")).toBeNull();
+  await act(async () => seedConsent({ marketing: true }));
+  expect(container.querySelector("iframe[title='Recenzii FireArtRo de pe Facebook']")).not.toBeNull();
+  expect(container.querySelector("[data-review-card]")).toBeNull();
+});
+
+test("enabling Facebook alone does not request reviews from the server", async () => {
+  seedConsent({ marketing: true });
+  await render({ googleEnabled: false });
+  expectFacebookReviewLink();
+  expect(container.querySelector("iframe")).not.toBeNull();
+  expect(global.fetch).not.toHaveBeenCalled();
 });
 
 test("shows enabled sources in the authenticated draft preview without loading external reviews", async () => {

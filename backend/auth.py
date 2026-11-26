@@ -23,6 +23,7 @@ ADMIN_COOKIE_PATH = "/api/admin"
 SESSION_LIFETIME = timedelta(hours=12)
 LOGIN_WINDOW = timedelta(minutes=10)
 LOGIN_ATTEMPT_LIMIT = 5
+LOGIN_ACCOUNT_ATTEMPT_LIMIT = 30
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 INVALID_CREDENTIALS = "Datele de autentificare nu sunt valide."
 AUTH_UNAVAILABLE = "Autentificarea nu este disponibilă momentan."
@@ -160,12 +161,12 @@ class MongoLoginAttemptRepository:
         )
         return result.matched_count == 1
 
-    async def reserve(self, key, now):
+    async def reserve(self, key, now, *, limit=LOGIN_ATTEMPT_LIMIT):
         reservation = secrets.token_hex(16)
         for _ in range(32):
             previous = await self.collection.find_one({"_id": key})
             entries = self._live_entries(previous, now)
-            if len(entries) >= LOGIN_ATTEMPT_LIMIT:
+            if len(entries) >= limit:
                 retry_after = max(
                     1,
                     math.ceil(
@@ -187,20 +188,20 @@ class MongoLoginAttemptRepository:
                 return reservation
         raise AuthError(AUTH_UNAVAILABLE, 503)
 
-    async def _finish(self, key, reservation, now, success):
+    async def _finish(self, key, reservation, now, outcome):
         for _ in range(32):
             previous = await self.collection.find_one({"_id": key})
             entries = self._live_entries(previous, now)
             if not any(entry["id"] == reservation for entry in entries):
                 return
-            if success:
+            if outcome == "success":
                 # Clear completed failures, but never erase another in-flight login.
                 entries = [
                     entry
                     for entry in entries
                     if entry["id"] != reservation and entry["state"] == "pending"
                 ]
-            else:
+            elif outcome == "failure":
                 entries = [
                     (
                         {**entry, "state": "failed"}
@@ -209,15 +210,20 @@ class MongoLoginAttemptRepository:
                     )
                     for entry in entries
                 ]
+            else:
+                entries = [entry for entry in entries if entry["id"] != reservation]
             if await self._save(key, previous, entries, now):
                 return
         raise AuthError(AUTH_UNAVAILABLE, 503)
 
     async def record_failure(self, key, reservation, now):
-        await self._finish(key, reservation, now, success=False)
+        await self._finish(key, reservation, now, "failure")
 
     async def clear(self, key, reservation, now):
-        await self._finish(key, reservation, now, success=True)
+        await self._finish(key, reservation, now, "success")
+
+    async def cancel(self, key, reservation, now):
+        await self._finish(key, reservation, now, "cancel")
 
 
 class AuthService:
@@ -276,14 +282,34 @@ class AuthService:
             hashlib.sha256,
         ).hexdigest()
 
+    def _account_key(self, username_bytes):
+        return hmac.new(
+            self.session_secret.encode("utf-8"),
+            b"fireartro:admin-login-account:v1\0" + username_bytes,
+            hashlib.sha256,
+        ).hexdigest()
+
     async def login(self, username, password, client_ip, user_agent):
         self._ensure_configured()
-        key = self._ip_key(client_ip)
+        ip_key = self._ip_key(client_ip)
         try:
-            reservation = await self.attempts.reserve(key, _utc(self.clock()))
+            now = _utc(self.clock())
+            ip_reservation = await self.attempts.reserve(ip_key, now)
+            reservations = [(ip_key, ip_reservation)]
             username_bytes, password_bytes = _encoded(username, 256), _encoded(
                 password, 72
             )
+            if username_bytes is not None:
+                account_key = self._account_key(username_bytes)
+                try:
+                    account_reservation = await self.attempts.reserve(
+                        account_key, now, limit=LOGIN_ACCOUNT_ATTEMPT_LIMIT
+                    )
+                except AuthError as error:
+                    if error.status_code == 429:
+                        await self.attempts.cancel(ip_key, ip_reservation, _utc(self.clock()))
+                    raise
+                reservations.append((account_key, account_reservation))
             matches = False
             if username_bytes is not None and password_bytes is not None:
                 try:
@@ -300,10 +326,11 @@ class AuthService:
                     )
                     and password_matches
                 )
+            finish = self.attempts.clear if matches else self.attempts.record_failure
+            for key, reservation in reservations:
+                await finish(key, reservation, _utc(self.clock()))
             if not matches:
-                await self.attempts.record_failure(key, reservation, _utc(self.clock()))
                 raise AuthError()
-            await self.attempts.clear(key, reservation, _utc(self.clock()))
             raw_token = secrets.token_urlsafe(48)
             csrf_token = self._csrf_token(raw_token)
             created_at = _utc(self.clock())
