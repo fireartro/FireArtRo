@@ -38,7 +38,7 @@ async function render({ route = "/admin?sectiune=quotes", handle } = {}) {
     if (path === "/api/admin/auth/session") return response({ admin: { username: "admin" }, csrf_token: "csrf-test", expires_at: "2030-01-01T00:00:00Z" });
     const custom = handle?.(path, options);
     if (custom !== undefined) return custom;
-    if (path.startsWith("/api/admin/quotes?")) return response({ items: [summary("q1"), summary("q2")], total: 2, page: 1, page_size: 25 });
+    if (path.startsWith("/api/admin/quotes?") || path === "/api/admin/quotes/search") return response({ items: [summary("q1"), summary("q2")], total: 2, page: 1, page_size: 25 });
     if (options.method === "GET" && path.startsWith("/api/admin/quotes/")) return response(quote(path.split("/").pop()));
     throw new Error("Unexpected request");
   });
@@ -71,7 +71,10 @@ afterEach(async () => {
 test("loads URL filters, displays customer detail safely and saves only through the global session", async () => {
   const saved = deferred();
   await render({ route: "/admin?sectiune=quotes&status=new&q=cluj&page=2", handle: (path, options) => options.method === "PATCH" ? saved.promise : undefined });
-  expect(global.fetch.mock.calls.some(([path]) => path.includes("status=new") && path.includes("q=cluj") && path.includes("page=2"))).toBe(true);
+  expect(global.fetch.mock.calls.some(([path]) => path.includes("status=new") && path.includes("page=2"))).toBe(true);
+  expect(global.fetch.mock.calls.every(([path]) => !path.includes("q=") && !path.includes("cluj"))).toBe(true);
+  expect(container.querySelector('[data-location]').textContent).not.toContain("q=");
+  expect(container.querySelector('#quote-search').value).toBe("");
   expect(container.textContent).not.toContain("Notă privată");
   await click("Deschide cererea Ana Popescu");
   expect(container.querySelector("textarea").value).toBe("Notă privată");
@@ -94,7 +97,7 @@ test("loads URL filters, displays customer detail safely and saves only through 
   expect(container.querySelector("textarea").value).toBe("Sunat la 14:30");
 });
 
-test("changing filters preserves Admin navigation and resets pagination; browser navigation restores controls", async () => {
+test("changing filters preserves Admin navigation and keeps a private term during pagination and browser navigation", async () => {
   await render({ route: "/admin?sectiune=quotes&other=keep&page=3" });
   await change('input[name="quote-search"]', "Brașov & centru");
   await change('select[name="quote-filter"]', "qualified");
@@ -103,10 +106,18 @@ test("changing filters preserves Admin navigation and resets pagination; browser
   expect(search.get("sectiune")).toBe("quotes");
   expect(search.get("other")).toBe("keep");
   expect(search.get("page")).toBe("1");
-  expect(search.get("q")).toBe("Brașov & centru");
+  expect(search.has("q")).toBe(false);
   expect(search.get("status")).toBe("qualified");
+  const calls = global.fetch.mock.calls.filter(([path]) => path === "/api/admin/quotes/search");
+  expect(calls).toHaveLength(1);
+  expect(calls[0][1].method).toBe("POST");
+  expect(calls[0][1].headers["X-CSRF-Token"]).toBe("csrf-test");
+  expect(JSON.parse(calls[0][1].body)).toEqual({ q: "Brașov & centru", status: "qualified", page: 1, page_size: 25 });
+  await change('input[name="quote-search"]', "Satu Mare");
+  await submit('form[aria-label="Filtrează cererile"]');
   await act(async () => navigate(-1));
-  expect(container.querySelector('input[name="quote-search"]').value).toBe("");
+  expect(new URLSearchParams(container.querySelector("[data-location]").textContent).get("page")).toBe("3");
+  expect(container.querySelector('input[name="quote-search"]').value).toBe("Satu Mare");
   expect(container.querySelector('select[name="quote-filter"]').value).toBe("");
 });
 
@@ -131,7 +142,7 @@ test("a late detail response never replaces the newly selected customer", async 
 
 test("older list requests cannot reintroduce rows from a previous filter", async () => {
   const old = deferred();
-  await render({ handle: (path) => path.includes("/quotes?") && !path.includes("q=none") ? old.promise : path.includes("q=none") ? response({ items: [], total: 0, page: 1, page_size: 25 }) : undefined });
+  await render({ handle: (path) => path.includes("/quotes?") ? old.promise : path === "/api/admin/quotes/search" ? response({ items: [], total: 0, page: 1, page_size: 25 }) : undefined });
   await change('input[name="quote-search"]', "none");
   await submit('form[aria-label="Filtrează cererile"]');
   await act(async () => old.resolve(response({ items: [summary("q1")], total: 1, page: 1, page_size: 25 })));

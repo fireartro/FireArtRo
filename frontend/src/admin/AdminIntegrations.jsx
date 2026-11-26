@@ -9,7 +9,6 @@ const INTEGRATIONS = [
   ['turnstile', 'Protecție formular'],
   ['analytics', 'Google Analytics'],
   ['google', 'Google Places pentru recenzii'],
-  ['facebook', 'Meta API pentru recenzii Facebook'],
 ];
 
 function stateCopy(value) {
@@ -46,14 +45,22 @@ export default function AdminIntegrations() {
 
   return <section className="cms-panel cms-integrations" aria-labelledby="cms-integrations-title">
     <header className="cms-panel-heading"><div><h2 id="cms-integrations-title">Starea integrărilor</h2>
-      <p>Verifică serviciile conectate la server. Widgetul Facebook prin Elfsight se verifică pe site.</p></div>
+      <p>Verifică serviciile conectate la server.</p></div>
       <button className="admin-button" disabled={loading} onClick={() => load(true)}>Verifică din nou</button></header>
     {loading && !data ? <p role="status">Se verifică integrările…</p> : null}
     {error ? <div className="cms-notice is-error" role="alert">{error}</div> : null}
-    {data ? <div className="cms-metric-grid">{INTEGRATIONS.map(([key, label]) => {
+    <div className="cms-metric-grid">{data && INTEGRATIONS.map(([key, label]) => {
       const value = data[key] || { configured: false, healthy: null, message: '' };
       return <article key={key} data-integration={key}><span>{label}</span><strong>{stateCopy(value)}</strong>
         <small>{value.message || (value.configured ? 'Configurarea este protejată pe server.' : 'Completează configurația în Vercel înainte de activare.')}</small></article>;
-    })}</div> : null}
+    })}
+      <article data-integration="facebook">
+        <span>Recenzii Facebook prin Elfsight</span>
+        <strong>Verificare pe site</strong>
+        <small>Permite categoria Conținut extern pentru a vedea dacă widgetul se încarcă.{' '}
+          <a href="/#recenzii" target="_blank" rel="noopener noreferrer">Vezi pe site</a>
+        </small>
+      </article>
+    </div>
   </section>;
 }

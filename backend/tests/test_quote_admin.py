@@ -347,8 +347,11 @@ def test_notification_retry_does_not_replay_pending_delivery(notification_domain
 
 def test_filters_pagination_and_summary_do_not_expose_notes_or_contact_details(domain):
     client, _, _ = domain
-    authorize(client)
-    response = client.get("/api/admin/quotes?status=new&q=cluj&page_size=1")
+    response = client.post(
+        "/api/admin/quotes/search",
+        headers=authorize(client),
+        json={"status": "new", "q": "cluj", "page_size": 1},
+    )
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-store"
     assert response.json()["total"] == 1
@@ -369,11 +372,31 @@ def test_filters_pagination_and_summary_do_not_expose_notes_or_contact_details(d
     assert client.get("/api/admin/quotes?page=3&page_size=1").json()["items"] == []
 
 
-@pytest.mark.parametrize("query", [".*", "(a+)+$", '{"$ne":null}', "Notă privată"])
+@pytest.mark.parametrize("query", ["Cluj (centru)", "Notă privată"])
 def test_search_is_literal_and_never_searches_private_notes(domain, query):
     client, _, _ = domain
-    authorize(client)
-    assert client.get("/api/admin/quotes", params={"q": query}).json()["items"] == []
+    response = client.post(
+        "/api/admin/quotes/search", headers=authorize(client), json={"q": query}
+    )
+    assert response.status_code == 200
+    assert response.json()["items"] == []
+
+
+def test_search_requires_session_and_csrf_and_drops_legacy_query(domain):
+    client, _, _ = domain
+    path = "/api/admin/quotes/search"
+    assert client.post(path, json={"q": "Cluj"}).status_code == 401
+    headers = authorize(client)
+    assert client.post(path, json={"q": "Cluj"}).status_code == 403
+    legacy = client.get("/api/admin/quotes", params={"q": "Cluj"})
+    assert legacy.status_code == 400
+    assert legacy.headers["cache-control"] == "no-store"
+    assert "Cluj" not in legacy.text
+    private = "Client demonstrativ " * 10
+    invalid = client.post(path, headers=headers, json={"q": private})
+    assert invalid.status_code == 422
+    assert invalid.headers["cache-control"] == "no-store"
+    assert "Client demonstrativ" not in invalid.text
 
 
 @pytest.mark.parametrize(
@@ -384,7 +407,6 @@ def test_search_is_literal_and_never_searches_private_notes(domain, query):
         "page=1001",
         "page_size=0",
         "page_size=101",
-        "q=" + "x" * 121,
     ],
 )
 def test_filter_bounds_are_authoritative(domain, query):

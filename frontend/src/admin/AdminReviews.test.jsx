@@ -56,7 +56,7 @@ test('opens on the public settings and keeps the manual records in a separate ar
   expect(container.querySelector('input[name="reviewSettings.facebookEnabled"]')).toBeNull();
 });
 
-test('distinguishes published display, draft changes, missing setup and verified API errors', async () => {
+test('keeps Elfsight status separate from the Google Places check', async () => {
   mockDraft = { ...CMS_DEFAULTS, reviewSettings: { ...CMS_DEFAULTS.reviewSettings, facebookEnabled: false } };
   mockPublication = { reviewSettings: { ...CMS_DEFAULTS.reviewSettings, enabled: true, facebookEnabled: true } };
   mockRequest.mockResolvedValue({
@@ -67,24 +67,26 @@ test('distinguishes published display, draft changes, missing setup and verified
   const facebook = container.querySelector('[data-review-source="facebook"]');
   const google = container.querySelector('[data-review-source="google"]');
   expect([...facebook.querySelectorAll('dd')].map(node => node.textContent)).toEqual(['Permisă', 'Oprită']);
-  expect(facebook.textContent).toContain('Stare neverificată.');
+  expect(facebook.textContent).toContain('Verifică afișarea pe site');
+  expect(google.textContent).toContain('Stare neverificată.');
   expect(mockRequest).not.toHaveBeenCalled();
-  await act(async () => getButton('Verifică sursele API').click());
+  await act(async () => getButton('Verifică Google Places').click());
   expect(mockRequest).toHaveBeenCalledTimes(1);
   expect(mockRequest).toHaveBeenCalledWith('/api/admin/integrations?refresh=1');
-  expect(facebook.textContent).toContain('Necesită configurare');
+  expect(facebook.textContent).toContain('Verifică afișarea pe site');
+  expect(facebook.textContent).not.toContain('Necesită configurare');
   expect(google.textContent).toContain('Eroare de conectare');
 });
 
 test('reports a failed diagnostics request without changing the draft', async () => {
   mockRequest.mockRejectedValueOnce(new Error('Unavailable'));
   await act(async () => root.render(<AdminReviews />));
-  await act(async () => getButton('Verifică sursele API').click());
-  expect(container.querySelector('[role="alert"]').textContent).toContain('Starea surselor nu este disponibilă');
-  expect(getButton('Verifică sursele API').disabled).toBe(false);
+  await act(async () => getButton('Verifică Google Places').click());
+  expect(container.querySelector('[role="alert"]').textContent).toContain('Starea Google Places nu este disponibilă');
+  expect(getButton('Verifică Google Places').disabled).toBe(false);
   expect(mockUpdate).not.toHaveBeenCalled();
   mockRequest.mockResolvedValueOnce({ google: { configured: true, healthy: true } });
-  await act(async () => getButton('Verifică sursele API').click());
+  await act(async () => getButton('Verifică Google Places').click());
   expect(container.querySelector('[data-review-source="google"]').textContent).toContain('Conectat');
   expect(container.querySelector('[role="alert"]')).toBeNull();
 });

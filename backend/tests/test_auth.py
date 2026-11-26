@@ -336,6 +336,26 @@ async def test_five_failures_block_even_correct_password_across_instances(domain
 
 
 @pytest.mark.asyncio
+async def test_account_budget_is_shared_without_consuming_a_denied_ip_slot(domain, monkeypatch):
+    monkeypatch.setattr("auth.LOGIN_ACCOUNT_ATTEMPT_LIMIT", 1, raising=False)
+    with pytest.raises(AuthError) as failed:
+        await login(domain.auth, password="wrong")
+    assert failed.value.status_code == 401
+
+    second_ip = "192.0.2.10"
+    with pytest.raises(AuthError) as throttled:
+        await login(domain.service(), ip=second_ip)
+    assert throttled.value.status_code == 429
+    assert throttled.value.headers["Retry-After"] == "600"
+    assert domain.sessions.documents == []
+    second_ip_bucket = await domain.attempts.find_one({"_id": domain.auth._ip_key(second_ip)})
+    assert second_ip_bucket["entries"] == []
+
+    domain.clock.now += timedelta(minutes=10)
+    await login(domain.service(), ip=second_ip)
+
+
+@pytest.mark.asyncio
 async def test_throttle_uses_rolling_ten_minutes_and_ignores_delayed_ttl(domain):
     with pytest.raises(AuthError):
         await login(domain.auth, password="wrong")
@@ -378,7 +398,7 @@ async def test_concurrent_failed_logins_cannot_bypass_five_attempt_budget(domain
     assert all(isinstance(result, AuthError) for result in outcomes)
     assert sorted(result.status_code for result in outcomes) == [401] * 5 + [429] * 25
     assert domain.sessions.documents == []
-    assert len(domain.attempts.documents) == 1
+    assert len(domain.attempts.documents) == 2
 
 
 @pytest.mark.asyncio
@@ -813,7 +833,7 @@ async def test_real_mongo_concurrent_logins_share_five_attempt_budget(real_mongo
     assert all(isinstance(result, AuthError) for result in results)
     assert sorted(result.status_code for result in results) == [401] * 5 + [429] * 25
     assert await real_mongo.db.admin_sessions.count_documents({}) == 0
-    assert await real_mongo.db.admin_login_attempts.count_documents({}) == 1
+    assert await real_mongo.db.admin_login_attempts.count_documents({}) == 2
     with pytest.raises(AuthError) as error:
         await login(real_mongo.service(1))
     assert error.value.status_code == 429

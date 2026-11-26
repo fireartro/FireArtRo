@@ -8,7 +8,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-test("returns only configured providers containing real review text", async () => {
+test("returns Google reviews with text and ignores legacy Facebook payloads", async () => {
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
     status: 200,
@@ -22,7 +22,7 @@ test("returns only configured providers containing real review text", async () =
             { id: "g2", provider: "google", author: "Gol", text: "   ", rating: 5 },
           ],
         },
-        { id: "facebook", href: "", reviews: [{ id: "f1", text: "Bun." }] },
+        { id: "facebook", href: "https://www.facebook.com/FireArtRo/reviews", reviews: [{ id: "f1", text: "Bun." }] },
         { id: "unknown", href: "https://example.com", reviews: [{ id: "x1", text: "Nu." }] },
       ],
     }),

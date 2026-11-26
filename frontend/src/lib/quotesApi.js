@@ -6,16 +6,21 @@ export function quoteFilters(params) {
   const page = Number(params.get("page") || 1);
   const status = params.get("status") || "";
   return {
-    q: (params.get("q") || "").slice(0, 120).trim(),
     status: Object.hasOwn(QUOTE_STATUSES, status) ? status : "",
     page: Number.isInteger(page) && page >= 1 && page <= 1000 ? page : 1,
   };
 }
 
 export function listAdminQuotes(request, filters, options = {}) {
+  if (filters.q) {
+    return request("/api/admin/quotes/search", {
+      ...options,
+      method: "POST",
+      body: JSON.stringify({ q: filters.q, status: filters.status || null, page: filters.page, page_size: 25 }),
+    });
+  }
   const query = new URLSearchParams({ page: String(filters.page), page_size: "25" });
   if (filters.status) query.set("status", filters.status);
-  if (filters.q) query.set("q", filters.q);
   return request(`/api/admin/quotes?${query}`, options);
 }
 

@@ -12,14 +12,14 @@ const sources = [
     id: 'facebook',
     label: 'Facebook',
     field: 'facebookEnabled',
-    api: 'Meta API',
-    description: 'Site-ul afișează recenziile din Meta API când sunt disponibile. În rest folosește widgetul Elfsight după acordul pentru Conținut extern. Dacă widgetul nu răspunde, rămâne un link spre recenziile de pe Facebook.',
+    integration: 'Elfsight',
+    description: 'Când sursa este activă, site-ul încarcă widgetul Elfsight după acordul pentru Conținut extern. Dacă widgetul nu răspunde, vizitatorii au în continuare un link spre recenziile de pe Facebook.',
   },
   {
     id: 'google',
     label: 'Google Maps',
     field: 'googleEnabled',
-    api: 'Places API',
+    integration: 'Places API',
     description: 'Site-ul afișează recenziile cu autor și link furnizate de Google Places, după acordul pentru Conținut extern. Google furnizează cel mult cinci recenzii.',
   },
 ];
@@ -96,14 +96,14 @@ export default function AdminReviews({ onPreview }) {
         <header>
           <div>
             <h2 id="admin-review-sources">Surse și disponibilitate</h2>
-            <p>Verificarea poate consuma din cota API a furnizorilor configurați. Starea widgetului Elfsight se verifică pe site.</p>
+            <p>Verificarea Google Places poate consuma din cota API.</p>
           </div>
           <button type="button" className="admin-button" disabled={checking} onClick={checkSources}>
-            <RefreshCw aria-hidden="true" /> {checking ? 'Se verifică…' : 'Verifică sursele API'}
+            <RefreshCw aria-hidden="true" /> {checking ? 'Se verifică…' : 'Verifică Google Places'}
           </button>
         </header>
-        {checking && <p role="status">Se verifică sursele de recenzii…</p>}
-        {diagnostics.status === 'error' && <p className="cms-notice is-error" role="alert">Starea surselor nu este disponibilă momentan. Poți încerca din nou.</p>}
+        {checking && <p role="status">Se verifică Google Places…</p>}
+        {diagnostics.status === 'error' && <p className="cms-notice is-error" role="alert">Starea Google Places nu este disponibilă momentan. Poți încerca din nou.</p>}
         <div className="cms-reviews__source-grid" aria-live="polite">
           {sources.map(source => <article key={source.id} data-review-source={source.id}>
             <h3>{source.label}</h3>
@@ -113,8 +113,10 @@ export default function AdminReviews({ onPreview }) {
             </dl>
             <p>{source.description}</p>
             <div className="cms-reviews__api">
-              <h4>{source.api}</h4>
-              <IntegrationState value={diagnostics.data?.[source.id]} />
+              <h4>{source.integration}</h4>
+              {source.id === 'google' ? <IntegrationState value={diagnostics.data?.google} /> : (
+                <a href="/#recenzii" target="_blank" rel="noopener noreferrer">Verifică afișarea pe site <ExternalLink aria-hidden="true" /></a>
+              )}
             </div>
           </article>)}
         </div>

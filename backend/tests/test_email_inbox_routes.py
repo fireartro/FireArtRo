@@ -217,6 +217,10 @@ def test_private_search_uses_protected_request_body(inbox_domain):
     assert response.headers["cache-control"] == "no-store"
     assert response.json()["total"] == 1
     assert "Cerere" not in str(response.request.url)
+    legacy = client.get("/api/admin/inbox", params={"q": "Cerere"})
+    assert legacy.status_code == 400
+    assert legacy.headers["cache-control"] == "no-store"
+    assert "Cerere" not in legacy.text
 
 
 def test_reply_uses_stored_sender_thread_headers_and_stable_delivery(inbox_domain):

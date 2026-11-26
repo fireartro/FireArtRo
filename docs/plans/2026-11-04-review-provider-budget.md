@@ -1,5 +1,7 @@
 # Review provider budget implementation plan
 
+Historical plan. See the [reviews runbook](../runbooks/fireartro-reviews-activation.md) for the current provider budget.
+
 **Goal:** Close the confirmed anonymous Google Places quota-consumption path without changing the public design, review payload or hero media.
 
 **Architecture:** Enforce provider-attempt budgets inside `ReviewsService`, shared by the public route and integration-health calls. Use the existing Mongo revision-CAS convention in a dedicated bounded document for each provider. Coalesce only in-flight tasks in one instance; a shared expiring lease prevents concurrent provider calls across instances. Store counters, HMAC client identities and lease/backoff metadata, never Google review content.
