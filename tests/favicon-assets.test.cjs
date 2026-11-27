@@ -15,10 +15,9 @@ test('the public document exposes FireArtRo icons for browsers and installed sho
   const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
   const manifest = JSON.parse(fs.readFileSync(path.join(publicDir, 'site.webmanifest'), 'utf8'));
 
-  assert.match(html, /rel="icon"[^>]+href="%PUBLIC_URL%\/favicon\.ico"/);
-  assert.match(html, /rel="icon"[^>]+type="image\/png"[^>]+href="%PUBLIC_URL%\/favicon-96x96\.png"[^>]+sizes="96x96"/);
-  assert.match(html, /rel="icon"[^>]+type="image\/png"[^>]+href="%PUBLIC_URL%\/favicon-16x16\.png"[^>]+sizes="16x16"/);
-  assert.match(html, /rel="icon"[^>]+type="image\/png"[^>]+href="%PUBLIC_URL%\/favicon-32x32\.png"[^>]+sizes="32x32"/);
+  const icons = html.match(/<link\b[^>]*\brel="icon"[^>]*>/g);
+  assert.equal(icons.length, 1, 'Google and browsers get one preferred square favicon');
+  assert.match(icons[0], /type="image\/png"[^>]+href="%PUBLIC_URL%\/favicon-96x96\.png"[^>]+sizes="96x96"/);
   assert.match(html, /rel="apple-touch-icon"[^>]+href="%PUBLIC_URL%\/apple-touch-icon\.png"/);
   assert.match(html, /rel="manifest"[^>]+href="%PUBLIC_URL%\/site\.webmanifest"/);
   assert.equal(manifest.name, 'FireArtRo');

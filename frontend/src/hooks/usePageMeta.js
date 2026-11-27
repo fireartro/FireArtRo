@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect } from "react";
 import { CANONICAL_SITE_URL } from "@/data/businessContent";
+import { DEFAULT_SEARCH_COVER, SEARCH_COVERS } from "@/data/searchCovers";
 
 // A collector belongs to one server render; concurrent requests share no state.
 export const PageMetadataContext = createContext(null);
@@ -13,22 +14,43 @@ const ensureMeta = (selector, attributes) => {
   Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
 };
 
+function withPrimaryImage(schema, canonicalUrl, imageUrl) {
+  const { "@context": context, "@graph": graph, ...node } = schema || {};
+  return {
+    "@context": context || "https://schema.org",
+    "@graph": [
+      ...(graph || (schema ? [node] : [])),
+      {
+        "@type": "WebPage",
+        "@id": `${canonicalUrl}#webpage`,
+        url: canonicalUrl,
+        primaryImageOfPage: { "@type": "ImageObject", url: imageUrl },
+      },
+    ],
+  };
+}
+
 export default function usePageMeta({
   title,
   description,
   path,
-  image = "/media/coperta-spectacol-artificii-fireartro.webp",
+  image,
   schema,
   noindex = false,
 }) {
   const collector = useContext(PageMetadataContext);
-  if (collector) collector.current = { title, description, path, image, schema, noindex };
-  const schemaText = schema ? JSON.stringify(schema).replace(/</g, "\\u003c") : "";
+  const selectedCover = image || SEARCH_COVERS[path];
+  const resolvedImage = selectedCover || DEFAULT_SEARCH_COVER;
+  const canonicalUrl = `${CANONICAL_SITE_URL}${path}`;
+  const imageUrl = resolvedImage.startsWith("http") ? resolvedImage : `${CANONICAL_SITE_URL}${resolvedImage}`;
+  const pageSchema = SEARCH_COVERS[path] && !noindex
+    ? withPrimaryImage(schema, canonicalUrl, imageUrl)
+    : schema;
+  if (collector) collector.current = { title, description, path, image: resolvedImage, schema: pageSchema, noindex };
+  const schemaText = pageSchema ? JSON.stringify(pageSchema).replace(/</g, "\\u003c") : "";
 
   useEffect(() => {
     if (window.location.pathname === "/admin") return;
-    const canonicalUrl = `${CANONICAL_SITE_URL}${path}`;
-    const imageUrl = image.startsWith("http") ? image : `${CANONICAL_SITE_URL}${image}`;
     document.title = title;
 
     ensureMeta('meta[name="description"]', { name: "description", content: description });
@@ -63,5 +85,5 @@ export default function usePageMeta({
     }
 
     return () => document.getElementById(schemaId)?.remove();
-  }, [description, image, noindex, path, schemaText, title]);
+  }, [canonicalUrl, description, imageUrl, noindex, schemaText, title]);
 }

@@ -40,7 +40,7 @@ async function render(slug, content = CMS_DEFAULTS) {
 
 test("the public service catalogue resolves only known service slugs", () => {
   expect(SERVICE_CATALOG.map((service) => service.slug)).toEqual([
-    "artificii-nunta", "spectacole-drone", "artificii-de-zi", "efecte-speciale",
+    "artificii-evenimente", "artificii-nunta", "spectacole-drone", "artificii-de-zi", "efecte-speciale",
     "artificii-satu-mare", "artificii-cluj", "artificii-maramures",
   ]);
   expect(findService("spectacole-drone").category).toBe("Show drone");

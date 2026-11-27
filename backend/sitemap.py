@@ -17,6 +17,7 @@ FIXED_PUBLIC_PATHS = (
     "/intrebari-frecvente",
     "/contact",
     "/blog",
+    "/servicii/artificii-evenimente",
     "/servicii/artificii-nunta",
     "/servicii/spectacole-drone",
     "/servicii/artificii-de-zi",

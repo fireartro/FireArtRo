@@ -4,6 +4,7 @@ import { ORGANIZATION_ID } from "@/data/storeLocation";
 import Navbar from "@/components/site/Navbar";
 import Hero from "@/components/site/Hero";
 import PageEnd from "@/components/site/PageEnd";
+import ServiceDirectory from "@/components/site/ServiceDirectory";
 import SocialDock from "@/components/site/SocialDock";
 import ScrollProgress from "@/components/site/ScrollProgress";
 import HomeRunway from "@/components/night/HomeRunway";
@@ -59,6 +60,7 @@ export default function Home() {
       <Navbar />
       <Hero />
       <HomeRunway />
+      <ServiceDirectory />
       <PageEnd showBlog />
       <SocialDock />
     </main>

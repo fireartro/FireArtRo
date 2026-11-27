@@ -1,4 +1,5 @@
 const { test, expect } = require("@playwright/test");
+const publishedContent = require("../src/content/__fixtures__/siteContent.json");
 
 const posts = [
   {
@@ -101,7 +102,10 @@ test("landing hides the Blog section for empty or failed requests", async ({ pag
 
 test("archive, safe article body, and footer navigation use approved routes", async ({ page }) => {
   await mockBlog(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/blog", { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => window.__fireartIntro?.dismiss());
+  await page.getByRole("button", { name: "Doar necesare", exact: true }).click();
 
   await expect(page.getByRole("heading", { name: "Blog", exact: true })).toBeVisible();
   await expect(page.getByTestId("blog-card")).toHaveCount(3);
@@ -259,11 +263,21 @@ test("Blog surfaces use the approved compact scale", async ({ page }) => {
 });
 
 test("admin creates a draft, uploads its cover, publishes it, and deletes it", async ({ page }) => {
-  const adminKey = "valid-admin-key";
+  const csrfToken = "csrf-blog-browser-test";
   let storedPosts = [];
 
+  await page.route("**/api/admin/auth/session", (route) => route.fulfill({
+    json: { admin: { username: "test-admin" }, csrf_token: csrfToken, expires_at: "2030-01-01T00:00:00Z" },
+  }));
+  await page.route("**/api/admin/content/draft", (route) => route.fulfill({
+    json: { content: publishedContent, version: 1, published_revision_id: "blog-browser-test" },
+  }));
+  await page.route("**/api/content", (route) => route.fulfill({
+    json: { content: publishedContent, revision_id: "blog-browser-test", published_at: "2026-09-28T00:00:00Z" },
+  }));
+
   await page.route("**/api/admin/blog/media", async (route) => {
-    expect(route.request().headers()["x-admin-key"]).toBe(adminKey);
+    expect(route.request().headers()["x-csrf-token"]).toBe(csrfToken);
     await route.fulfill({
       status: 201,
       contentType: "application/json",
@@ -273,7 +287,6 @@ test("admin creates a draft, uploads its cover, publishes it, and deletes it", a
 
   await page.route("**/api/admin/blog/posts**", async (route) => {
     const request = route.request();
-    expect(request.headers()["x-admin-key"]).toBe(adminKey);
     const method = request.method();
     const url = new URL(request.url());
     const postId = url.pathname.split("/api/admin/blog/posts/")[1];
@@ -286,6 +299,7 @@ test("admin creates a draft, uploads its cover, publishes it, and deletes it", a
       return;
     }
 
+    expect(request.headers()["x-csrf-token"]).toBe(csrfToken);
     if (method === "POST") {
       const payload = request.postDataJSON();
       const created = {
@@ -332,10 +346,7 @@ test("admin creates a draft, uploads its cover, publishes it, and deletes it", a
     }
   });
 
-  await page.goto("/admin", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: /Blog/ }).click();
-  await page.getByLabel("Cheie Admin").fill(adminKey);
-  await page.getByRole("button", { name: "Accesează Blogul" }).click();
+  await page.goto("/admin?sectiune=blog", { waitUntil: "domcontentloaded" });
   await expect(page.getByText("Nu există articole. Creează primul articol.")).toBeVisible();
 
   await page.getByRole("button", { name: "Articol nou" }).click();

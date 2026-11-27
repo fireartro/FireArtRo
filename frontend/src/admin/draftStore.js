@@ -2,9 +2,16 @@ import { normalizePublishedContent, validateManagedContent } from '@/content/man
 import { fetchPublishedContent } from '@/lib/contentApi';
 import { SERVICE_PAGE_DEFAULTS } from '@/data/serviceCatalog';
 
+function editorServicePages(publishedPages) {
+  return Object.fromEntries(Object.entries(SERVICE_PAGE_DEFAULTS).map(([key, defaults]) => {
+    const saved = publishedPages?.[key];
+    return [key, { ...defaults, ...saved, offerDetails: saved?.offerDetails ?? defaults.offerDetails }];
+  }));
+}
+
 function editorContent(content) {
   const normalized = normalizePublishedContent(content);
-  return { ...normalized, servicePages: { ...SERVICE_PAGE_DEFAULTS, ...normalized.servicePages } };
+  return { ...normalized, servicePages: editorServicePages(normalized.servicePages) };
 }
 
 export function setContentPath(content, path, value) {
@@ -19,7 +26,7 @@ export function setContentPath(content, path, value) {
 
 export const changedModules = (before, after) => after ? Object.keys(after).filter(key => {
   if (key === 'schema_version') return false;
-  const previous = before && key === 'servicePages' ? { ...SERVICE_PAGE_DEFAULTS, ...before.servicePages } : before?.[key];
+  const previous = before && key === 'servicePages' ? editorServicePages(before.servicePages) : before?.[key];
   return JSON.stringify(previous) !== JSON.stringify(after[key]);
 }) : [];
 

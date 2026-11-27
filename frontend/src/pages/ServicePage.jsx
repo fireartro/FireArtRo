@@ -15,6 +15,7 @@ export default function ServicePage({ service: suppliedService } = {}) {
   const routeService = suppliedService || findService(slug);
   const servicePages = useManagedContent("servicePages", SERVICE_PAGE_DEFAULTS);
   const service = routeService && { ...routeService, ...servicePages?.[SERVICE_PAGE_KEYS[routeService.slug]] };
+  const offerDetails = (service?.offerDetails ?? routeService?.offerDetails ?? "").trim();
   const siteDetails = useManagedContent("siteDetails", CMS_DEFAULTS.siteDetails);
   const packages = useManagedContent("packages", CMS_DEFAULTS.packages);
   const matchingPackages = service ? packages.filter((item) => item.category === service.category) : [];
@@ -96,9 +97,11 @@ export default function ServicePage({ service: suppliedService } = {}) {
               ))}
             </section>}
 
-            <section className="fa-blog-body" aria-labelledby="service-offer-title">
-              <h2 className="fa-kicker" id="service-offer-title">Discută evenimentul cu {siteDetails.name}</h2>
-              <p>Trimite data, localitatea, locația și momentul pe care îl pregătești. Configurația și disponibilitatea se confirmă direct cu echipa.</p>
+            <section className="fa-blog-body" id={offerDetails ? "pret" : undefined} aria-labelledby="service-offer-title">
+              <h2 className="fa-kicker" id="service-offer-title">{offerDetails ? "Preț și ofertă" : `Discută evenimentul cu ${siteDetails.name}`}</h2>
+              {offerDetails
+                ? offerDetails.split(/\n+/).filter(Boolean).map((paragraph, index) => <p key={index}>{paragraph}</p>)
+                : <p>Trimite data, localitatea, locația și momentul pe care îl pregătești. Configurația și disponibilitatea se confirmă direct cu echipa.</p>}
               {siteDetails.email && <p>Pentru detalii, ne poți scrie la <a href={`mailto:${siteDetails.email}`}>{siteDetails.email}</a>.</p>}
               <p><NightButton to="/contact">Cere ofertă</NightButton></p>
               <p><NightButton to={packageHref} variant="secondary">Vezi opțiunile din pachete</NightButton></p>

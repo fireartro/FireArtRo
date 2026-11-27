@@ -74,7 +74,7 @@ export default function BlogArticlePage({ previewPost = null }) {
 
   const image = state.post?.cover_media_id
     ? blogMediaUrl(state.post.cover_media_id)
-    : "/media/coperta-spectacol-artificii-fireartro.webp";
+    : undefined;
   const schema = useMemo(() => state.post ? {
     "@context": "https://schema.org",
     "@type": "BlogPosting",

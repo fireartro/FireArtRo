@@ -137,7 +137,11 @@ test('boot data and structured data preserve their values without allowing scrip
 });
 
 test('dynamic article and service routes receive their CSS without duplicating existing stylesheet links', async () => {
-  for (const [pathname, pattern] of [['/blog/public-article', '/blog/:slug'], ['/servicii/spectacole-drone', '/servicii/:slug']]) {
+  for (const [pathname, pattern] of [
+    ['/blog/public-article', '/blog/:slug'],
+    ['/servicii/spectacole-drone', '/servicii/:slug'],
+    ['/servicii/artificii-evenimente', '/servicii/:slug'],
+  ]) {
     const handler = createPublicPageHandler({ readData: async () => ({}), render: async () => ({ ...result, pathname, meta: { ...result.meta, path: pathname } }),
       readTemplate: async () => template.replace('</head>', '<link rel="stylesheet" href="/static/css/common.css"></head>'),
       readAssets: async () => ({ common: ['/static/css/common.css'], routes: { [pattern]: ['/static/css/details.css'] } }),

@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import Navbar from "@/components/site/Navbar";
 import PageEnd from "@/components/site/PageEnd";
+import ServiceDirectory from "@/components/site/ServiceDirectory";
 import ScrollProgress from "@/components/site/ScrollProgress";
 import usePageMeta from "@/hooks/usePageMeta";
 import useManagedContent from "@/hooks/useManagedContent";
@@ -302,6 +303,7 @@ export default function GalleryPage() {
         </div>
       </section>
 
+      <ServiceDirectory />
       <PageEnd />
 
       <Dialog open={expandedIndex >= 0} onOpenChange={(open) => !open && closePhoto()}>
