@@ -57,9 +57,9 @@ test('uses a separate responsive viewport and transfers the latest draft only to
     await render(true);
     expect(send).toHaveBeenLastCalledWith({type:'fireart:preview-content',content:mockDraft},window.location.origin);
     const pageSelect = document.querySelector('.cms-preview-route select');
-    expect(pageSelect.options).toHaveLength(16);
+    expect(pageSelect.options).toHaveLength(17);
     expect(Array.from(pageSelect.options, option => option.value)).toEqual(expect.arrayContaining([
-      '/servicii/artificii-satu-mare', '/servicii/artificii-cluj', '/servicii/artificii-maramures',
+      '/servicii/artificii-evenimente', '/servicii/artificii-satu-mare', '/servicii/artificii-cluj', '/servicii/artificii-maramures',
     ]));
     await act(async () => {
       pageSelect.value = '/galerie';

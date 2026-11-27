@@ -10,6 +10,7 @@ const require = createRequire(import.meta.url);
 const PUBLIC_PATHS = new Set([
   '/', '/pachete', '/galerie', '/intrebari-frecvente', '/contact', '/blog',
   '/confidentialitate', '/termeni-si-conditii', '/cookies',
+  '/servicii/artificii-evenimente',
   '/servicii/artificii-nunta', '/servicii/spectacole-drone',
   '/servicii/artificii-de-zi', '/servicii/efecte-speciale',
   '/servicii/artificii-satu-mare', '/servicii/artificii-cluj', '/servicii/artificii-maramures',

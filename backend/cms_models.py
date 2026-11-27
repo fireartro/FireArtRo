@@ -596,6 +596,7 @@ class ServiceSection(StrictModel):
 class ServicePageContent(StrictModel):
     title: str = Field(min_length=1, max_length=160)
     description: str = Field(min_length=1, max_length=600)
+    offerDetails: str | None = Field(default=None, max_length=2000)
     sections: list[ServiceSection] = Field(max_length=20)
     faq: list[FaqItem] = Field(max_length=30)
 
@@ -611,12 +612,13 @@ class ServicePages(StrictModel):
     drones: ServicePageContent
     day: ServicePageContent
     effects: ServicePageContent
+    events: ServicePageContent | None = None
     satuMare: ServicePageContent | None = None
     cluj: ServicePageContent | None = None
     maramures: ServicePageContent | None = None
 
     @model_serializer(mode="wrap")
-    def omit_unspecified_regional_pages(self, handler):
+    def omit_unspecified_pages(self, handler):
         return {key: page for key, page in handler(self).items() if page is not None}
 
 

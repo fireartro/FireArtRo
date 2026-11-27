@@ -5,11 +5,46 @@ import { REGIONAL_SERVICES } from "./regionalServices";
 // authorisations, fleet sizes, reviews or event credits.
 export const SERVICE_CATALOG = [
   {
+    slug: "artificii-evenimente",
+    path: "/servicii/artificii-evenimente",
+    title: "Artificii pentru evenimente",
+    description: "Spectacole de artificii pentru evenimente private, firme și festivaluri. Alege între foc de artificii după apus și efecte de zi, în funcție de program și locație.",
+    category: "Artificii de noapte",
+    offerDetails: "Costul depinde de durată, efecte și deplasarea echipei. Trimite data, adresa și ora aproximativă. Dacă ai deja un program, spune-ne ce se întâmplă imediat înainte și după spectacol.\n\nCompară ofertele pe aceeași durată și verifică ce cheltuieli de transport și montaj sunt incluse.",
+    sections: [
+      {
+        title: "Artificii de zi sau de noapte",
+        paragraphs: [
+          "Pentru un eveniment după apus, un foc de artificii poate încheia programul sau marca un moment precum tăierea tortului. Pentru o inaugurare sau o intrare în timpul zilei, alege un efect conceput să se vadă în lumină naturală.",
+          "Spune-ne ce vrei să vadă invitații și de unde vor privi. În funcție de spațiu, echipa îți poate propune un spectacol pe cer sau un efect concentrat în jurul scenei.",
+        ],
+      },
+      {
+        title: "Ce confirmi cu locația",
+        paragraphs: [
+          "Întreabă organizatorul unde vor sta invitații și dacă locația are restricții de oră sau de zgomot. Trimite adresa exactă și datele de contact ale persoanei care coordonează locația.",
+          "La un festival sau la un eveniment de firmă, trimite și reperele din program. Echipa verifică ce se poate face la locație înainte să confirme formatul.",
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: "Pot cere artificii pentru un eveniment organizat în timpul zilei?",
+        a: "Da, FireArtRo oferă artificii de zi. Menționează ora, spațiul și momentul pe care vrei să-l marchezi, pentru ca echipa să confirme opțiunile potrivite.",
+      },
+      {
+        q: "Ce trimit dacă evenimentul are loc la o sală?",
+        a: "Trimite numele sălii, adresa, ora propusă și o fotografie a curții, dacă ai. Spune dacă sala a comunicat deja restricții pentru efecte.",
+      },
+    ],
+  },
+  {
     slug: "artificii-nunta",
     path: "/servicii/artificii-nunta",
     title: "Artificii pentru nuntă",
     description: "Un spectacol de artificii de noapte pentru un moment al nunții, configurat după locație, program și amploarea dorită.",
     category: "Artificii de noapte",
+    offerDetails: "Când ceri prețul pentru artificii la nuntă, spune dacă vrei un final scurt după tort sau un spectacol separat, cu o durată mai mare. Durata, efectele și distanța până la locație schimbă oferta.\n\nTrimite data, numele sălii și, dacă ai, o fotografie a curții. Când compari două oferte, uită-te la durata spectacolului, la efectele incluse și la costul total cu deplasarea și montajul.",
     sections: [
       {
         title: "Un moment în programul serii",
@@ -50,6 +85,7 @@ export const SERVICE_CATALOG = [
     title: "Spectacole cu drone pentru evenimente",
     description: "Coregrafii luminoase cu drone pentru nunți, evenimente corporate și festivaluri, dezvoltate pornind de la conceptul evenimentului și condițiile locației.",
     category: "Show drone",
+    offerDetails: "Prețul unui spectacol cu drone depinde de durata coregrafiei, de configurația cu care se pot reda formele și de câtă animație se creează pentru eveniment. Un mesaj scurt și o succesiune de animații făcute de la zero au cerințe diferite.\n\nTrimite data, adresa și o schiță a imaginii sau a mesajului dorit. Dacă ai deja un program, spune când poți rezerva momentul pentru drone. Așa putem verifica locația și estima costul conceptului.",
     sections: [
       {
         title: "De la idee la coregrafie luminoasă",
@@ -172,6 +208,7 @@ export function findService(slug) {
 }
 
 export const SERVICE_PAGE_KEYS = {
+  "artificii-evenimente": "events",
   "artificii-nunta": "wedding",
   "spectacole-drone": "drones",
   "artificii-de-zi": "day",
@@ -184,6 +221,7 @@ export const SERVICE_PAGE_DEFAULTS = Object.fromEntries(SERVICE_CATALOG.map(serv
   {
     title: service.title,
     description: service.description,
+    offerDetails: service.offerDetails || "",
     sections: service.sections.map((section, index) => ({ id: `section-${index + 1}`, ...section })),
     faq: service.faq.map((item, index) => ({ id: `question-${index + 1}`, ...item })),
   },

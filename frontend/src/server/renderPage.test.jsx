@@ -1,6 +1,7 @@
 /** @jest-environment node */
 jest.mock('gsap/ScrollTrigger', () => require('gsap/dist/ScrollTrigger'));
 import { CMS_DEFAULTS } from '@/data/cmsDefaults';
+import { SERVICE_PAGE_DEFAULTS } from '@/data/serviceCatalog';
 import { renderPublicPage, publicPageForPath } from './renderPage';
 
 const publication = { revision_id: 'test-publication', published_at: '2026-11-02T12:00:00Z', content: CMS_DEFAULTS };
@@ -28,6 +29,46 @@ test('renders the homepage with published content and its metadata', () => {
   expect(page.meta.title).toBe('Titlu publicat curent');
   expect(page.html).toContain('id="acasa"');
   expect(page.html).toContain('href="/pachete"');
+});
+
+test.each([
+  ['/', '/media/optimized/spectacol-artificii-panoramic-1920-20261102.webp'],
+  ['/intrebari-frecvente', '/media/public-spectacol-artificii-2.webp'],
+])('publishes the preferred photograph for %s alongside its page metadata', (path, image) => {
+  const { meta } = renderPublicPage(path, data);
+  expect(meta.image).toBe(image);
+  expect(meta.schema['@graph']).toContainEqual(expect.objectContaining({
+    '@type': 'WebPage',
+    url: `https://fireart.ro${path}`,
+    primaryImageOfPage: { '@type': 'ImageObject', url: `https://fireart.ro${image}` },
+  }));
+});
+
+test.each(['/', '/pachete', '/galerie'])('makes national and regional services directly reachable from %s', path => {
+  const { html } = renderPublicPage(path, data);
+  for (const slug of ['artificii-evenimente', 'spectacole-drone', 'artificii-satu-mare', 'artificii-cluj', 'artificii-maramures']) {
+    expect(html.includes(`href="/servicii/${slug}"`)).toBe(true);
+  }
+});
+
+test('renders the national fireworks page even for a publication created before that page existed', () => {
+  const content = { ...CMS_DEFAULTS };
+  delete content.servicePages;
+  const page = renderPublicPage('/servicii/artificii-evenimente', { ...data, publication: { ...publication, content } });
+  expect(page.html).toMatch(/<h1[^>]*>Artificii pentru evenimente<\/h1>/);
+  expect(page.html).toContain('id="pret"');
+  expect(page.meta.path).toBe('/servicii/artificii-evenimente');
+});
+
+test('shows useful price guidance for legacy snapshots and preserves the published editor value', () => {
+  const edited = { ...CMS_DEFAULTS, servicePages: JSON.parse(JSON.stringify(SERVICE_PAGE_DEFAULTS)) };
+  delete edited.servicePages.wedding.offerDetails;
+  const render = () => renderPublicPage('/servicii/artificii-nunta', {
+    ...data, publication: { ...publication, content: edited },
+  });
+  expect(render().html.includes('id="pret"')).toBe(true);
+  edited.servicePages.wedding.offerDetails = 'Text de ofertă salvat în Admin.';
+  expect(render().html).toContain('Text de ofertă salvat în Admin.');
 });
 
 test('lets the browser select the portrait hero before the client script starts', () => {

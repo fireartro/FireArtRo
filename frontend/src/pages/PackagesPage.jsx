@@ -4,6 +4,7 @@ import Navbar from "@/components/site/Navbar";
 import ScrollProgress from "@/components/site/ScrollProgress";
 import Packages from "@/components/site/Packages";
 import PageEnd from "@/components/site/PageEnd";
+import ServiceDirectory from "@/components/site/ServiceDirectory";
 import usePageMeta from "@/hooks/usePageMeta";
 import useManagedContent from "@/hooks/useManagedContent";
 
@@ -40,6 +41,7 @@ export default function PackagesPage() {
       <ScrollProgress />
       <Navbar />
       <Packages items={packages} />
+      <ServiceDirectory />
       <PageEnd />
     </main>
   );

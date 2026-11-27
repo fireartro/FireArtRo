@@ -1,5 +1,6 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
+import { MemoryRouter } from "react-router-dom";
 import Home from "./Home";
 
 jest.mock("@/components/site/Navbar", () => () => null);
@@ -19,7 +20,7 @@ test("the hydrated homepage schema keeps the crawlable FireArtRo logo", async ()
   const root = createRoot(container);
 
   await act(async () => {
-    root.render(<Home />);
+    root.render(<MemoryRouter><Home /></MemoryRouter>);
   });
 
   const schema = JSON.parse(document.getElementById("page-structured-data").textContent);

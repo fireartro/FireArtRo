@@ -114,6 +114,7 @@ export const ADMIN_MODULES = {
     object(SERVICE_PAGE_KEYS[service.slug], service.title, [
       text("title", "Titlu", { required: true, maxLength: 160 }),
       textarea("description", "Introducere și descriere SEO", { required: true, maxLength: 600 }),
+      textarea("offerDetails", "Preț și ofertă", { maxLength: 2000, rows: 5, help: "Textul apare lângă butonul Cere ofertă. Scrie ce influențează costul și adaugă tarifele atunci când le publici." }),
       collection("sections", "Secțiuni", { id: "section", title: "", paragraphs: [] }, [
         text("title", "Titlu secțiune", { required: true, maxLength: 200 }),
         lines("paragraphs", "Paragrafe", { help: "Câte un paragraf pe rând.", rows: 6 }),
